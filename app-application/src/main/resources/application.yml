@@ -4,3 +4,18 @@ server:
 spring:
   application:
     name: bluecone-app
+
+  datasource:
+    url: jdbc:mysql://rm-bp1xld3504q1gtf6b9o.mysql.rds.aliyuncs.com:3306/app?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: muzhenpeng
+    password: MUzhiwei123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+
+mybatis-plus:
+  enabled: true

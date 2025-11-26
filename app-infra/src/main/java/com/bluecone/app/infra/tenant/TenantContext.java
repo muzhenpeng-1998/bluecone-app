@@ -29,7 +29,7 @@ public class TenantContext {
      * 租户 ID 存储容器
      * 使用 ThreadLocal 确保线程隔离，避免多线程环境下的数据混乱
      */
-    private static final ThreadLocal<String> TENANT_ID_HOLDER = new ThreadLocal<>();
+    private static final ThreadLocal<String> TENANT_ID_HOLDER = ThreadLocal.withInitial(() -> null);
 
     /**
      * 设置当前线程的租户 ID

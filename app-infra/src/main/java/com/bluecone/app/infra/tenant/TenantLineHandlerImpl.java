@@ -1,10 +1,14 @@
 package com.bluecone.app.infra.tenant;
 
+import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.StringValue;
+
 /**
- * MyBatis-Plus 租户行级数据隔离处理器（预留实现）
+ * MyBatis-Plus 租户行级数据隔离处理器
  *
  * 功能：
- * - 预留用于实现 MyBatis-Plus 的 TenantLineHandler 接口
+ * - 实现 MyBatis-Plus 的 TenantLineHandler 接口
  * - 自动在 SQL 语句中添加租户条件（WHERE tenant_id = ?）
  * - 支持表级别的租户隔离控制
  *
@@ -19,120 +23,85 @@ package com.bluecone.app.infra.tenant;
  * - INSERT: 自动填充租户 ID 字段
  * - UPDATE/DELETE: 自动添加租户条件，防止误操作其他租户数据
  *
- * 未来启用方式：
- * 在 MybatisPlusConfig 中注册：
- * <pre>
- * import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
- * import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
- * import net.sf.jsqlparser.expression.Expression;
- * import net.sf.jsqlparser.expression.StringValue;
- *
- * public class TenantLineHandlerImpl implements TenantLineHandler {
- *     &#64;Override
- *     public Expression getTenantId() {
- *         String tenantId = TenantContext.getTenantId();
- *         return new StringValue(tenantId != null ? tenantId : "");
- *     }
- *
- *     &#64;Override
- *     public String getTenantIdColumn() {
- *         return "tenant_id";
- *     }
- *
- *     &#64;Override
- *     public boolean ignoreTable(String tableName) {
- *         return false; // 根据实际需求排除系统表
- *     }
- * }
- *
- * // 在 MybatisPlusConfig 中注册
- * TenantLineInnerInterceptor tenantInterceptor = new TenantLineInnerInterceptor(new TenantLineHandlerImpl());
- * interceptor.addInnerInterceptor(tenantInterceptor);
- * </pre>
- *
  * 注意事项：
- * - 当前未实现接口，仅作为架构预留和代码示例
- * - 启用前需确保所有业务表都有 tenant_id 字段
+ * - 租户 ID 从 TenantContext（ThreadLocal）中获取
+ * - 如果租户 ID 为空，使用默认值 "default"
  * - 系统表、配置表等公共表需要通过 ignoreTable() 排除
- * - 需要添加 jsqlparser 依赖才能使用 Expression 和 StringValue
  *
  * @author BlueCone Architecture Team
  * @since 1.0.0
  */
-public class TenantLineHandlerImpl {
+public class TenantLineHandlerImpl implements TenantLineHandler {
 
     /**
-     * 预留构造函数
-     *
-     * 未来实现 TenantLineHandler 接口时使用
+     * 默认租户 ID
+     * 当 TenantContext 中没有设置租户 ID 时使用
      */
-    public TenantLineHandlerImpl() {
-        // 空实现，预留用于未来扩展
-    }
+    private static final String DEFAULT_TENANT_ID = "default";
 
     /**
-     * 获取租户 ID 值（预留方法）
+     * 获取租户 ID 值
      *
      * 从 TenantContext 中获取当前线程的租户 ID，并转换为 SQL 表达式
+     * 如果租户 ID 为空或空白，则使用默认租户 ID
      *
-     * 未来实现示例：
-     * <pre>
-     * &#64;Override
-     * public Expression getTenantId() {
-     *     String tenantId = TenantContext.getTenantId();
-     *     if (tenantId == null) {
-     *         return new StringValue("");
-     *     }
-     *     return new StringValue(tenantId);
-     * }
-     * </pre>
+     * @return 租户 ID 的 SQL 表达式（StringValue 类型）
      */
-    public String getTenantIdValue() {
-        return TenantContext.getTenantId();
+    @Override
+    public Expression getTenantId() {
+        String tenantId = TenantContext.getTenantId();
+
+        // 如果租户 ID 为空或空白，使用默认值
+        if (tenantId == null || tenantId.isBlank()) {
+            tenantId = DEFAULT_TENANT_ID;
+        }
+
+        return new StringValue(tenantId);
     }
 
     /**
-     * 获取租户字段名称（预留方法）
+     * 获取租户字段名称
      *
      * 指定数据库表中用于存储租户 ID 的字段名
+     * 所有需要租户隔离的表都应该包含此字段
      *
-     * 未来实现示例：
-     * <pre>
-     * &#64;Override
-     * public String getTenantIdColumn() {
-     *     return "tenant_id";
-     * }
-     * </pre>
+     * @return 租户字段名，默认为 "tenant_id"
      */
-    public String getTenantIdColumnName() {
+    @Override
+    public String getTenantIdColumn() {
         return "tenant_id";
     }
 
     /**
-     * 判断是否忽略租户隔离（预留方法）
+     * 判断是否忽略租户隔离
      *
      * 某些表不需要租户隔离（如系统配置表、字典表等），可以在此方法中排除
      *
-     * 未来实现示例：
-     * <pre>
-     * &#64;Override
-     * public boolean ignoreTable(String tableName) {
-     *     if ("sys_config".equalsIgnoreCase(tableName)) {
-     *         return true;
-     *     }
-     *     if ("sys_dict".equalsIgnoreCase(tableName)) {
-     *         return true;
-     *     }
-     *     return false;
-     * }
-     * </pre>
+     * 未来可扩展的忽略表示例：
+     * - sys_config: 系统配置表
+     * - sys_dict: 数据字典表
+     * - sys_menu: 系统菜单表
+     * - sys_role: 系统角色表（如果是全局角色）
+     * - tenant: 租户表本身
      *
      * @param tableName 表名
      * @return true 表示忽略租户隔离，false 表示需要租户隔离
      */
-    public boolean shouldIgnoreTable(String tableName) {
+    @Override
+    public boolean ignoreTable(String tableName) {
+        // TODO: 未来可根据实际业务需求，排除系统表、配置表等
+        // 示例：
+        // if ("sys_config".equalsIgnoreCase(tableName)) {
+        //     return true;
+        // }
+        // if ("sys_dict".equalsIgnoreCase(tableName)) {
+        //     return true;
+        // }
+        // if ("tenant".equalsIgnoreCase(tableName)) {
+        //     return true;
+        // }
+
         // 当前返回 false，表示所有表都启用租户隔离
-        // 未来可根据实际业务需求，排除系统表、配置表等
         return false;
     }
 }
