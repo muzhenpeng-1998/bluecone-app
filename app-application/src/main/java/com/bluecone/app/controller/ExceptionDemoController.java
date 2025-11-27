@@ -1,8 +1,8 @@
 package com.bluecone.app.controller;
 
+import com.bluecone.app.core.log.annotation.ApiLog;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
-import com.bluecone.app.core.log.annotation.ApiLog;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,12 +15,7 @@ import java.util.Map;
 public class ExceptionDemoController {
 
     @GetMapping("/biz-ex")
-    @ApiLog(
-            value = "业务异常验证",
-            logOnSuccess = true,
-            logOnError = true,
-            printStackTrace = false
-    )
+    @ApiLog("业务异常验证")
     public Map<String, Object> businessException() {
         throw BusinessException.of(
                 ErrorCode.STOCK_NOT_ENOUGH.getCode(),
