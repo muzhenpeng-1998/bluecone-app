@@ -17,5 +17,36 @@ spring:
       max-lifetime: 1800000
       connection-timeout: 30000
 
+  data:
+    redis:
+      host: sh-crs-kwzgk7ez.sql.tencentcdb.com
+      port: 29104
+      database: 4
+      username: root
+      password: MUzhiwei123
+
+
 mybatis-plus:
   enabled: true
+
+
+
+bluecone:
+  cache:
+    l1:
+      max-size: 20000
+    l2:
+      enabled: true
+    consistency:
+      redis:
+        enabled: true
+    profiles:
+      user-profile:
+        ttl-seconds: 600
+        cache-null: true
+      order-detail:
+        ttl-seconds: 180
+        strong-consistency: true
+      tenant-config:
+        ttl-seconds: 1800
+        cache-null: false
