@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
@@ -60,6 +61,9 @@ public class TenantWebInterceptor implements HandlerInterceptor {
      */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (StringUtils.hasText(TenantContext.getTenantId())) {
+            return true;
+        }
         // 从请求头中获取租户 ID
         String tenantId = request.getHeader(TENANT_HEADER);
 

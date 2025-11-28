@@ -12,7 +12,8 @@ public enum RedisKeyNamespace {
     CACHE("cache"),
     IDEMPOTENT("idempotent"),
     LOCK("lock"),
-    RATE_LIMIT("rate_limit");
+    RATE_LIMIT("rate_limit"),
+    TOKEN_BLACKLIST("token_blacklist");
 
     private final String code;
 
