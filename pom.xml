@@ -31,6 +31,7 @@
     </properties>
 
     <modules>
+        <module>app-id</module>
         <module>app-core</module>
         <module>app-infra</module>
         <module>app-security</module>
