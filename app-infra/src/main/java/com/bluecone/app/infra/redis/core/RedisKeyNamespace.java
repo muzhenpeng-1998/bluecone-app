@@ -14,7 +14,8 @@ public enum RedisKeyNamespace {
     LOCK("lock"),
     RATE_LIMIT("rate_limit"),
     TOKEN_BLACKLIST("token_blacklist"),
-    EVENT("event");
+    EVENT("event"),
+    SCHEDULER("scheduler");
 
     private final String code;
 

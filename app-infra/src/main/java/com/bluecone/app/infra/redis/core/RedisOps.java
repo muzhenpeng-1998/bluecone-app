@@ -250,6 +250,19 @@ public class RedisOps {
     }
 
     /**
+     * 阻塞弹出列表元素，底层使用 BRPOP。
+     *
+     * @param key     Redis key
+     * @param timeout 等待超时时间
+     * @param type    目标类型
+     * @param <T>     泛型返回
+     * @return 映射值，超时返回 null
+     */
+    public <T> T brPop(String key, Duration timeout, Class<T> type) {
+        return execute("BRPOP", key, () -> convert(redisTemplate.opsForList().rightPop(key, timeout), type));
+    }
+
+    /**
      * 获取列表区间元素。
      *
      * @param key   Redis key
