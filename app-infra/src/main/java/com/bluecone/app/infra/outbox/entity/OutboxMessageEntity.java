@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  * Outbox 持久化实体，映射表 bc_outbox_message。
  *
  * <p>包含事件元信息、序列化载荷、重试状态等字段，驱动状态机：
- * NEW → PUBLISHED → DONE / FAILED → DEAD。</p>
+ * NEW → DONE / FAILED → DEAD（移除中间态以避免悬挂）。</p>
  */
 @TableName("bc_outbox_message")
 public class OutboxMessageEntity {

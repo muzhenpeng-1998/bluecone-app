@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS bc_outbox_message (
     payload JSON NOT NULL COMMENT '事件载荷，序列化后的 DomainEvent',
     headers JSON NULL COMMENT '元数据/扩展头，traceId/tenantId 等',
     tenant_id BIGINT NULL COMMENT '租户 ID，便于多租户隔离与清理',
-    status VARCHAR(32) NOT NULL COMMENT 'NEW / PUBLISHED / DONE / FAILED / DEAD',
+    status VARCHAR(32) NOT NULL COMMENT 'NEW / DONE / FAILED / DEAD',
     retry_count INT NOT NULL DEFAULT 0 COMMENT '已重试次数',
     next_retry_at TIMESTAMP NULL COMMENT '下一次重试时间',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

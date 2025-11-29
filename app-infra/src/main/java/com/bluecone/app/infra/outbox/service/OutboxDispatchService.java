@@ -69,11 +69,13 @@ public class OutboxDispatchService {
         }
     }
 
+    /**
+     * Dispatches a single outbox record without persisting intermediate states.
+     * Avoiding a PUBLISHED/PROCESSING status ensures we never leave records hanging
+     * if the process crashes between status update and actual handler execution.
+     */
     private void dispatchSingle(final OutboxMessageEntity message) {
         Objects.requireNonNull(message, "message must not be null");
-        if (!repository.markPublished(message.getId())) {
-            log.warn("[Outbox] mark published failed id={}", message.getId());
-        }
         Map<String, String> headers = deserializeHeaders(message);
         DomainEvent event = serializer.deserialize(message.getPayload(), headers);
 
@@ -94,6 +96,7 @@ public class OutboxDispatchService {
             }
             repository.markDone(message.getId());
             message.setStatus(OutboxMessageStatus.DONE);
+            message.setNextRetryAt(null);
             metricsRecorder.onPublishedSuccess(message);
             log.info("[Outbox] delivered eventType={} eventKey={} outboxId={}", message.getEventType(), message.getEventKey(), message.getId());
         } catch (Exception ex) {
@@ -124,6 +127,7 @@ public class OutboxDispatchService {
         LocalDateTime nextRetryAt = dead ? null : LocalDateTime.now().plus(retryPolicy.nextDelay(nextRetry));
         repository.markFailed(message.getId(), nextRetry, nextRetryAt, dead);
         message.setRetryCount(nextRetry);
+        message.setNextRetryAt(nextRetryAt);
         message.setStatus(dead ? OutboxMessageStatus.DEAD : OutboxMessageStatus.FAILED);
         if (dead) {
             metricsRecorder.onDeadLetter(message, ex);

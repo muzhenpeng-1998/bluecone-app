@@ -6,14 +6,14 @@
 3. 事件以 `NEW` 状态写入 `bc_outbox_message`。  
 4. 定时任务扫描 `NEW/FAILED` 且 `next_retry_at <= now`。  
 5. 反序列化事件 → 路由 `EventHandler` → 执行。  
-6. 成功：`PUBLISHED → DONE`；失败：`retry+1` 并回写 `FAILED/DEAD`。  
+6. 成功：`DONE`；失败：`retry+1` 并回写 `FAILED/DEAD`。  
 7. 清理任务定期删除过期的 `DONE/DEAD`。
 
 ## 状态机
 ```
-NEW --dispatch--> PUBLISHED --success--> DONE
-                     |--failure--> FAILED --超限--> DEAD
-                                   \--重试--> NEW(或保持 FAILED 待重试)
+NEW --dispatch--> DONE
+   \--failure--> FAILED --超限--> DEAD
+                  \--重试--> NEW(或保持 FAILED 待重试)
 ```
 
 ## 重试机制

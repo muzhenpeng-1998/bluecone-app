@@ -45,13 +45,6 @@ public class OutboxMessageRepository {
         return mapper.selectList(wrapper);
     }
 
-    public boolean markPublished(final Long id) {
-        LambdaUpdateWrapper<OutboxMessageEntity> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(OutboxMessageEntity::getId, id)
-                .set(OutboxMessageEntity::getStatus, OutboxMessageStatus.PUBLISHED);
-        return mapper.update(null, wrapper) > 0;
-    }
-
     public boolean markDone(final Long id) {
         LambdaUpdateWrapper<OutboxMessageEntity> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(OutboxMessageEntity::getId, id)
