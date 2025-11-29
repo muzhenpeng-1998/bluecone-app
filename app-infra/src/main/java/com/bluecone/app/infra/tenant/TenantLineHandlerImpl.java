@@ -100,6 +100,10 @@ public class TenantLineHandlerImpl implements TenantLineHandler {
         // if ("tenant".equalsIgnoreCase(tableName)) {
         //     return true;
         // }
+         // Outbox 表为全局队列，不做租户隔离
+         if ("bc_outbox_message".equalsIgnoreCase(tableName)) {
+             return true;
+         }
 
         // 当前返回 false，表示所有表都启用租户隔离
         return false;

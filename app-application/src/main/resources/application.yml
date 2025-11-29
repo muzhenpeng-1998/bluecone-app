@@ -2,8 +2,6 @@ server:
   port: 8080
 
 spring:
-  profiles:
-    active: dev
   application:
     name: bluecone-app
 
@@ -52,3 +50,19 @@ bluecone:
       tenant-config:
         ttl-seconds: 1800
         cache-null: false
+
+  outbox:
+    enabled: true
+    publish-cron: "0/5 * * * * ?"    # 调试时 5 秒扫描一次
+    clean-cron: "0 0 3 * * ?"        # 每日 3 点清理 DONE/DEAD
+    max-retries: 5
+    base-delay-seconds: 1
+    max-delay-seconds: 300
+    backoff-multiplier: 2.0
+    dispatch-batch-size: 100
+    clean-retention-days: 7
+    consumption-dedup-days: 7
+
+logging:
+  level:
+    com.bluecone.app.infra.outbox: DEBUG
