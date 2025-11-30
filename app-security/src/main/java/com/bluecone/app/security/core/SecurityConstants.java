@@ -13,6 +13,7 @@ public final class SecurityConstants {
 
     public static final String[] PERMIT_ALL_PATHS = {
             "/api/auth/**",
+            "/api/gw/auth/**",
             "/actuator/health",
             "/error"
     };
