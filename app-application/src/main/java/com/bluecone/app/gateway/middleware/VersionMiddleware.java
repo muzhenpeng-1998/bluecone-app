@@ -46,9 +46,6 @@ public class VersionMiddleware implements ApiMiddleware {
         if (StringUtils.hasText(queryVersion)) {
             return normalize(queryVersion);
         }
-        if (ctx.getRequest().getMethod() != null) {
-            HttpMethod.resolve(ctx.getRequest().getMethod());
-        }
         Matcher matcher = VERSION_IN_PATH.matcher(ctx.getRequest().getRequestURI() + "/");
         if (matcher.find()) {
             return "v" + matcher.group(1);
