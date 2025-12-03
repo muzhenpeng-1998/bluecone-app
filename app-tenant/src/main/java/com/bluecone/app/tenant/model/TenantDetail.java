@@ -7,7 +7,10 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * 租户详情聚合，聚合租户主体、认证、套餐、平台账号等。
+ * 租户详情聚合视图。
+ * - 面向上层 API 的只读模型，不直接暴露 Entity
+ * - 聚合 tenant 主表 + profile + plan + platformAccounts + media + settings
+ * - 便于一次查询返回完整信息，减少 Controller/网关拼装
  */
 @Value
 @Builder

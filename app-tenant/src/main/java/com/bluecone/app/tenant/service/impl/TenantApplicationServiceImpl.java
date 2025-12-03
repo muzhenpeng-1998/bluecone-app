@@ -52,6 +52,12 @@ import org.springframework.util.StringUtils;
 
 /**
  * 租户聚合应用服务，实现跨表编排与审计。
+ *
+ * 设计约束：
+ * 1) 编排而非堆业务到 Controller：一次方法调用内部完成多表写入/读取，保持上层简洁。
+ * 2) 审计内建：所有变更入口都写入 tenant_audit_log，方便后续稽核。
+ * 3) Upsert/幂等：平台账号按平台类型 upsert，profile 不存在自动插入。
+ * 4) 可扩展：settings 采用 key-value，便于套餐等配置扩展；留有缓存/读写分离切入点。
  */
 @Service
 @RequiredArgsConstructor

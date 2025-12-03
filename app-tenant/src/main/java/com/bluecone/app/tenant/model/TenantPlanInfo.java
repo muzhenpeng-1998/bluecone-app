@@ -7,6 +7,8 @@ import lombok.Value;
 
 /**
  * 套餐信息视图。
+ * - 来自 settings 或 billing 与 plan 表组合
+ * - 便于在列表/详情中统一展示套餐名、价格、到期时间
  */
 @Value
 @Builder

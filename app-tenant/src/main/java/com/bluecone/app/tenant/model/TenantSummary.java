@@ -5,7 +5,9 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * 租户精简视图，供列表/下拉使用。
+ * 租户精简视图。
+ * - 主要用于列表/下拉展示，包含套餐信息的核心字段
+ * - 避免在列表场景加载冗余大字段（媒体、平台账号等）
  */
 @Value
 @Builder
