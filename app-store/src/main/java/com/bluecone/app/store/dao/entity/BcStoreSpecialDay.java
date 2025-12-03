@@ -7,7 +7,6 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
@@ -17,7 +16,6 @@ import lombok.Data;
  * @since 2025-12-03
  */
 @Data
-@Schema(name = "BcStoreSpecialDay", description = "")
 public class BcStoreSpecialDay implements Serializable {
     private static final long serialVersionUID = 1L;
 

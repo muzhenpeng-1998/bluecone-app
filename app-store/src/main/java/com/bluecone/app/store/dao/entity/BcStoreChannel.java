@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.annotation.TableId;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
@@ -15,7 +14,6 @@ import lombok.Data;
  * @since 2025-12-03
  */
 @Data
-@Schema(name = "BcStoreChannel", description = "")
 public class BcStoreChannel implements Serializable {
     private static final long serialVersionUID = 1L;
 

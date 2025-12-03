@@ -1,6 +1,6 @@
 package com.bluecone.app.store.dao.mapper;
 
-import com.bluecone.app.tenant.dao.entity.BcStoreOpeningHours;
+import com.bluecone.app.store.dao.entity.BcStoreOpeningHours;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

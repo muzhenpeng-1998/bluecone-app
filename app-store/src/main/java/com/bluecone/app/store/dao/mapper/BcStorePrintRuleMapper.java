@@ -1,6 +1,6 @@
 package com.bluecone.app.store.dao.mapper;
 
-import com.bluecone.app.tenant.dao.entity.BcStorePrintRule;
+import com.bluecone.app.store.dao.entity.BcStorePrintRule;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

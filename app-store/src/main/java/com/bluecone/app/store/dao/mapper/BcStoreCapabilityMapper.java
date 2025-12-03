@@ -1,6 +1,6 @@
 package com.bluecone.app.store.dao.mapper;
 
-import com.bluecone.app.tenant.dao.entity.BcStoreCapability;
+import com.bluecone.app.store.dao.entity.BcStoreCapability;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

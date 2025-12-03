@@ -1,8 +1,8 @@
 package com.bluecone.app.store.dao.service.impl;
 
-import com.bluecone.app.tenant.dao.entity.BcStoreDevice;
-import com.bluecone.app.tenant.dao.mapper.BcStoreDeviceMapper;
-import com.bluecone.app.tenant.dao.service.IBcStoreDeviceService;
+import com.bluecone.app.store.dao.entity.BcStoreDevice;
+import com.bluecone.app.store.dao.mapper.BcStoreDeviceMapper;
+import com.bluecone.app.store.dao.service.IBcStoreDeviceService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 

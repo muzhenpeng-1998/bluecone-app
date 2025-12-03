@@ -1,6 +1,6 @@
 package com.bluecone.app.store.dao.service;
 
-import com.bluecone.app.tenant.dao.entity.BcStoreChannel;
+import com.bluecone.app.store.dao.entity.BcStoreChannel;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
