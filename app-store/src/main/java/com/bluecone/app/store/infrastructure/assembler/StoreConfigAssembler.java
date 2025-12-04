@@ -51,7 +51,7 @@ public class StoreConfigAssembler {
                 .industryType(store.getIndustryType())
                 .cityCode(store.getCityCode())
                 .status(store.getStatus())
-                .openForOrders(store.getOpenForOrders())
+                .openForOrders(Boolean.TRUE.equals(store.getOpenForOrders()))
                 .configVersion(store.getConfigVersion())
                 .capabilities(toCapabilityModels(capabilities))
                 .openingSchedule(buildOpeningSchedule(openingHours, specialDays))

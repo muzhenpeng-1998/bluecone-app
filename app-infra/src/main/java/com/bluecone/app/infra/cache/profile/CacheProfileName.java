@@ -6,5 +6,8 @@ package com.bluecone.app.infra.cache.profile;
 public enum CacheProfileName {
     USER_PROFILE,
     ORDER_DETAIL,
-    TENANT_CONFIG
+    TENANT_CONFIG,
+    STORE_CONFIG,
+    STORE_BASE,
+    STORE_SNAPSHOT
 }

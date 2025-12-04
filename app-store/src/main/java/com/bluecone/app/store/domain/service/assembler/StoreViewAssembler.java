@@ -1,10 +1,11 @@
-package com.bluecone.app.store.infrastructure.assembler;
+package com.bluecone.app.store.domain.service.assembler;
 
 import com.bluecone.app.store.api.dto.StoreBaseView;
 import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
 import com.bluecone.app.store.domain.model.StoreCapabilityModel;
 import com.bluecone.app.store.domain.model.StoreChannelModel;
 import com.bluecone.app.store.domain.model.StoreConfig;
+import com.bluecone.app.store.dao.entity.BcStore;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -15,18 +16,42 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 将领域聚合 StoreConfig 装配为对外只读视图（基础信息/订单快照）。
- * <p>高隔离：外部模块拿到的是 DTO，不会直接依赖领域模型。</p>
- * <p>高并发：快照装配后可直接缓存，减少重复装配成本。</p>
+ * 领域层装配器：负责将 StoreConfig 聚合裁剪为对外 DTO。
+ * <p>高隔离：仅输出视图 DTO，避免外部模块直接依赖领域对象。</p>
+ * <p>高并发：装配产物可直接作为快照缓存的载体，减少重复组装。</p>
  */
 @Component
-public class StoreSnapshotAssembler {
+public class StoreViewAssembler {
 
-    public StoreBaseView toBaseView(StoreConfig config) {
+    /**
+     * 将主表实体转换为基础视图，供列表/详情直接使用。
+     */
+    public StoreBaseView toStoreBaseView(BcStore entity) {
+        if (entity == null) {
+            return null;
+        }
+        return StoreBaseView.builder()
+                .tenantId(entity.getTenantId())
+                .storeId(entity.getId())
+                .storeCode(entity.getStoreCode())
+                .name(entity.getName())
+                .shortName(entity.getShortName())
+                .industryType(entity.getIndustryType())
+                .cityCode(entity.getCityCode())
+                .status(entity.getStatus())
+                .openForOrders(Boolean.TRUE.equals(entity.getOpenForOrders()))
+                .logoUrl(entity.getLogoUrl())
+                .coverUrl(entity.getCoverUrl())
+                .build();
+    }
+
+    /**
+     * 裁剪基础信息视图。
+     */
+    public StoreBaseView toStoreBaseView(StoreConfig config) {
         if (config == null) {
             return null;
         }
-        // 将聚合中的基础信息映射到只读视图，避免外部直接依赖领域对象
         return StoreBaseView.builder()
                 .tenantId(config.getTenantId())
                 .storeId(config.getStoreId())
@@ -36,15 +61,17 @@ public class StoreSnapshotAssembler {
                 .industryType(config.getIndustryType())
                 .cityCode(config.getCityCode())
                 .status(config.getStatus())
-                .openForOrders(config.getOpenForOrders())
+                .openForOrders(config.isOpenForOrders())
                 .build();
     }
 
+    /**
+     * 裁剪订单场景快照，仅保留高频字段。
+     */
     public StoreOrderSnapshot toOrderSnapshot(StoreConfig config, LocalDateTime now, String channelType) {
         if (config == null) {
             return null;
         }
-        // 收集已启用能力，用于高频下单校验
         Set<String> enabledCapabilities = Optional.ofNullable(config.getCapabilities())
                 .orElse(Collections.emptyList())
                 .stream()
@@ -52,7 +79,6 @@ public class StoreSnapshotAssembler {
                 .map(StoreCapabilityModel::getCapability)
                 .collect(Collectors.toSet());
 
-        // 匹配当前渠道绑定
         StoreChannelModel matchedChannel = Optional.ofNullable(config.getChannels())
                 .orElse(Collections.emptyList())
                 .stream()
@@ -60,14 +86,13 @@ public class StoreSnapshotAssembler {
                 .findFirst()
                 .orElse(null);
 
-        // TODO: 可在此处结合 StoreOpenStateService 计算 currentlyOpen/specialDayHit，并写入快照
         return StoreOrderSnapshot.builder()
                 .storeId(config.getStoreId())
                 .storeName(config.getName())
                 .cityCode(config.getCityCode())
                 .industryType(config.getIndustryType())
                 .status(config.getStatus())
-                .openForOrders(config.getOpenForOrders())
+                .openForOrders(config.isOpenForOrders())
                 .enabledCapabilities(enabledCapabilities)
                 .channelType(channelType)
                 .channelStatus(matchedChannel != null ? matchedChannel.getStatus() : null)

@@ -30,6 +30,14 @@ public class StoreContextCache {
         cache.put(buildKey(tenantId, storeId, channelType, snapshot.getConfigVersion()), snapshot);
     }
 
+    /**
+     * 让目标门店的快照缓存失效，避免继续复用旧版本数据。
+     */
+    public void evictStore(Long tenantId, Long storeId) {
+        String prefix = "store:snapshot:" + tenantId + ":" + storeId + ":";
+        cache.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
     private String buildKey(Long tenantId, Long storeId, String channelType, Long configVersion) {
         return "store:snapshot:" + tenantId + ":" + storeId + ":" + channelType + ":" + configVersion;
     }

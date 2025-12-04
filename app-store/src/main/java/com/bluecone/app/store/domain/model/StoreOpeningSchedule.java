@@ -37,8 +37,66 @@ public class StoreOpeningSchedule {
      * @return true 表示营业，false 表示不营业
      */
     public boolean isOpenAt(LocalDateTime dateTime) {
-        // TODO 后续补充具体判断逻辑：先判断特殊日，再回落到常规营业时间
-        return false;
+        if (dateTime == null) {
+            return false;
+        }
+        // 1）拆解出日期/星期，weekday 取值 1~7（周一=1）
+        LocalDate date = dateTime.toLocalDate();
+        int weekday = dateTime.getDayOfWeek().getValue();
+        LocalTime time = dateTime.toLocalTime();
+
+        // 2）优先检查特殊日：命中 CLOSED 直接关店；命中 SPECIAL_TIME 则按时间段判定
+        if (specialDays != null && !specialDays.isEmpty()) {
+            for (SpecialDayItem item : specialDays) {
+                if (item == null || item.getDate() == null) {
+                    continue;
+                }
+                if (!item.getDate().isEqual(date)) {
+                    continue;
+                }
+                if ("CLOSED".equalsIgnoreCase(item.getSpecialType())) {
+                    return false;
+                }
+                if ("SPECIAL_TIME".equalsIgnoreCase(item.getSpecialType())) {
+                    LocalTime start = item.getStartTime();
+                    LocalTime end = item.getEndTime();
+                    if (start != null && end != null) {
+                        return !time.isBefore(start) && time.isBefore(end);
+                    }
+                    // 未配置时间段则视为全天营业
+                    return true;
+                }
+                // 其他类型暂不处理，回落到常规营业时间
+                break;
+            }
+        }
+
+        // 3）常规营业时间：先找出匹配 weekday 的段，再判断是否在 REGULAR 且不落入 BREAK
+        if (regularHours == null || regularHours.isEmpty()) {
+            return false;
+        }
+
+        boolean inRegular = regularHours.stream()
+                .filter(item -> item != null && item.getWeekday() == weekday)
+                .filter(item -> "REGULAR".equalsIgnoreCase(item.getPeriodType()))
+                .anyMatch(item -> within(time, item.getStartTime(), item.getEndTime()));
+        if (!inRegular) {
+            return false;
+        }
+
+        boolean inBreak = regularHours.stream()
+                .filter(item -> item != null && item.getWeekday() == weekday)
+                .filter(item -> "BREAK".equalsIgnoreCase(item.getPeriodType()))
+                .anyMatch(item -> within(time, item.getStartTime(), item.getEndTime()));
+        return !inBreak;
+    }
+
+    private boolean within(LocalTime time, LocalTime start, LocalTime end) {
+        if (time == null || start == null || end == null) {
+            return false;
+        }
+        // 半开区间：[start, end)，避免重叠边界重复判定
+        return !time.isBefore(start) && time.isBefore(end);
     }
 
     /**
@@ -49,7 +107,7 @@ public class StoreOpeningSchedule {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OpeningHoursItem {
-        private Byte weekday;
+        private int weekday;
         private LocalTime startTime;
         private LocalTime endTime;
         private String periodType;
@@ -67,5 +125,9 @@ public class StoreOpeningSchedule {
         private String specialType;
         private LocalTime startTime;
         private LocalTime endTime;
+        /**
+         * 备注信息，便于运营配置说明。
+         */
+        private String remark;
     }
 }

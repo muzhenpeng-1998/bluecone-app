@@ -1,6 +1,8 @@
 package com.bluecone.app.exception;
 
+import com.bluecone.app.api.ApiResponse;
 import com.bluecone.app.core.exception.ApiErrorResponse;
+import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.core.log.error.ExceptionEvent;
@@ -31,12 +33,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 处理统一 BizException，返回标准 ApiResponse。
+     */
+    @ExceptionHandler(BizException.class)
+    public ApiResponse<Void> handleBizException(BizException ex) {
+        return ApiResponse.fail(ex.getCode(), ex.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleException(Exception ex, HttpServletRequest request) {
         String path = request.getRequestURI();
         ApiErrorResponse response = ApiErrorResponse.of(
-                ErrorCode.INTERNAL_ERROR.getCode(),
-                ErrorCode.INTERNAL_ERROR.getMessage(),
+                com.bluecone.app.core.exception.ErrorCode.INTERNAL_ERROR.getCode(),
+                com.bluecone.app.core.exception.ErrorCode.INTERNAL_ERROR.getMessage(),
                 path
         );
 

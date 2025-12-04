@@ -53,7 +53,7 @@ public class StoreRepositoryImpl implements StoreRepository {
 
     @Override
     public StoreConfig loadFullConfig(Long tenantId, Long storeId) {
-        // 直接从 DB 聚合多张表，后续可由上层通过缓存包装（本地 + Redis）
+        // 1）查主档 bc_store（限定租户 + 门店 + 未删除）
         BcStore store = bcStoreMapper.selectOne(new LambdaQueryWrapper<BcStore>()
                 .eq(BcStore::getTenantId, tenantId)
                 .eq(BcStore::getId, storeId)
@@ -62,18 +62,22 @@ public class StoreRepositoryImpl implements StoreRepository {
             return null;
         }
 
+        // 2）查询能力配置
         List<BcStoreCapability> capabilities = bcStoreCapabilityMapper.selectList(new LambdaQueryWrapper<BcStoreCapability>()
                 .eq(BcStoreCapability::getTenantId, tenantId)
                 .eq(BcStoreCapability::getStoreId, storeId)
                 .eq(BcStoreCapability::getIsDeleted, false));
+        // 3）查询常规营业时间
         List<BcStoreOpeningHours> openingHours = bcStoreOpeningHoursMapper.selectList(new LambdaQueryWrapper<BcStoreOpeningHours>()
                 .eq(BcStoreOpeningHours::getTenantId, tenantId)
                 .eq(BcStoreOpeningHours::getStoreId, storeId)
                 .eq(BcStoreOpeningHours::getIsDeleted, false));
+        // 4）查询特殊日
         List<BcStoreSpecialDay> specialDays = bcStoreSpecialDayMapper.selectList(new LambdaQueryWrapper<BcStoreSpecialDay>()
                 .eq(BcStoreSpecialDay::getTenantId, tenantId)
                 .eq(BcStoreSpecialDay::getStoreId, storeId)
                 .eq(BcStoreSpecialDay::getIsDeleted, false));
+        // 预留其他配置（渠道/资源/设备/打印/员工）
         List<BcStoreChannel> channels = bcStoreChannelMapper.selectList(new LambdaQueryWrapper<BcStoreChannel>()
                 .eq(BcStoreChannel::getTenantId, tenantId)
                 .eq(BcStoreChannel::getStoreId, storeId)

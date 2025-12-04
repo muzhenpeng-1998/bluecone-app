@@ -62,7 +62,7 @@ public class StoreConfig {
     /**
      * 是否可接单（配置维度开关）。
      */
-    private Boolean openForOrders;
+    private boolean openForOrders;
 
     /**
      * 配置版本号，乐观锁与缓存版本化的核心字段。

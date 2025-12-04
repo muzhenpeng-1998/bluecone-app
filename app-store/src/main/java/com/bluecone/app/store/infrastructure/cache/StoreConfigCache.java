@@ -33,6 +33,14 @@ public class StoreConfigCache {
         cache.put(buildKey(config.getTenantId(), config.getStoreId(), config.getConfigVersion()), config);
     }
 
+    /**
+     * 使指定门店的缓存失效，防止后续读取到旧版本配置。
+     */
+    public void evictStore(Long tenantId, Long storeId) {
+        String prefix = "store:config:" + tenantId + ":" + storeId + ":";
+        cache.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
     private String buildKey(Long tenantId, Long storeId, Long configVersion) {
         return "store:config:" + tenantId + ":" + storeId + ":" + configVersion;
     }

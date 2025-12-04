@@ -4,7 +4,6 @@ import com.bluecone.app.store.api.StoreFacade;
 import com.bluecone.app.store.api.dto.StoreBaseView;
 import com.bluecone.app.store.api.dto.StoreOrderAcceptResult;
 import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
-import com.bluecone.app.store.application.StoreApplicationService;
 import com.bluecone.app.store.application.command.ChangeStoreStatusCommand;
 import com.bluecone.app.store.application.command.CreateStoreCommand;
 import com.bluecone.app.store.application.command.ToggleOpenForOrdersCommand;
@@ -14,7 +13,11 @@ import com.bluecone.app.store.application.command.UpdateStoreOpeningHoursCommand
 import com.bluecone.app.store.application.command.UpdateStoreSpecialDaysCommand;
 import com.bluecone.app.store.application.query.StoreDetailQuery;
 import com.bluecone.app.store.application.query.StoreListQuery;
+import com.bluecone.app.store.application.service.StoreCommandService;
+import com.bluecone.app.store.application.service.StoreQueryService;
+import com.bluecone.app.store.domain.model.StoreConfig;
 import com.bluecone.app.store.domain.service.StoreContextProvider;
+import com.bluecone.app.store.domain.service.StoreOpenStateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +26,7 @@ import java.util.List;
 
 /**
  * Facade 实现，对外模块（订单、用户等）只能通过此类访问门店能力，确保高隔离。
- * <p>读请求委派到 StoreContextProvider，写请求委派到 StoreApplicationService。</p>
+ * <p>读请求委派到 StoreContextProvider/StoreQueryService，写请求委派到 StoreCommandService。</p>
  * <p>高稳定：内部可挂载缓存与降级策略，外部调用方无需感知。</p>
  */
 @Service
@@ -31,7 +34,9 @@ import java.util.List;
 public class StoreFacadeImpl implements StoreFacade {
 
     private final StoreContextProvider storeContextProvider;
-    private final StoreApplicationService storeApplicationService;
+    private final StoreOpenStateService storeOpenStateService;
+    private final StoreQueryService storeQueryService;
+    private final StoreCommandService storeCommandService;
 
     @Override
     public StoreBaseView getStoreBase(Long tenantId, Long storeId) {
@@ -45,51 +50,56 @@ public class StoreFacadeImpl implements StoreFacade {
 
     @Override
     public StoreOrderAcceptResult checkOrderAcceptable(Long tenantId, Long storeId, String capability, LocalDateTime now, String channelType) {
-        return storeContextProvider.checkOrderAcceptable(tenantId, storeId, capability, now, channelType);
+        // 读流程：加载 StoreConfig 聚合后交给领域服务判断，确保规则集中
+        StoreConfig config = storeQueryService.loadStoreConfig(tenantId, storeId);
+        return storeOpenStateService.check(config, capability, now, channelType);
     }
 
     @Override
     public List<StoreBaseView> list(StoreListQuery query) {
-        return storeApplicationService.list(query);
+        // 列表查询走应用层查询服务，避免外部依赖 Mapper
+        return storeQueryService.listStores(query);
     }
 
     @Override
     public StoreBaseView detail(StoreDetailQuery query) {
-        return storeApplicationService.detail(query);
+        // 详情查询同样走应用层查询服务
+        return storeQueryService.getStoreDetail(query);
     }
 
     @Override
     public void createStore(CreateStoreCommand command) {
-        storeApplicationService.createStore(command);
+        // Facade 不做复杂校验，直接交给写侧应用服务
+        storeCommandService.createStore(command);
     }
 
     @Override
     public void updateStoreBase(UpdateStoreBaseCommand command) {
-        storeApplicationService.updateStoreBase(command);
+        storeCommandService.updateStoreBase(command);
     }
 
     @Override
     public void updateCapabilities(UpdateStoreCapabilitiesCommand command) {
-        storeApplicationService.updateCapabilities(command);
+        storeCommandService.updateCapabilities(command);
     }
 
     @Override
     public void updateOpeningHours(UpdateStoreOpeningHoursCommand command) {
-        storeApplicationService.updateOpeningHours(command);
+        storeCommandService.updateOpeningHours(command);
     }
 
     @Override
     public void updateSpecialDays(UpdateStoreSpecialDaysCommand command) {
-        storeApplicationService.updateSpecialDays(command);
+        storeCommandService.updateSpecialDays(command);
     }
 
     @Override
     public void changeStatus(ChangeStoreStatusCommand command) {
-        storeApplicationService.changeStatus(command);
+        storeCommandService.changeStatus(command);
     }
 
     @Override
     public void toggleOpenForOrders(ToggleOpenForOrdersCommand command) {
-        storeApplicationService.toggleOpenForOrders(command);
+        storeCommandService.toggleOpenForOrders(command);
     }
 }

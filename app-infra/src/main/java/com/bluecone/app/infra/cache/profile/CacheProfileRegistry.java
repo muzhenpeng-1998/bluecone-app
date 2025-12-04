@@ -57,6 +57,27 @@ public class CacheProfileRegistry {
                 .cacheNull(false)
                 .strongConsistency(true)
                 .build());
+
+        registry.put(CacheProfileName.STORE_CONFIG, CacheProfile.builder(CacheProfileName.STORE_CONFIG)
+                .domain("store-config")
+                .ttl(Duration.ofMinutes(5))
+                .cacheNull(false)
+                .strongConsistency(true)
+                .build());
+
+        registry.put(CacheProfileName.STORE_BASE, CacheProfile.builder(CacheProfileName.STORE_BASE)
+                .domain("store-base")
+                .ttl(Duration.ofMinutes(3))
+                .cacheNull(true)
+                .strongConsistency(true)
+                .build());
+
+        registry.put(CacheProfileName.STORE_SNAPSHOT, CacheProfile.builder(CacheProfileName.STORE_SNAPSHOT)
+                .domain("store-snapshot")
+                .ttl(Duration.ofMinutes(2))
+                .cacheNull(true)
+                .strongConsistency(true)
+                .build());
     }
 
     private void applyOverrides() {

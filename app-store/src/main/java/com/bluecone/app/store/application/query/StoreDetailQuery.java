@@ -15,4 +15,8 @@ import lombok.NoArgsConstructor;
 public class StoreDetailQuery {
     private Long tenantId;
     private Long storeId;
+    /**
+     * 支持按门店编码查询。
+     */
+    private String storeCode;
 }

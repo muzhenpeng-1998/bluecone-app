@@ -1,8 +1,11 @@
 package com.bluecone.app.store.domain.service.impl;
 
 import com.bluecone.app.store.api.dto.StoreOrderAcceptResult;
+import com.bluecone.app.store.domain.error.StoreErrorCode;
 import com.bluecone.app.store.domain.model.StoreConfig;
 import com.bluecone.app.store.domain.service.StoreOpenStateService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -15,25 +18,78 @@ import java.time.LocalDateTime;
 @Service
 public class StoreOpenStateServiceImpl implements StoreOpenStateService {
 
+    private static final Logger log = LoggerFactory.getLogger(StoreOpenStateServiceImpl.class);
+
     @Override
     public StoreOrderAcceptResult check(StoreConfig config, String capability, LocalDateTime now, String channelType) {
-        // 1. 检查门店状态是否 OPEN
-        // TODO: 根据 config.getStatus() 判定是否营业，否则返回 STORE_CLOSED
-        // 2. 检查开关 openForOrders
-        // TODO: openForOrders=false 时返回 STORE_ORDER_DISABLED
-        // 3. 检查能力是否启用
-        // TODO: capability 未启用时返回 CAPABILITY_DISABLED
-        // 4. 检查特殊日配置（bc_store_special_day）
-        // TODO: 若特殊日关闭/限时，应优先返回特殊日原因
-        // 5. 检查常规营业时间（bc_store_opening_hours）
-        // TODO: 使用 openingSchedule.isOpenAt(now) 判定
-        // 6. 检查渠道绑定状态（bc_store_channel）
-        // TODO: 渠道未绑定或禁用时返回 CHANNEL_BLOCKED
-        // 以上步骤未来可结合缓存/熔断实现降级策略
+        // 1）配置判空
+        if (config == null) {
+            return StoreOrderAcceptResult.builder()
+                    .acceptable(false)
+                    .reasonCode(StoreErrorCode.STORE_NOT_FOUND.getCode())
+                    .reasonMessage(StoreErrorCode.STORE_NOT_FOUND.getMessage())
+                    .build();
+        }
+
+        // 2）检查门店状态
+        if (!"OPEN".equalsIgnoreCase(config.getStatus())) {
+            return StoreOrderAcceptResult.builder()
+                    .acceptable(false)
+                    .reasonCode(StoreErrorCode.STORE_STATUS_NOT_OPEN.getCode())
+                    .reasonMessage(StoreErrorCode.STORE_STATUS_NOT_OPEN.getMessage())
+                    .build();
+        }
+
+        // 3）接单开关
+        if (!config.isOpenForOrders()) {
+            return StoreOrderAcceptResult.builder()
+                    .acceptable(false)
+                    .reasonCode(StoreErrorCode.STORE_NOT_ACCEPTING_ORDERS.getCode())
+                    .reasonMessage(StoreErrorCode.STORE_NOT_ACCEPTING_ORDERS.getMessage())
+                    .build();
+        }
+
+        // 4）能力校验
+        if (capability != null && !capability.isBlank()) {
+            boolean enabled = config.getCapabilities() != null && config.getCapabilities().stream()
+                    .filter(item -> item.getCapability() != null)
+                    .anyMatch(item -> capability.equalsIgnoreCase(item.getCapability()) && Boolean.TRUE.equals(item.getEnabled()));
+            if (!enabled) {
+                return StoreOrderAcceptResult.builder()
+                        .acceptable(false)
+                        .reasonCode(StoreErrorCode.STORE_CAPABILITY_DISABLED.getCode())
+                        .reasonMessage(StoreErrorCode.STORE_CAPABILITY_DISABLED.getMessage())
+                        .build();
+            }
+        }
+
+        // 5）营业时间 / 特殊日判定
+        if (config.getOpeningSchedule() == null) {
+            return StoreOrderAcceptResult.builder()
+                    .acceptable(false)
+                    .reasonCode(StoreErrorCode.STORE_NO_OPENING_CONFIG.getCode())
+                    .reasonMessage(StoreErrorCode.STORE_NO_OPENING_CONFIG.getMessage())
+                    .build();
+        }
+        boolean open = config.getOpeningSchedule().isOpenAt(now);
+        if (!open) {
+            return StoreOrderAcceptResult.builder()
+                    .acceptable(false)
+                    .reasonCode(StoreErrorCode.STORE_OUT_OF_BUSINESS_HOURS.getCode())
+                    .reasonMessage(StoreErrorCode.STORE_OUT_OF_BUSINESS_HOURS.getMessage())
+                    .build();
+        }
+
+        // 6）渠道校验（骨架：默认可用，后续结合 bc_store_channel 补充）
+        if (channelType != null && !channelType.isBlank()) {
+            log.debug("channelType={} 暂不做额外校验，后续可结合 bc_store_channel 增强", channelType);
+        }
+
+        // 7）全部通过，允许接单
         return StoreOrderAcceptResult.builder()
                 .acceptable(true)
-                .reasonCode(null)
-                .reasonMessage(null)
+                .reasonCode("OK")
+                .reasonMessage("允许接单")
                 .build();
     }
 }
