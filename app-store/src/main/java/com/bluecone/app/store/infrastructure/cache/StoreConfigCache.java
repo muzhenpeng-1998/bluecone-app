@@ -21,6 +21,7 @@ public class StoreConfigCache {
     private final Map<String, StoreConfig> cache = new ConcurrentHashMap<>();
 
     public StoreConfig get(Long tenantId, Long storeId, long configVersion) {
+        // key 带版本号，避免并发更新后的旧缓存被复用
         return cache.get(buildKey(tenantId, storeId, configVersion));
     }
 
@@ -28,6 +29,7 @@ public class StoreConfigCache {
         if (config == null) {
             return;
         }
+        // 未来接入 Redis 时此处可改为写穿透逻辑
         cache.put(buildKey(config.getTenantId(), config.getStoreId(), config.getConfigVersion()), config);
     }
 

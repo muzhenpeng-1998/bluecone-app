@@ -26,6 +26,7 @@ public class StoreSnapshotAssembler {
         if (config == null) {
             return null;
         }
+        // 将聚合中的基础信息映射到只读视图，避免外部直接依赖领域对象
         return StoreBaseView.builder()
                 .tenantId(config.getTenantId())
                 .storeId(config.getStoreId())
@@ -43,6 +44,7 @@ public class StoreSnapshotAssembler {
         if (config == null) {
             return null;
         }
+        // 收集已启用能力，用于高频下单校验
         Set<String> enabledCapabilities = Optional.ofNullable(config.getCapabilities())
                 .orElse(Collections.emptyList())
                 .stream()
@@ -50,6 +52,7 @@ public class StoreSnapshotAssembler {
                 .map(StoreCapabilityModel::getCapability)
                 .collect(Collectors.toSet());
 
+        // 匹配当前渠道绑定
         StoreChannelModel matchedChannel = Optional.ofNullable(config.getChannels())
                 .orElse(Collections.emptyList())
                 .stream()

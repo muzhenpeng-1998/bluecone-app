@@ -24,6 +24,7 @@ import java.util.List;
 /**
  * Facade 实现，对外模块（订单、用户等）只能通过此类访问门店能力，确保高隔离。
  * <p>读请求委派到 StoreContextProvider，写请求委派到 StoreApplicationService。</p>
+ * <p>高稳定：内部可挂载缓存与降级策略，外部调用方无需感知。</p>
  */
 @Service
 @RequiredArgsConstructor

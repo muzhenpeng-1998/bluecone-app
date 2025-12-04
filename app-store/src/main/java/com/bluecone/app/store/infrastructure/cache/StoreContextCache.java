@@ -18,6 +18,7 @@ public class StoreContextCache {
     private final Map<String, StoreOrderSnapshot> cache = new ConcurrentHashMap<>();
 
     public StoreOrderSnapshot get(Long tenantId, Long storeId, String channelType, long configVersion) {
+        // channelType + version 作为维度，确保不同渠道的快照隔离
         return cache.get(buildKey(tenantId, storeId, channelType, configVersion));
     }
 
@@ -25,6 +26,7 @@ public class StoreContextCache {
         if (snapshot == null || snapshot.getConfigVersion() == null) {
             return;
         }
+        // 未来可在此做 TTL 控制或接入多级缓存
         cache.put(buildKey(tenantId, storeId, channelType, snapshot.getConfigVersion()), snapshot);
     }
 

@@ -38,6 +38,7 @@ public class StoreContextProviderImpl implements StoreContextProvider {
         if (config == null) {
             return null;
         }
+        // 通过装配器生成只读视图，避免外部依赖领域对象
         return storeSnapshotAssembler.toBaseView(config);
     }
 

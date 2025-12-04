@@ -34,6 +34,7 @@ import java.util.List;
 /**
  * 门店仓储实现，基于已有 Mapper 从多张表组装 StoreConfig。
  * <p>当前直接访问 DB，后续由上层 StoreContextProvider 增加本地缓存/Redis 缓存包装以支撑高并发。</p>
+ * <p>高隔离：对领域层提供语义化方法，隐藏 ORM 与表结构；高稳定：关键查询/更新均可被缓存与乐观锁保护；高并发：一次性聚合多表形成快照，减少链路内多次 IO。</p>
  */
 @Repository
 @RequiredArgsConstructor
@@ -52,7 +53,7 @@ public class StoreRepositoryImpl implements StoreRepository {
 
     @Override
     public StoreConfig loadFullConfig(Long tenantId, Long storeId) {
-        // 直接从 DB 聚合多张表，后续可由上层通过缓存包装
+        // 直接从 DB 聚合多张表，后续可由上层通过缓存包装（本地 + Redis）
         BcStore store = bcStoreMapper.selectOne(new LambdaQueryWrapper<BcStore>()
                 .eq(BcStore::getTenantId, tenantId)
                 .eq(BcStore::getId, storeId)
@@ -94,6 +95,7 @@ public class StoreRepositoryImpl implements StoreRepository {
                 .eq(BcStoreStaff::getStoreId, storeId)
                 .eq(BcStoreStaff::getIsDeleted, false));
 
+        // 汇总装配为领域聚合 StoreConfig，便于作为快照直接缓存
         return storeConfigAssembler.assembleStoreConfig(
                 store,
                 capabilities,
@@ -109,6 +111,7 @@ public class StoreRepositoryImpl implements StoreRepository {
 
     @Override
     public long getConfigVersion(Long tenantId, Long storeId) {
+        // 只查版本号，避免不必要的列加载
         BcStore store = bcStoreMapper.selectOne(new LambdaQueryWrapper<BcStore>()
                 .select(BcStore::getConfigVersion)
                 .eq(BcStore::getTenantId, tenantId)
@@ -136,13 +139,13 @@ public class StoreRepositoryImpl implements StoreRepository {
 
     @Override
     public void updateOpeningSchedule(Long tenantId, Long storeId, StoreOpeningSchedule schedule) {
-        // TODO: 补充具体更新逻辑（删除旧配置 + 批量插入），并结合 configVersion 保护并发
+        // TODO: 补充具体更新逻辑（删除旧配置 + 批量插入），并结合 configVersion 保护并发；完成后需要刷新缓存
         throw new UnsupportedOperationException("TODO implement updateOpeningSchedule");
     }
 
     @Override
     public void updateCapabilities(Long tenantId, Long storeId, Iterable<StoreCapabilityModel> capabilities) {
-        // TODO: 补充具体更新逻辑（批量 upsert），并结合 configVersion 保护并发
+        // TODO: 补充具体更新逻辑（批量 upsert），并结合 configVersion 保护并发；完成后需要刷新缓存
         throw new UnsupportedOperationException("TODO implement updateCapabilities");
     }
 }

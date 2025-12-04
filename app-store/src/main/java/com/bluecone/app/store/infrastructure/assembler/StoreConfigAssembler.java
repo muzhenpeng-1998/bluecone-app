@@ -41,6 +41,7 @@ public class StoreConfigAssembler {
                                            List<BcStoreDevice> devices,
                                            List<BcStorePrintRule> printRules,
                                            List<BcStoreStaff> staff) {
+        // 该方法在仓储层被调用，负责把多张表的行数据组合成领域聚合
         return StoreConfig.builder()
                 .tenantId(store.getTenantId())
                 .storeId(store.getId())
@@ -77,6 +78,7 @@ public class StoreConfigAssembler {
 
     private StoreOpeningSchedule buildOpeningSchedule(List<BcStoreOpeningHours> openingHours,
                                                       List<BcStoreSpecialDay> specialDays) {
+        // 聚合常规营业时间 + 特殊日，供领域服务一次性判断
         List<StoreOpeningSchedule.OpeningHoursItem> regularHours = openingHours == null ? Collections.emptyList() :
                 openingHours.stream()
                         .filter(item -> !Boolean.TRUE.equals(item.getIsDeleted()))
