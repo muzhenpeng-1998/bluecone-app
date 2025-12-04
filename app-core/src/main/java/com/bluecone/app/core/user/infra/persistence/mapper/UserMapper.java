@@ -1,9 +1,9 @@
-package com.bluecone.app.user.mapper;
+package com.bluecone.app.core.user.infra.persistence.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.bluecone.app.user.domain.UserEntity;
+import com.bluecone.app.core.user.infra.persistence.entity.UserEntity;
 
 /**
  * 用户表 Mapper。

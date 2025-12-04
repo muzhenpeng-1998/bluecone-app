@@ -31,7 +31,6 @@
         <module>app-infra</module>
         <module>app-security</module>
         <module>app-order</module>
-        <module>app-user</module>
         <module>app-tenant</module>
         <module>app-store</module>
         <module>app-application</module>

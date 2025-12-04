@@ -14,8 +14,8 @@ import com.bluecone.app.infra.security.session.AuthSessionService;
 import com.bluecone.app.infra.security.token.TokenProperties;
 import com.bluecone.app.infra.security.token.TokenProvider;
 import com.bluecone.app.infra.security.token.TokenUserContext;
-import com.bluecone.app.user.domain.UserEntity;
-import com.bluecone.app.user.service.UserService;
+import com.bluecone.app.core.user.infra.persistence.entity.UserEntity;
+import com.bluecone.app.core.user.application.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

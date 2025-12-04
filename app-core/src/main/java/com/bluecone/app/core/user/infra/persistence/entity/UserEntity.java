@@ -1,4 +1,4 @@
-package com.bluecone.app.user.domain;
+package com.bluecone.app.core.user.infra.persistence.entity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;

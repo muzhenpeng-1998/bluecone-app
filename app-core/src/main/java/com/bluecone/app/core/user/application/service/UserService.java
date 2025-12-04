@@ -1,4 +1,4 @@
-package com.bluecone.app.user.service;
+package com.bluecone.app.core.user.application.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -13,8 +13,8 @@ import org.springframework.util.StringUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
-import com.bluecone.app.user.domain.UserEntity;
-import com.bluecone.app.user.mapper.UserMapper;
+import com.bluecone.app.core.user.infra.persistence.entity.UserEntity;
+import com.bluecone.app.core.user.infra.persistence.mapper.UserMapper;
 
 import lombok.RequiredArgsConstructor;
 

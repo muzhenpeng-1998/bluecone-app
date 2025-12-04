@@ -33,8 +33,8 @@ import com.bluecone.app.infra.security.token.TokenUserContext;
 import com.bluecone.app.infra.security.token.blacklist.TokenBlacklistService;
 import com.bluecone.app.security.core.SecurityConstants;
 import com.bluecone.app.security.core.SecurityUserPrincipal;
-import com.bluecone.app.user.domain.UserEntity;
-import com.bluecone.app.user.service.UserService;
+import com.bluecone.app.core.user.infra.persistence.entity.UserEntity;
+import com.bluecone.app.core.user.application.service.UserService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
