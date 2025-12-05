@@ -9,5 +9,6 @@ public enum CacheProfileName {
     TENANT_CONFIG,
     STORE_CONFIG,
     STORE_BASE,
-    STORE_SNAPSHOT
+    STORE_SNAPSHOT,
+    INVENTORY_STOCK
 }

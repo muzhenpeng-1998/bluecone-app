@@ -78,6 +78,13 @@ public class CacheProfileRegistry {
                 .cacheNull(true)
                 .strongConsistency(true)
                 .build());
+
+        registry.put(CacheProfileName.INVENTORY_STOCK, CacheProfile.builder(CacheProfileName.INVENTORY_STOCK)
+                .domain("inventory-stock")
+                .ttl(Duration.ofSeconds(30))
+                .cacheNull(true)
+                .strongConsistency(true)
+                .build());
     }
 
     private void applyOverrides() {
