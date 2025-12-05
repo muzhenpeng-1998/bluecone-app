@@ -1,0 +1,80 @@
+package com.bluecone.app.core.user.domain.service;
+
+import com.bluecone.app.core.user.domain.identity.RegisterChannel;
+import com.bluecone.app.core.user.domain.identity.UserIdentity;
+import com.bluecone.app.core.user.domain.identity.UserStatus;
+import com.bluecone.app.core.user.domain.profile.UserProfile;
+import com.bluecone.app.core.user.domain.repository.UserIdentityRepository;
+import com.bluecone.app.core.user.domain.repository.UserProfileRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+/**
+ * 用户领域服务实现，聚合身份与画像初始化逻辑。
+ */
+@Service
+@RequiredArgsConstructor
+public class UserDomainServiceImpl implements UserDomainService {
+
+    private final UserIdentityRepository userIdentityRepository;
+    private final UserProfileRepository userProfileRepository;
+
+    @Override
+    public UserIdentity registerOrLoadByWeChatUnionId(String unionId,
+                                                      String phone,
+                                                      String countryCode,
+                                                      Long firstTenantId,
+                                                      RegisterChannel registerChannel) {
+        Optional<UserIdentity> existing = Optional.empty();
+        if (StringUtils.hasText(unionId)) {
+            existing = userIdentityRepository.findByUnionId(unionId);
+        }
+        if (existing.isEmpty() && StringUtils.hasText(phone)) {
+            existing = userIdentityRepository.findByPhone(countryCode, phone);
+        }
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        UserIdentity identity = new UserIdentity();
+        identity.setUnionId(unionId);
+        identity.setPhone(phone);
+        identity.setCountryCode(countryCode);
+        identity.setRegisterChannel(registerChannel != null ? registerChannel : RegisterChannel.WECHAT_MINI);
+        identity.setStatus(UserStatus.ACTIVE);
+        identity.setFirstTenantId(firstTenantId);
+        identity.setCreatedAt(LocalDateTime.now());
+        identity.setUpdatedAt(LocalDateTime.now());
+        // TODO: 完善邮箱/风控字段等
+        return userIdentityRepository.save(identity);
+    }
+
+    @Override
+    public UserProfile initOrUpdateProfile(Long userId, UserProfile profileInput) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseGet(UserProfile::new);
+        profile.setUserId(userId);
+        if (profileInput != null) {
+            profile.setNickname(profileInput.getNickname());
+            profile.setAvatarUrl(profileInput.getAvatarUrl());
+            profile.setGender(profileInput.getGender());
+            profile.setBirthday(profileInput.getBirthday());
+            profile.setCity(profileInput.getCity());
+            profile.setProvince(profileInput.getProvince());
+            profile.setCountry(profileInput.getCountry());
+            profile.setLanguage(profileInput.getLanguage());
+            profile.setTags(profileInput.getTags());
+            profile.setLastLoginAt(profileInput.getLastLoginAt());
+        }
+        profile.setUpdatedAt(LocalDateTime.now());
+        if (profile.getCreatedAt() == null) {
+            profile.setCreatedAt(LocalDateTime.now());
+        }
+        // TODO: 增加字段合法性校验与敏感词过滤
+        return userProfileRepository.save(profile);
+    }
+}

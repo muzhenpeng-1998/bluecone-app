@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bluecone.app.infra.user.query.MemberReadMapper">
+
+    <resultMap id="MemberListViewMap" type="com.bluecone.app.infra.user.query.MemberListViewDO">
+        <id column="member_id" property="memberId"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="user_id" property="userId"/>
+        <result column="member_no" property="memberNo"/>
+        <result column="status" property="status"/>
+        <result column="nickname" property="nickname"/>
+        <result column="avatar_url" property="avatarUrl"/>
+        <result column="phone" property="phone"/>
+        <result column="level_id" property="levelId"/>
+        <result column="level_name" property="levelName"/>
+        <result column="growth_value" property="growthValue"/>
+        <result column="join_at" property="joinAt"/>
+        <result column="last_login_at" property="lastLoginAt"/>
+    </resultMap>
+
+    <sql id="BaseSelect">
+        SELECT
+            tm.id AS member_id,
+            tm.tenant_id,
+            tm.user_id,
+            tm.member_no,
+            tm.status,
+            up.nickname,
+            up.avatar_url,
+            ui.phone,
+            tm.level_id,
+            ml.level_name,
+            tm.growth_value,
+            tm.join_at,
+            up.last_login_at
+        FROM bc_tenant_member tm
+                 LEFT JOIN bc_user_identity ui ON tm.user_id = ui.id
+                 LEFT JOIN bc_user_profile up ON tm.user_id = up.user_id
+                 LEFT JOIN bc_member_level ml ON tm.level_id = ml.id
+        WHERE tm.tenant_id = #{tenantId}
+    </sql>
+
+    <select id="selectMemberList" resultMap="MemberListViewMap">
+        <include refid="BaseSelect"/>
+        <if test="keyword != null and keyword != ''">
+            AND (ui.phone LIKE CONCAT('%', #{keyword}, '%')
+                OR up.nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR tm.member_no LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="levelId != null">
+            AND tm.level_id = #{levelId}
+        </if>
+        <if test="status != null">
+            AND tm.status = #{status}
+        </if>
+        <if test="minGrowth != null">
+            AND tm.growth_value &gt;= #{minGrowth}
+        </if>
+        <if test="maxGrowth != null">
+            AND tm.growth_value &lt;= #{maxGrowth}
+        </if>
+        <if test="joinStart != null">
+            AND tm.join_at &gt;= #{joinStart}
+        </if>
+        <if test="joinEnd != null">
+            AND tm.join_at &lt;= #{joinEnd}
+        </if>
+        <!-- TODO: 标签筛选 tagIds，可使用 EXISTS 子查询实现“包含全部标签”策略 -->
+        ORDER BY tm.join_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countMemberList" resultType="long">
+        SELECT COUNT(1)
+        <include refid="BaseSelect"/>
+        <if test="keyword != null and keyword != ''">
+            AND (ui.phone LIKE CONCAT('%', #{keyword}, '%')
+                OR up.nickname LIKE CONCAT('%', #{keyword}, '%')
+                OR tm.member_no LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="levelId != null">
+            AND tm.level_id = #{levelId}
+        </if>
+        <if test="status != null">
+            AND tm.status = #{status}
+        </if>
+        <if test="minGrowth != null">
+            AND tm.growth_value &gt;= #{minGrowth}
+        </if>
+        <if test="maxGrowth != null">
+            AND tm.growth_value &lt;= #{maxGrowth}
+        </if>
+        <if test="joinStart != null">
+            AND tm.join_at &gt;= #{joinStart}
+        </if>
+        <if test="joinEnd != null">
+            AND tm.join_at &lt;= #{joinEnd}
+        </if>
+        <!-- TODO: 标签筛选 tagIds -->
+    </select>
+
+</mapper>
