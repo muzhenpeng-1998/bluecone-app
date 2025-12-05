@@ -7,6 +7,7 @@ import com.bluecone.app.product.domain.model.attribute.ProductAttributeGroup;
 import com.bluecone.app.product.domain.model.spec.ProductSpecGroup;
 import com.bluecone.app.product.domain.model.tag.ProductTag;
 import com.bluecone.app.product.domain.model.store.ProductStoreConfig;
+import com.bluecone.app.product.domain.model.ProductCategory;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,8 @@ public class Product implements Serializable {
     private List<AddonGroup> addonGroups;
 
     private List<ProductTag> tags;
+
+    private List<ProductCategory> categories;
 
     private List<ProductStoreConfig> storeConfigs;
 }

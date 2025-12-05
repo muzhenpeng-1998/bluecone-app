@@ -2,6 +2,7 @@ package com.bluecone.app.product.domain.repository;
 
 import com.bluecone.app.product.domain.enums.ProductStatus;
 import com.bluecone.app.product.domain.model.Product;
+import com.bluecone.app.product.domain.model.readmodel.StoreMenuSnapshot;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -32,4 +33,24 @@ public interface ProductRepository {
      * 修改商品状态（草稿/启用/禁用），可结合操作人做审计。
      */
     void changeStatus(Long tenantId, Long productId, ProductStatus newStatus, Long operatorId);
+
+    /**
+     * 高并发读路径：加载单个商品在指定门店与渠道下的完整聚合（可直接用于缓存）。
+     */
+    Product loadProductAggregate(Long tenantId, Long productId, Long storeId, String channel);
+
+    /**
+     * 高并发读路径：按门店+渠道加载可售商品列表（可缓存的聚合视图）。
+     */
+    List<Product> loadAvailableProductsForStore(Long tenantId, Long storeId, String channel);
+
+    /**
+     * 读取门店菜单快照，用于高并发菜单拉取。
+     */
+    StoreMenuSnapshot loadStoreMenuSnapshot(Long tenantId, Long storeId, String channel, String orderScene);
+
+    /**
+     * 写入或覆盖门店菜单快照（简单 upsert，后续可加乐观锁与缓存刷新）。
+     */
+    void saveOrUpdateStoreMenuSnapshot(StoreMenuSnapshot snapshot);
 }
