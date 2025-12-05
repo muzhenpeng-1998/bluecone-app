@@ -33,6 +33,7 @@
         <module>app-order</module>
         <module>app-tenant</module>
         <module>app-store</module>
+        <module>app-product</module>
         <module>app-application</module>
     </modules>
 

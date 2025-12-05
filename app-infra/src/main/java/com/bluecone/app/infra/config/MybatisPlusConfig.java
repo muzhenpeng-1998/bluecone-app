@@ -32,7 +32,7 @@ import org.springframework.context.annotation.Configuration;
  * @since 1.0.0
  */
 @Configuration
-@MapperScan({"com.bluecone.app.**.mapper", "com.bluecone.app.infra.security.session"})
+@MapperScan({"com.bluecone.app.**.mapper", "com.bluecone.app.infra.security.session", "com.bluecone.app.infra.user.query"})
 @ConditionalOnClass(MybatisPlusInterceptor.class)
 @ConditionalOnProperty(name = "mybatis-plus.enabled", havingValue = "true", matchIfMissing = false)
 public class MybatisPlusConfig {
