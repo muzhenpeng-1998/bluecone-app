@@ -32,7 +32,13 @@ import org.springframework.context.annotation.Configuration;
  * @since 1.0.0
  */
 @Configuration
-@MapperScan({"com.bluecone.app.**.mapper", "com.bluecone.app.infra.security.session", "com.bluecone.app.infra.user.query"})
+@MapperScan({
+        "com.bluecone.app.**.mapper",
+        "com.bluecone.app.infra.security.session",
+        "com.bluecone.app.infra.user.query",
+        // 支付模块 Mapper（位于 infrastructure.persistence 包下）
+        "com.bluecone.app.payment.infrastructure.persistence"
+})
 @ConditionalOnClass(MybatisPlusInterceptor.class)
 @ConditionalOnProperty(name = "mybatis-plus.enabled", havingValue = "true", matchIfMissing = false)
 public class MybatisPlusConfig {

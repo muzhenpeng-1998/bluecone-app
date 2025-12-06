@@ -17,6 +17,11 @@ import lombok.NoArgsConstructor;
 public class WechatPayCallbackCommand {
 
     /**
+     * 微信回调原始报文（解密后的 JSON 字符串）。
+     */
+    private String rawBody;
+
+    /**
      * 微信回调中的 appid。
      */
     private String appId;
@@ -55,11 +60,6 @@ public class WechatPayCallbackCommand {
      * 附加数据（attach），通常存放 tenantId/orderId 等 JSON 字符串。
      */
     private String attach;
-
-    /**
-     * 原始回调报文（JSON/XML），用于审计或排查。
-     */
-    private String rawBody;
 
     /**
      * 回调通知的唯一 ID（如有）。

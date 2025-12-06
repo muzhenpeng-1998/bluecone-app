@@ -1,15 +1,17 @@
-package com.bluecone.app.payment.infra.persistence.channel;
+package com.bluecone.app.payment.infrastructure.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecone.app.payment.domain.channel.PaymentChannelConfig;
 import com.bluecone.app.payment.domain.channel.PaymentChannelConfigRepository;
 import com.bluecone.app.payment.domain.channel.PaymentChannelType;
 import com.bluecone.app.payment.domain.channel.WeChatChannelSecrets;
+import com.bluecone.app.payment.infrastructure.persistence.PaymentChannelConfigDO;
+import com.bluecone.app.payment.infrastructure.persistence.PaymentChannelConfigMapper;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
 /**
- * 支付渠道配置仓储实现（MyBatis-Plus）。
+ * 支付渠道配置仓储实现（使用 MyBatis-Plus）。
  */
 @Repository
 public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigRepository {
@@ -25,8 +27,8 @@ public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigR
         LambdaQueryWrapper<PaymentChannelConfigDO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PaymentChannelConfigDO::getTenantId, tenantId)
                 .eq(PaymentChannelConfigDO::getStoreId, storeId)
-                .eq(PaymentChannelConfigDO::getChannelCode, channelType == null ? null : channelType.getCode())
-                .eq(PaymentChannelConfigDO::getEnabled, 1)
+                .eq(PaymentChannelConfigDO::getChannelType, channelType == null ? null : channelType.getCode())
+                .eq(PaymentChannelConfigDO::getStatus, 1)
                 .last("limit 1");
         PaymentChannelConfigDO doObj = mapper.selectOne(wrapper);
         return Optional.ofNullable(toDomain(doObj));
@@ -46,15 +48,16 @@ public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigR
         if (doObj == null) {
             return null;
         }
-        PaymentChannelType channelType = doObj.getChannelCode() == null ? null : PaymentChannelType.fromCode(doObj.getChannelCode());
+        PaymentChannelType channelType = doObj.getChannelType() == null ? null : PaymentChannelType.fromCode(doObj.getChannelType());
         WeChatChannelSecrets secrets = null;
         if (channelType == PaymentChannelType.WECHAT_JSAPI || channelType == PaymentChannelType.WECHAT_NATIVE) {
             secrets = WeChatChannelSecrets.builder()
                     .mchId(doObj.getMchId())
                     .appId(doObj.getAppId())
                     .subMchId(doObj.getSubMchId())
-                    .encApiV3Key(doObj.getEncApiV3Key())
-                    .encSerialNo(doObj.getEncSerialNo())
+                    // encryptPayload 可存储敏感配置的密文，后续引入解密服务再拆分
+                    .encApiV3Key(doObj.getEncryptPayload())
+                    .encSerialNo(null)
                     .build();
         }
         return PaymentChannelConfig.builder()
@@ -62,10 +65,10 @@ public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigR
                 .tenantId(doObj.getTenantId())
                 .storeId(doObj.getStoreId())
                 .channelType(channelType)
-                .enabled(doObj.getEnabled() != null && doObj.getEnabled() == 1)
-                .notifyUrl(doObj.getNotifyUrl())
+                .enabled(doObj.getStatus() != null && doObj.getStatus() == 1)
+                .notifyUrl(null)
                 .weChatSecrets(secrets)
-                .extJson(doObj.getExtJson())
+                .extJson(null)
                 .createdAt(doObj.getCreatedAt())
                 .updatedAt(doObj.getUpdatedAt())
                 .build();
@@ -76,17 +79,14 @@ public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigR
         doObj.setId(config.getId());
         doObj.setTenantId(config.getTenantId());
         doObj.setStoreId(config.getStoreId());
-        doObj.setChannelCode(config.getChannelType() == null ? null : config.getChannelType().getCode());
-        doObj.setEnabled(config.isEnabled() ? 1 : 0);
-        doObj.setNotifyUrl(config.getNotifyUrl());
+        doObj.setChannelType(config.getChannelType() == null ? null : config.getChannelType().getCode());
+        doObj.setStatus(config.isEnabled() ? 1 : 0);
         if (config.getWeChatSecrets() != null) {
             doObj.setMchId(config.getWeChatSecrets().getMchId());
             doObj.setAppId(config.getWeChatSecrets().getAppId());
             doObj.setSubMchId(config.getWeChatSecrets().getSubMchId());
-            doObj.setEncApiV3Key(config.getWeChatSecrets().getEncApiV3Key());
-            doObj.setEncSerialNo(config.getWeChatSecrets().getEncSerialNo());
+            doObj.setEncryptPayload(config.getWeChatSecrets().getEncApiV3Key());
         }
-        doObj.setExtJson(config.getExtJson());
         doObj.setCreatedAt(config.getCreatedAt());
         doObj.setUpdatedAt(config.getUpdatedAt());
         return doObj;
