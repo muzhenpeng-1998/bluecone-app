@@ -37,12 +37,18 @@ public class PaymentOrder implements Serializable {
 
     private Long storeId;
 
+    // 业务主键（可选，若业务订单主键为 Long，可映射到此字段）
+    private Long bizOrderId;
+
     // 业务关联信息
     private String bizType;
 
     private String bizOrderNo;
 
     private String paymentNo;
+
+    // 用户
+    private Long userId;
 
     // 渠道与方式
     private PaymentChannel channel;
