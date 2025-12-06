@@ -87,4 +87,121 @@ public class OrderRepositoryImpl implements OrderRepository {
         }
         order.setVersion(po.getVersion());
     }
+
+    @Override
+    public List<Order> findUserOrders(Long tenantId,
+                                      Long userId,
+                                      List<String> statusList,
+                                      java.time.LocalDateTime fromTime,
+                                      java.time.LocalDateTime toTime,
+                                      int offset,
+                                      int limit) {
+        LambdaQueryWrapper<OrderPO> wrapper = baseUserWrapper(tenantId, userId, statusList, fromTime, toTime);
+        wrapper.orderByDesc(OrderPO::getCreatedAt);
+        wrapper.last("LIMIT " + offset + "," + limit);
+        List<OrderPO> poList = orderMapper.selectList(wrapper);
+        if (poList == null || poList.isEmpty()) {
+            return List.of();
+        }
+        List<Long> orderIds = poList.stream().map(OrderPO::getId).collect(Collectors.toList());
+        List<OrderItemPO> itemList = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItemPO>()
+                .eq(OrderItemPO::getTenantId, tenantId)
+                .in(OrderItemPO::getOrderId, orderIds));
+        var itemsByOrder = itemList.stream().collect(Collectors.groupingBy(OrderItemPO::getOrderId));
+        return poList.stream()
+                .map(po -> OrderConverter.toDomain(po, itemsByOrder.getOrDefault(po.getId(), List.of())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countUserOrders(Long tenantId,
+                                Long userId,
+                                List<String> statusList,
+                                java.time.LocalDateTime fromTime,
+                                java.time.LocalDateTime toTime) {
+        LambdaQueryWrapper<OrderPO> wrapper = baseUserWrapper(tenantId, userId, statusList, fromTime, toTime);
+        return orderMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public List<Order> findStoreOrders(Long tenantId,
+                                       Long storeId,
+                                       List<String> statusList,
+                                       String orderSource,
+                                       java.time.LocalDateTime fromTime,
+                                       java.time.LocalDateTime toTime,
+                                       int offset,
+                                       int limit) {
+        LambdaQueryWrapper<OrderPO> wrapper = storeWrapper(tenantId, storeId, statusList, orderSource, fromTime, toTime);
+        wrapper.orderByDesc(OrderPO::getCreatedAt);
+        wrapper.last("LIMIT " + offset + "," + limit);
+        List<OrderPO> poList = orderMapper.selectList(wrapper);
+        if (poList == null || poList.isEmpty()) {
+            return List.of();
+        }
+        List<Long> orderIds = poList.stream().map(OrderPO::getId).collect(Collectors.toList());
+        List<OrderItemPO> itemList = orderItemMapper.selectList(new LambdaQueryWrapper<OrderItemPO>()
+                .eq(OrderItemPO::getTenantId, tenantId)
+                .in(OrderItemPO::getOrderId, orderIds));
+        var itemsByOrder = itemList.stream().collect(Collectors.groupingBy(OrderItemPO::getOrderId));
+        return poList.stream()
+                .map(po -> OrderConverter.toDomain(po, itemsByOrder.getOrDefault(po.getId(), List.of())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countStoreOrders(Long tenantId,
+                                 Long storeId,
+                                 List<String> statusList,
+                                 String orderSource,
+                                 java.time.LocalDateTime fromTime,
+                                 java.time.LocalDateTime toTime) {
+        LambdaQueryWrapper<OrderPO> wrapper = storeWrapper(tenantId, storeId, statusList, orderSource, fromTime, toTime);
+        return orderMapper.selectCount(wrapper);
+    }
+
+    private LambdaQueryWrapper<OrderPO> baseUserWrapper(Long tenantId,
+                                                        Long userId,
+                                                        List<String> statusList,
+                                                        java.time.LocalDateTime fromTime,
+                                                        java.time.LocalDateTime toTime) {
+        LambdaQueryWrapper<OrderPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderPO::getTenantId, tenantId)
+                .eq(OrderPO::getUserId, userId)
+                .and(w -> w.isNull(OrderPO::getUserDeleted).or().eq(OrderPO::getUserDeleted, false));
+        if (statusList != null && !statusList.isEmpty()) {
+            wrapper.in(OrderPO::getStatus, statusList);
+        }
+        if (fromTime != null) {
+            wrapper.ge(OrderPO::getCreatedAt, fromTime);
+        }
+        if (toTime != null) {
+            wrapper.le(OrderPO::getCreatedAt, toTime);
+        }
+        return wrapper;
+    }
+
+    private LambdaQueryWrapper<OrderPO> storeWrapper(Long tenantId,
+                                                     Long storeId,
+                                                     List<String> statusList,
+                                                     String orderSource,
+                                                     java.time.LocalDateTime fromTime,
+                                                     java.time.LocalDateTime toTime) {
+        LambdaQueryWrapper<OrderPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderPO::getTenantId, tenantId)
+                .eq(OrderPO::getStoreId, storeId);
+        if (statusList != null && !statusList.isEmpty()) {
+            wrapper.in(OrderPO::getStatus, statusList);
+        }
+        if (orderSource != null && !orderSource.isBlank()) {
+            wrapper.eq(OrderPO::getOrderSource, orderSource);
+        }
+        if (fromTime != null) {
+            wrapper.ge(OrderPO::getCreatedAt, fromTime);
+        }
+        if (toTime != null) {
+            wrapper.le(OrderPO::getCreatedAt, toTime);
+        }
+        return wrapper;
+    }
 }

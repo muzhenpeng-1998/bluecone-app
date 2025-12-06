@@ -5,12 +5,14 @@ import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.domain.enums.BizType;
+import com.bluecone.app.order.domain.enums.OrderEvent;
 import com.bluecone.app.order.domain.enums.OrderSource;
 import com.bluecone.app.order.domain.enums.OrderStatus;
 import com.bluecone.app.order.domain.enums.PayStatus;
 import com.bluecone.app.order.domain.model.Order;
 import com.bluecone.app.order.domain.model.OrderItem;
 import com.bluecone.app.order.domain.service.OrderDomainService;
+import com.bluecone.app.order.domain.service.OrderStateMachine;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,6 +26,12 @@ import org.springframework.util.StringUtils;
 public class OrderDomainServiceImpl implements OrderDomainService {
 
     private static final BigDecimal AMOUNT_TOLERANCE = new BigDecimal("0.01");
+
+    private final OrderStateMachine orderStateMachine;
+
+    public OrderDomainServiceImpl(OrderStateMachine orderStateMachine) {
+        this.orderStateMachine = orderStateMachine;
+    }
 
     @Override
     public Order buildConfirmedOrder(ConfirmOrderRequest request) {
@@ -71,7 +79,12 @@ public class OrderDomainServiceImpl implements OrderDomainService {
 
         order.recalculateAmounts();
         order.validateAgainstClientAmounts(request.getClientPayableAmount(), AMOUNT_TOLERANCE);
-        order.markPendingPayment();
+
+        OrderStatus fromStatus = OrderStatus.DRAFT;
+        OrderStatus nextStatus = orderStateMachine.transitOrThrow(bizType, fromStatus, OrderEvent.SUBMIT);
+        order.setStatus(nextStatus);
+        order.setPayStatus(PayStatus.UNPAID);
+
         order.setUpdatedAt(LocalDateTime.now());
         return order;
     }

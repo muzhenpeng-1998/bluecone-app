@@ -9,19 +9,24 @@ import com.bluecone.app.order.application.OrderConfirmAppService;
 import com.bluecone.app.order.application.assembler.OrderAppAssembler;
 import com.bluecone.app.order.application.generator.OrderIdGenerator;
 import com.bluecone.app.order.application.generator.OrderNoGenerator;
+import com.bluecone.app.order.domain.enums.OrderEvent;
+import com.bluecone.app.order.domain.enums.OrderStatus;
 import com.bluecone.app.order.domain.enums.PayStatus;
 import com.bluecone.app.order.domain.model.Order;
 import com.bluecone.app.order.domain.model.OrderPayment;
 import com.bluecone.app.order.domain.model.OrderSession;
 import com.bluecone.app.order.domain.service.OrderDomainService;
+import com.bluecone.app.order.domain.service.OrderStateMachine;
 import com.bluecone.app.order.domain.repository.OrderPaymentRepository;
 import com.bluecone.app.order.domain.repository.OrderRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Service
 public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
 
@@ -31,18 +36,21 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
     private final OrderIdGenerator orderIdGenerator;
     private final OrderNoGenerator orderNoGenerator;
     private final CollaborativeOrderSessionAppService sessionAppService;
+    private final OrderStateMachine orderStateMachine;
     public OrderConfirmAppServiceImpl(OrderDomainService orderDomainService,
                                       OrderRepository orderRepository,
                                       OrderPaymentRepository orderPaymentRepository,
                                       OrderIdGenerator orderIdGenerator,
                                       OrderNoGenerator orderNoGenerator,
-                                      CollaborativeOrderSessionAppService sessionAppService) {
+                                      CollaborativeOrderSessionAppService sessionAppService,
+                                      OrderStateMachine orderStateMachine) {
         this.orderDomainService = orderDomainService;
         this.orderRepository = orderRepository;
         this.orderPaymentRepository = orderPaymentRepository;
         this.orderIdGenerator = orderIdGenerator;
         this.orderNoGenerator = orderNoGenerator;
         this.sessionAppService = sessionAppService;
+        this.orderStateMachine = orderStateMachine;
     }
 
     @Override
@@ -75,6 +83,16 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
         if (request.getSessionId() != null) {
             sessionAppService.closeSessionAfterConfirm(request.getTenantId(), request.getSessionId());
         }
+
+        OrderStatus fromStatus = OrderStatus.DRAFT;
+        OrderStatus expectedStatus = orderStateMachine.transitOrThrow(order.getBizType(), fromStatus, OrderEvent.SUBMIT);
+        if (!expectedStatus.equals(order.getStatus())) {
+            log.warn("Order status differs from state machine result, tenantId={}, storeId={}, userId={}, clientOrderNo={}, actualStatus={}, expectedStatus={}",
+                    request.getTenantId(), request.getStoreId(), request.getUserId(), request.getClientOrderNo(), order.getStatus(), expectedStatus);
+        }
+        log.info("Order submit via state machine, tenantId={}, storeId={}, userId={}, clientOrderNo={}, fromStatus={}, toStatus={}",
+                request.getTenantId(), request.getStoreId(), request.getUserId(), request.getClientOrderNo(),
+                fromStatus, order.getStatus());
 
         return OrderAppAssembler.toConfirmResponse(order);
     }

@@ -40,6 +40,7 @@ public class ConfirmOrderRequest {
     /**
      * 用户ID，C端登录用户；匿名用户可为空。
      */
+    @NotNull
     private Long userId;
 
     /**
@@ -111,18 +112,21 @@ public class ConfirmOrderRequest {
      * 前端计算的原价总额（所有明细原价之和）。
      */
     @NotNull
+    @jakarta.validation.constraints.DecimalMin(value = "0.00")
     private BigDecimal clientTotalAmount;
 
     /**
      * 前端计算的优惠总额。
      */
     @NotNull
+    @jakarta.validation.constraints.DecimalMin(value = "0.00")
     private BigDecimal clientDiscountAmount;
 
     /**
      * 前端认为的应付金额 = total - discount + 其他费用。
      */
     @NotNull
+    @jakarta.validation.constraints.DecimalMin(value = "0.00")
     private BigDecimal clientPayableAmount;
 
     // === 支付意向 ===

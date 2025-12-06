@@ -91,6 +91,10 @@ public class Order implements Serializable {
 
     private Long updatedBy;
 
+    private Boolean userDeleted;
+
+    private LocalDateTime userDeletedAt;
+
     /**
      * 根据 items 重算 totalAmount、discountAmount、payableAmount 等金额字段。
      */
@@ -166,5 +170,40 @@ public class Order implements Serializable {
         if (this.payStatus == null) {
             this.payStatus = PayStatus.PAID;
         }
+    }
+
+    /**
+     * 用户侧是否可取消。
+     */
+    public boolean canCancelByUser() {
+        if (status == null) {
+            return false;
+        }
+        return switch (status) {
+            case PENDING_PAYMENT, PENDING_ACCEPT, DRAFT, PENDING_CONFIRM -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * 用户侧取消订单。
+     */
+    public void cancelByUser() {
+        if (!canCancelByUser()) {
+            throw new IllegalStateException("当前状态不允许用户取消订单");
+        }
+        this.status = OrderStatus.CANCELLED;
+        if (this.payStatus == null) {
+            this.payStatus = PayStatus.UNPAID;
+        }
+    }
+
+    public boolean isUserDeleted() {
+        return Boolean.TRUE.equals(this.userDeleted);
+    }
+
+    public void markUserDeleted() {
+        this.userDeleted = true;
+        this.userDeletedAt = LocalDateTime.now();
     }
 }

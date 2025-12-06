@@ -10,6 +10,8 @@ public enum PayStatus {
     INIT("INIT", "待支付初始化"),
     UNPAID("UNPAID", "未支付"),
     PAID("PAID", "已支付"),
+    REFUNDING("REFUNDING", "退款中"),
+    REFUNDED("REFUNDED", "已退款"),
     PARTIAL_REFUND("PARTIAL_REFUND", "部分退款"),
     FULL_REFUND("FULL_REFUND", "全额退款");
 

@@ -62,6 +62,8 @@ public class OrderConverter {
                 .createdBy(orderPO.getCreatedBy())
                 .updatedAt(orderPO.getUpdatedAt())
                 .updatedBy(orderPO.getUpdatedBy())
+                .userDeleted(orderPO.getUserDeleted())
+                .userDeletedAt(orderPO.getUserDeletedAt())
                 .build();
     }
 
@@ -94,6 +96,8 @@ public class OrderConverter {
         po.setUpdatedAt(order.getUpdatedAt());
         po.setCreatedBy(order.getCreatedBy());
         po.setUpdatedBy(order.getUpdatedBy());
+        po.setUserDeleted(order.getUserDeleted());
+        po.setUserDeletedAt(order.getUserDeletedAt());
         return po;
     }
 

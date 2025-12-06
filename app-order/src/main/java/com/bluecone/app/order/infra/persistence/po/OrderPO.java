@@ -64,4 +64,9 @@ public class OrderPO implements Serializable {
     private LocalDateTime updatedAt;
 
     private Long updatedBy;
+
+    // TODO: 确保 bc_order 表已包含 user_deleted / user_deleted_at 字段
+    private Boolean userDeleted;
+
+    private LocalDateTime userDeletedAt;
 }
