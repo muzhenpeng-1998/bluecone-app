@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.bluecone.app.tenant.dao.entity.Tenant;
 import com.bluecone.app.tenant.dao.entity.TenantAuditLog;
 import com.bluecone.app.tenant.dao.entity.TenantMedia;
@@ -69,7 +70,7 @@ class TenantApplicationServiceTest {
         });
         when(tenantProfileService.save(any(TenantProfile.class))).thenReturn(true);
         when(tenantSettingsService.saveBatch(anyList())).thenReturn(true);
-        doNothing().when(tenantAuditLogService).save(any(TenantAuditLog.class));
+        when(tenantAuditLogService.save(any(TenantAuditLog.class))).thenReturn(true);
 
         Long tenantId = tenantApplicationService.createTenant(new CreateTenantCommand(
                 "BlueCone Store",
@@ -99,7 +100,7 @@ class TenantApplicationServiceTest {
         tenant.setId(2L);
         when(tenantService.getById(2L)).thenReturn(tenant);
         when(tenantService.updateById(any(Tenant.class))).thenReturn(true);
-        doNothing().when(tenantAuditLogService).save(any(TenantAuditLog.class));
+        when(tenantAuditLogService.save(any(TenantAuditLog.class))).thenReturn(true);
 
         tenantApplicationService.updateTenantBasicInfo(new UpdateTenantBasicInfoCommand(
                 2L, "Updated Name", "Bob", "13900000000", "bob@bluecone.com", "note", 1, 8L));
@@ -122,7 +123,10 @@ class TenantApplicationServiceTest {
         TenantProfile profile = new TenantProfile();
         profile.setTenantId(3L);
         profile.setBusinessName("Biz Name");
-        when(tenantProfileService.lambdaQuery().eq(any(), any()).one()).thenReturn(profile);
+        LambdaQueryChainWrapper<TenantProfile> profileQuery = mock(LambdaQueryChainWrapper.class);
+        when(tenantProfileService.lambdaQuery()).thenReturn(profileQuery);
+        when(profileQuery.eq(any(), any())).thenReturn(profileQuery);
+        when(profileQuery.one()).thenReturn(profile);
 
         TenantSettings planIdSetting = new TenantSettings();
         planIdSetting.setTenantId(3L);
@@ -132,8 +136,10 @@ class TenantApplicationServiceTest {
         expireSetting.setTenantId(3L);
         expireSetting.setKeyName("plan.expireAt");
         expireSetting.setKeyValue(LocalDateTime.now().plusDays(30).toString());
-        when(tenantSettingsService.lambdaQuery().eq(any(), any()).list())
-                .thenReturn(List.of(planIdSetting, expireSetting));
+        LambdaQueryChainWrapper<TenantSettings> settingsQuery = mock(LambdaQueryChainWrapper.class);
+        when(tenantSettingsService.lambdaQuery()).thenReturn(settingsQuery);
+        when(settingsQuery.eq(any(), any())).thenReturn(settingsQuery);
+        when(settingsQuery.list()).thenReturn(List.of(planIdSetting, expireSetting));
 
         TenantPlan plan = new TenantPlan();
         plan.setId(10L);
@@ -144,12 +150,18 @@ class TenantApplicationServiceTest {
         TenantPlatformAccount account = new TenantPlatformAccount();
         account.setId(5L);
         account.setPlatformType("wechat");
-        when(tenantPlatformAccountService.lambdaQuery().eq(any(), any()).list()).thenReturn(List.of(account));
+        LambdaQueryChainWrapper<TenantPlatformAccount> accountQuery = mock(LambdaQueryChainWrapper.class);
+        when(tenantPlatformAccountService.lambdaQuery()).thenReturn(accountQuery);
+        when(accountQuery.eq(any(), any())).thenReturn(accountQuery);
+        when(accountQuery.list()).thenReturn(List.of(account));
 
         TenantMedia media = new TenantMedia();
         media.setId(6L);
         media.setMediaType("avatar");
-        when(tenantMediaService.lambdaQuery().eq(any(), any()).list()).thenReturn(List.of(media));
+        LambdaQueryChainWrapper<TenantMedia> mediaQuery = mock(LambdaQueryChainWrapper.class);
+        when(tenantMediaService.lambdaQuery()).thenReturn(mediaQuery);
+        when(mediaQuery.eq(any(), any())).thenReturn(mediaQuery);
+        when(mediaQuery.list()).thenReturn(List.of(media));
 
         TenantDetail detail = tenantApplicationService.getTenantDetail(3L);
 
