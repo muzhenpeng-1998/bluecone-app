@@ -4,14 +4,18 @@ import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.order.domain.enums.BizType;
 import com.bluecone.app.order.domain.enums.OrderSource;
+import com.bluecone.app.order.domain.command.SubmitOrderFromDraftCommand;
 import com.bluecone.app.order.domain.enums.OrderStatus;
 import com.bluecone.app.order.domain.enums.PayStatus;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +28,7 @@ import lombok.NoArgsConstructor;
 public class Order implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private static final BigDecimal CONFIRM_TOLERANCE = new BigDecimal("0.01");
 
     // 标识与多租户
     private Long id;
@@ -105,7 +110,8 @@ public class Order implements Serializable {
                 if (item == null) {
                     continue;
                 }
-                BigDecimal unitPrice = item.getUnitPrice() == null ? BigDecimal.ZERO : item.getUnitPrice();
+                item.recalculateAmounts();
+                BigDecimal unitPrice = defaultBigDecimal(item.getUnitPrice());
                 int qty = item.getQuantity() == null ? 0 : item.getQuantity();
                 total = total.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
             }
@@ -205,5 +211,170 @@ public class Order implements Serializable {
     public void markUserDeleted() {
         this.userDeleted = true;
         this.userDeletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 当前订单是否处于草稿态。
+     */
+    public boolean isDraft() {
+        return OrderStatus.DRAFT.equals(this.status);
+    }
+
+    /**
+     * 确保当前订单可编辑（必须是草稿态）。
+     *
+     * @throws BizException 非草稿态时抛出
+     */
+    public void assertEditable() {
+        if (!isDraft()) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单当前状态不可编辑购物车");
+        }
+    }
+
+    /**
+     * 新增或合并一个购物车行。
+     */
+    public void addOrMergeItem(OrderItem newItem) {
+        assertEditable();
+        if (newItem == null) {
+            return;
+        }
+        List<OrderItem> working = ensureMutableItems();
+        OrderItem existing = findSameLineItem(working, newItem);
+        if (existing != null) {
+            int currentQty = existing.getQuantity() == null ? 0 : existing.getQuantity();
+            int delta = newItem.getQuantity() == null ? 0 : newItem.getQuantity();
+            existing.setQuantity(currentQty + delta);
+            existing.recalculateAmounts();
+        } else {
+            newItem.recalculateAmounts();
+            working.add(newItem);
+        }
+        this.items = working;
+        recalculateAmounts();
+    }
+
+    /**
+     * 修改某个 SKU 行的数量。
+     */
+    public void changeItemQuantity(Long skuId, Map<String, Object> attrs, int newQuantity) {
+        assertEditable();
+        if (newQuantity <= 0) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "明细数量必须大于0");
+        }
+        List<OrderItem> working = ensureMutableItems();
+        OrderItem target = findLineItem(working, skuId, attrs);
+        if (target == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "待修改的购物车明细不存在");
+        }
+        target.setQuantity(newQuantity);
+        target.recalculateAmounts();
+        this.items = working;
+        recalculateAmounts();
+    }
+
+    /**
+     * 删除指定的购物车行。
+     */
+    public void removeItem(Long skuId, Map<String, Object> attrs) {
+        assertEditable();
+        List<OrderItem> working = ensureMutableItems();
+        OrderItem target = findLineItem(working, skuId, attrs);
+        if (target == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "待删除的购物车明细不存在");
+        }
+        working.remove(target);
+        this.items = working;
+        recalculateAmounts();
+    }
+
+    /**
+     * 清空购物车明细。
+     */
+    public void clearItems() {
+        assertEditable();
+        this.items = new ArrayList<>();
+        recalculateAmounts();
+    }
+
+    /**
+     * 将草稿订单确认为正式订单。
+     */
+    public void confirmFromDraft(SubmitOrderFromDraftCommand command) {
+        if (command == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "确认订单命令不能为空");
+        }
+        if (!isDraft() && !OrderStatus.LOCKED_FOR_CHECKOUT.equals(this.status)) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单当前状态不可提交");
+        }
+        if (items == null || items.isEmpty()) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单无商品，无法提交");
+        }
+        recalculateAmounts();
+        BigDecimal clientAmount = Objects.requireNonNull(command.getClientPayableAmount(), "clientPayableAmount");
+        BigDecimal diff = payableAmount.subtract(clientAmount).abs();
+        if (diff.compareTo(CONFIRM_TOLERANCE) > 0) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单金额有变化，请刷新后重试");
+        }
+        this.payStatus = PayStatus.UNPAID;
+        this.status = OrderStatus.PENDING_PAYMENT;
+        this.updatedAt = LocalDateTime.now();
+        if (command.getUserRemark() != null && !command.getUserRemark().isBlank()) {
+            this.remark = command.getUserRemark();
+        }
+        updateExt("orderToken", command.getOrderToken());
+        updateExt("contactName", command.getContactName());
+        updateExt("contactPhone", command.getContactPhone());
+        updateExt("addressJson", command.getAddressJson());
+    }
+
+    private void updateExt(String key, Object value) {
+        if (value == null) {
+            return;
+        }
+        Map<String, Object> copy = new HashMap<>(this.ext == null ? Collections.emptyMap() : this.ext);
+        copy.put(key, value);
+        this.ext = copy;
+    }
+
+    private OrderItem findSameLineItem(List<OrderItem> candidates, OrderItem item) {
+        if (candidates == null || item == null) {
+            return null;
+        }
+        for (OrderItem candidate : candidates) {
+            if (candidate != null && candidate.sameCartLine(item.getSkuId(), item.getAttrs())) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private OrderItem findLineItem(List<OrderItem> candidates, Long skuId, Map<String, Object> attrs) {
+        if (candidates == null) {
+            return null;
+        }
+        for (OrderItem candidate : candidates) {
+            if (candidate != null && candidate.sameCartLine(skuId, attrs)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private List<OrderItem> ensureMutableItems() {
+        if (this.items == null) {
+            this.items = new ArrayList<>();
+            return this.items;
+        }
+        if (this.items instanceof ArrayList) {
+            return this.items;
+        }
+        List<OrderItem> copy = new ArrayList<>(this.items);
+        this.items = copy;
+        return copy;
+    }
+
+    private BigDecimal defaultBigDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 }

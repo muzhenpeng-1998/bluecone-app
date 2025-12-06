@@ -26,6 +26,7 @@ public class OrderStateMachineImpl implements OrderStateMachine {
         Map<OrderStatus, Map<OrderEvent, OrderStatus>> map = new EnumMap<>(OrderStatus.class);
 
         registerDraftTransitions(map);
+        registerLockedTransitions(map);
         registerPendingPaymentTransitions(map);
         registerPendingAcceptTransitions(map);
         registerCompletedTransitions(map);
@@ -40,6 +41,13 @@ public class OrderStateMachineImpl implements OrderStateMachine {
         draft.put(OrderEvent.SUBMIT, OrderStatus.PENDING_PAYMENT);
         draft.put(OrderEvent.USER_CANCEL, OrderStatus.CANCELLED);
         map.put(OrderStatus.DRAFT, Collections.unmodifiableMap(draft));
+    }
+
+    private static void registerLockedTransitions(Map<OrderStatus, Map<OrderEvent, OrderStatus>> map) {
+        EnumMap<OrderEvent, OrderStatus> locked = new EnumMap<>(OrderEvent.class);
+        locked.put(OrderEvent.SUBMIT, OrderStatus.PENDING_PAYMENT);
+        locked.put(OrderEvent.USER_CANCEL, OrderStatus.CANCELLED);
+        map.put(OrderStatus.LOCKED_FOR_CHECKOUT, Collections.unmodifiableMap(locked));
     }
 
     private static void registerPendingPaymentTransitions(Map<OrderStatus, Map<OrderEvent, OrderStatus>> map) {

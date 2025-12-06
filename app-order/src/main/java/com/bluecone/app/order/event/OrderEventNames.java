@@ -12,4 +12,5 @@ public final class OrderEventNames {
     }
 
     public static final String ORDER_PAID = "order.paid";
+    public static final String ORDER_CREATED = "order.created";
 }

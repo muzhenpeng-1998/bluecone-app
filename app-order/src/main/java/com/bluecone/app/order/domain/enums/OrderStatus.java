@@ -8,6 +8,7 @@ import java.util.Arrays;
 public enum OrderStatus {
 
     DRAFT("DRAFT", "草稿/预下单"),
+    LOCKED_FOR_CHECKOUT("LOCKED_FOR_CHECKOUT", "草稿锁定"),
     PENDING_CONFIRM("PENDING_CONFIRM", "待确认"),
     PENDING_PAYMENT("PENDING_PAYMENT", "待支付"),
     PENDING_ACCEPT("PENDING_ACCEPT", "待接单"),

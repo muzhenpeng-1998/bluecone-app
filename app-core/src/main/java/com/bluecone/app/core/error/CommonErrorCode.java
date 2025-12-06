@@ -9,7 +9,8 @@ public enum CommonErrorCode implements ErrorCode {
     SYSTEM_ERROR("SYS-500-000", "系统异常，请稍后重试"),
     BAD_REQUEST("SYS-400-000", "请求参数错误"),
     UNAUTHORIZED("SYS-401-000", "未登录或登录已失效"),
-    FORBIDDEN("SYS-403-000", "没有权限执行该操作");
+    FORBIDDEN("SYS-403-000", "没有权限执行该操作"),
+    CONFLICT("SYS-409-000", "发生并发冲突，请刷新后重试");
 
     private final String code;
     private final String message;

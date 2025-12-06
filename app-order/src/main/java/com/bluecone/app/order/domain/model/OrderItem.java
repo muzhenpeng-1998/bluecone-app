@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -59,4 +60,39 @@ public class OrderItem implements Serializable {
     private LocalDateTime updatedAt;
 
     private Long updatedBy;
+
+    /**
+     * 重新计算本条目的金额。
+     */
+    public void recalculateAmounts() {
+        BigDecimal quantity = BigDecimal.valueOf(this.quantity == null ? 0 : this.quantity);
+        BigDecimal gross = defaultBigDecimal(this.unitPrice).multiply(quantity);
+        BigDecimal discount = defaultBigDecimal(this.discountAmount);
+        BigDecimal payable = gross.subtract(discount);
+        if (payable.compareTo(BigDecimal.ZERO) < 0) {
+            payable = BigDecimal.ZERO;
+        }
+        this.payableAmount = payable;
+    }
+
+    /**
+     * 判断是否与指定 SKU+属性为同一购物车行。
+     */
+    public boolean sameCartLine(Long skuId, Map<String, Object> attrs) {
+        if (!Objects.equals(this.skuId, skuId)) {
+            return false;
+        }
+        return mapEquals(this.attrs, attrs);
+    }
+
+    private BigDecimal defaultBigDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private boolean mapEquals(Map<String, Object> left, Map<String, Object> right) {
+        if ((left == null || left.isEmpty()) && (right == null || right.isEmpty())) {
+            return true;
+        }
+        return Objects.equals(left, right);
+    }
 }
