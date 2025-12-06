@@ -52,4 +52,29 @@ public interface PaymentOrderRepository {
      * @throws com.bluecone.app.core.exception.BizException 当乐观锁冲突时抛出
      */
     void update(PaymentOrder paymentOrder);
+
+    /**
+     * 统计时间区间内创建的支付单数量。
+     */
+    long countCreatedBetween(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    /**
+     * 统计时间区间内支付成功的支付单数量。
+     */
+    long countSucceededBetween(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    /**
+     * 统计在指定时间之前仍停留在指定状态集合中的支付单数量，用于巡检卡单。
+     */
+    long countStuckPayments(java.time.LocalDateTime before, java.util.List<com.bluecone.app.payment.domain.enums.PaymentStatus> statuses);
+
+    /**
+     * 按支付日期查询支付单。
+     */
+    java.util.List<PaymentOrder> findByPayDate(java.time.LocalDate payDate);
+
+    /**
+     * 查询某日支付成功的支付单。
+     */
+    java.util.List<PaymentOrder> findSucceededByPayDate(java.time.LocalDate payDate);
 }

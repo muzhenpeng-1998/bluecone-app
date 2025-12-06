@@ -9,6 +9,9 @@ import com.bluecone.app.payment.domain.repository.PaymentOrderRepository;
 import com.bluecone.app.payment.infrastructure.converter.PaymentOrderConverter;
 import com.bluecone.app.payment.infrastructure.persistence.PaymentOrderDO;
 import com.bluecone.app.payment.infrastructure.persistence.PaymentOrderMapper;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -100,5 +103,65 @@ public class PaymentOrderRepositoryImpl implements PaymentOrderRepository {
             throw new BizException(CommonErrorCode.BAD_REQUEST, "支付单更新失败，版本冲突");
         }
         paymentOrder.setVersion(currentVersion.intValue() + 1);
+    }
+
+    @Override
+    public long countCreatedBetween(LocalDateTime from, LocalDateTime to) {
+        LambdaQueryWrapper<PaymentOrderDO> wrapper = new LambdaQueryWrapper<>();
+        if (from != null) {
+            wrapper.ge(PaymentOrderDO::getCreatedAt, from);
+        }
+        if (to != null) {
+            wrapper.le(PaymentOrderDO::getCreatedAt, to);
+        }
+        return paymentOrderMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public long countSucceededBetween(LocalDateTime from, LocalDateTime to) {
+        LambdaQueryWrapper<PaymentOrderDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PaymentOrderDO::getStatus, com.bluecone.app.payment.domain.enums.PaymentStatus.SUCCESS.getCode());
+        if (from != null) {
+            wrapper.ge(PaymentOrderDO::getUpdatedAt, from);
+        }
+        if (to != null) {
+            wrapper.le(PaymentOrderDO::getUpdatedAt, to);
+        }
+        return paymentOrderMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public long countStuckPayments(LocalDateTime before, List<com.bluecone.app.payment.domain.enums.PaymentStatus> statuses) {
+        LambdaQueryWrapper<PaymentOrderDO> wrapper = new LambdaQueryWrapper<>();
+        if (statuses != null && !statuses.isEmpty()) {
+            wrapper.in(PaymentOrderDO::getStatus, statuses.stream().map(com.bluecone.app.payment.domain.enums.PaymentStatus::getCode).toList());
+        }
+        if (before != null) {
+            wrapper.le(PaymentOrderDO::getUpdatedAt, before);
+        }
+        return paymentOrderMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public List<PaymentOrder> findByPayDate(java.time.LocalDate payDate) {
+        LambdaQueryWrapper<PaymentOrderDO> wrapper = new LambdaQueryWrapper<>();
+        if (payDate != null) {
+            wrapper.ge(PaymentOrderDO::getUpdatedAt, payDate.atStartOfDay())
+                    .lt(PaymentOrderDO::getUpdatedAt, payDate.plusDays(1).atStartOfDay());
+        }
+        List<PaymentOrderDO> list = paymentOrderMapper.selectList(wrapper);
+        return list.stream().map(PaymentOrderConverter::toDomain).toList();
+    }
+
+    @Override
+    public List<PaymentOrder> findSucceededByPayDate(java.time.LocalDate payDate) {
+        LambdaQueryWrapper<PaymentOrderDO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PaymentOrderDO::getStatus, com.bluecone.app.payment.domain.enums.PaymentStatus.SUCCESS.getCode());
+        if (payDate != null) {
+            wrapper.ge(PaymentOrderDO::getUpdatedAt, payDate.atStartOfDay())
+                    .lt(PaymentOrderDO::getUpdatedAt, payDate.plusDays(1).atStartOfDay());
+        }
+        List<PaymentOrderDO> list = paymentOrderMapper.selectList(wrapper);
+        return list.stream().map(PaymentOrderConverter::toDomain).toList();
     }
 }

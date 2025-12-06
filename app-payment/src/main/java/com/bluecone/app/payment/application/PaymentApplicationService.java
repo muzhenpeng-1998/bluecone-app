@@ -6,30 +6,28 @@ import com.bluecone.app.payment.api.PaymentApi;
 import com.bluecone.app.payment.api.command.CreatePaymentCommand;
 import com.bluecone.app.payment.api.dto.CreatePaymentResult;
 import com.bluecone.app.payment.api.dto.PaymentOrderView;
-import com.bluecone.app.payment.domain.channel.PaymentChannelConfig;
-import com.bluecone.app.payment.domain.channel.PaymentChannelConfigRepository;
-import com.bluecone.app.payment.domain.channel.PaymentChannelType;
 import com.bluecone.app.payment.domain.enums.PaymentChannel;
 import com.bluecone.app.payment.domain.enums.PaymentMethod;
 import com.bluecone.app.payment.domain.enums.PaymentScene;
 import com.bluecone.app.payment.domain.enums.PaymentStatus;
-import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayRequest;
-import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayResponse;
-import com.bluecone.app.payment.domain.gateway.WeChatPaymentGateway;
+import com.bluecone.app.payment.domain.gateway.channel.ChannelPrepayCommand;
+import com.bluecone.app.payment.domain.gateway.channel.ChannelPrepayResult;
+import com.bluecone.app.payment.domain.gateway.channel.PaymentChannelGatewayRouter;
 import com.bluecone.app.payment.domain.model.PaymentOrder;
 import com.bluecone.app.payment.domain.repository.PaymentOrderRepository;
 import com.bluecone.app.payment.domain.service.PaymentDomainService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * 支付应用服务：实现 PaymentApi，承上层调用与领域服务之间的编排。
@@ -43,129 +41,146 @@ import org.springframework.validation.annotation.Validated;
 public class PaymentApplicationService implements PaymentApi {
 
     private static final int DEFAULT_EXPIRE_MINUTES = 15;
+    private static final Logger log = LoggerFactory.getLogger(PaymentApplicationService.class);
 
     private final PaymentDomainService paymentDomainService;
     private final PaymentOrderRepository paymentOrderRepository;
-    private final PaymentChannelConfigRepository paymentChannelConfigRepository;
-    private final WeChatPaymentGateway weChatPaymentGateway;
     private final ObjectMapper objectMapper;
+    private final PaymentMetricsRecorder paymentMetricsRecorder;
+    private final PaymentChannelGatewayRouter paymentChannelGatewayRouter;
 
     public PaymentApplicationService(PaymentDomainService paymentDomainService,
                                      PaymentOrderRepository paymentOrderRepository,
-                                     PaymentChannelConfigRepository paymentChannelConfigRepository,
-                                     WeChatPaymentGateway weChatPaymentGateway,
-                                     ObjectMapper objectMapper) {
+                                     ObjectMapper objectMapper,
+                                     PaymentMetricsRecorder paymentMetricsRecorder,
+                                     PaymentChannelGatewayRouter paymentChannelGatewayRouter) {
         this.paymentDomainService = paymentDomainService;
         this.paymentOrderRepository = paymentOrderRepository;
-        this.paymentChannelConfigRepository = paymentChannelConfigRepository;
-        this.weChatPaymentGateway = weChatPaymentGateway;
         this.objectMapper = objectMapper;
+        this.paymentMetricsRecorder = paymentMetricsRecorder;
+        this.paymentChannelGatewayRouter = paymentChannelGatewayRouter;
     }
 
     @Override
     public CreatePaymentResult createPayment(@Valid CreatePaymentCommand command) {
+        long startNanos = System.nanoTime();
+        String resultTag = "SUCCESS";
         PaymentChannel channel = PaymentChannel.fromCode(command.getChannelCode());
         PaymentMethod method = PaymentMethod.fromCode(command.getMethodCode());
         PaymentScene scene = PaymentScene.fromCode(command.getSceneCode());
-        if (channel == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付渠道");
-        }
-        if (method == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付方式");
-        }
-        if (scene == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付场景");
-        }
-
-        // 微信 JSAPI 必填 openId
-        if (channel == PaymentChannel.WECHAT && method == PaymentMethod.WECHAT_JSAPI) {
-            if (isBlank(command.getPayerOpenId())) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 支付需要提供 payerOpenId");
-            }
-        }
-
-        int expireMinutes = command.getExpireMinutes() == null || command.getExpireMinutes() <= 0
-                ? DEFAULT_EXPIRE_MINUTES
-                : command.getExpireMinutes();
-        LocalDateTime expireAt = LocalDateTime.now().plusMinutes(expireMinutes);
-
-        // 幂等：按租户 + 业务订单 + 渠道 + 方式查已有支付单（当前 schema 支持有限，未来完善）
-        Optional<PaymentOrder> existing = paymentOrderRepository.findByBizKeys(
-                command.getTenantId(),
-                command.getBizType(),
-                command.getBizOrderNo(),
-                channel.getCode(),
-                method.getCode()
-        );
-        if (existing.isPresent()) {
-            PaymentOrder order = existing.get();
-            PaymentStatus status = order.getStatus();
-            if (status != PaymentStatus.FAILED && status != PaymentStatus.CANCELED && status != PaymentStatus.CLOSED) {
-                return toCreateResult(order, order.getChannelContext());
-            }
-        }
-
-        String currency = isBlank(command.getCurrency()) ? "CNY" : command.getCurrency();
-        PaymentOrder paymentOrder = paymentDomainService.buildPaymentOrder(
+        log.info("[payment-create] traceId={} tenantId={} storeId={} bizType={} bizOrderNo={} channel={} method={} scene={}",
+                MDC.get("traceId"),
                 command.getTenantId(),
                 command.getStoreId(),
                 command.getBizType(),
                 command.getBizOrderNo(),
-                channel,
-                method,
-                scene,
-                command.getTotalAmount(),
-                command.getDiscountAmount(),
-                currency,
-                command.getIdempotentKey(),
-                expireAt
-        );
-        paymentOrder.setUserId(command.getUserId());
-
-        paymentOrderRepository.insert(paymentOrder);
-
-        Map<String, Object> channelContext = null;
-        PaymentChannelType channelType = PaymentChannelType.fromChannelAndMethod(channel, method);
-
-        if (channelType == PaymentChannelType.WECHAT_JSAPI) {
-            PaymentChannelConfig config = paymentChannelConfigRepository.findByTenantStoreAndChannel(
-                            command.getTenantId(),
-                            command.getStoreId(),
-                            channelType
-                    )
-                    .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 渠道未配置"));
-
-            BigDecimal payable = paymentOrder.getPayableAmount();
-            if (payable == null) {
-                throw new BizException(CommonErrorCode.SYSTEM_ERROR, "支付单缺少应付金额");
+                command.getChannelCode(),
+                command.getMethodCode(),
+                command.getSceneCode());
+        try {
+            if (channel == null) {
+                throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付渠道");
             }
-            long fen = payable.multiply(BigDecimal.valueOf(100))
-                    .setScale(0, RoundingMode.HALF_UP)
-                    .longValueExact();
+            if (method == null) {
+                throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付方式");
+            }
+            if (scene == null) {
+                throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付场景");
+            }
 
-            WeChatJsapiPrepayRequest req = new WeChatJsapiPrepayRequest();
-            req.setPaymentOrderId(paymentOrder.getId());
-            req.setTenantId(paymentOrder.getTenantId());
-            req.setStoreId(paymentOrder.getStoreId());
-            req.setUserId(paymentOrder.getUserId());
-            req.setAmountTotal(fen);
-            req.setCurrency(currency);
-            req.setDescription(isBlank(command.getDescription()) ? buildDefaultDescription(command) : command.getDescription());
-            req.setOutTradeNo(String.valueOf(paymentOrder.getId()));
-            req.setPayerOpenId(command.getPayerOpenId());
-            req.setAttach(buildAttachJson(paymentOrder));
+            // 微信 JSAPI 必填 openId
+            if (channel == PaymentChannel.WECHAT && method == PaymentMethod.WECHAT_JSAPI) {
+                if (isBlank(command.getPayerOpenId())) {
+                    throw new BizException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 支付需要提供 payerOpenId");
+                }
+            }
 
-            WeChatJsapiPrepayResponse resp = weChatPaymentGateway.jsapiPrepay(req, config);
-            channelContext = new HashMap<>();
-            channelContext.put("appId", resp.getAppId());
-            channelContext.put("timeStamp", resp.getTimeStamp());
-            channelContext.put("nonceStr", resp.getNonceStr());
-            channelContext.put("package", resp.getPackageValue());
-            channelContext.put("signType", resp.getSignType());
-            channelContext.put("paySign", resp.getPaySign());
+            int expireMinutes = command.getExpireMinutes() == null || command.getExpireMinutes() <= 0
+                    ? DEFAULT_EXPIRE_MINUTES
+                    : command.getExpireMinutes();
+            LocalDateTime expireAt = LocalDateTime.now().plusMinutes(expireMinutes);
+
+            // 幂等：按租户 + 业务订单 + 渠道 + 方式查已有支付单（当前 schema 支持有限，未来完善）
+            Optional<PaymentOrder> existing = paymentOrderRepository.findByBizKeys(
+                    command.getTenantId(),
+                    command.getBizType(),
+                    command.getBizOrderNo(),
+                    channel.getCode(),
+                    method.getCode()
+            );
+            if (existing.isPresent()) {
+                PaymentOrder order = existing.get();
+                PaymentStatus status = order.getStatus();
+                if (status != PaymentStatus.FAILED && status != PaymentStatus.CANCELED && status != PaymentStatus.CLOSED) {
+                    resultTag = "IDEMPOTENT";
+                    log.info("[payment-create] hit idempotent paymentId={} status={} traceId={} tenantId={} storeId={} bizOrderNo={}",
+                            order.getId(), status, MDC.get("traceId"), order.getTenantId(), order.getStoreId(), order.getBizOrderNo());
+                    return toCreateResult(order, order.getChannelContext());
+                }
+            }
+
+            String currency = isBlank(command.getCurrency()) ? "CNY" : command.getCurrency();
+            PaymentOrder paymentOrder = paymentDomainService.buildPaymentOrder(
+                    command.getTenantId(),
+                    command.getStoreId(),
+                    command.getBizType(),
+                    command.getBizOrderNo(),
+                    channel,
+                    method,
+                    scene,
+                    command.getTotalAmount(),
+                    command.getDiscountAmount(),
+                    currency,
+                    command.getIdempotentKey(),
+                    expireAt
+            );
+            paymentOrder.setUserId(command.getUserId());
+
+            paymentOrderRepository.insert(paymentOrder);
+
+            ChannelPrepayResult channelPrepayResult = null;
+            if (requiresPrepay(channel, method)) {
+                String description = isBlank(command.getDescription()) ? buildDefaultDescription(command) : command.getDescription();
+                ChannelPrepayCommand prepayCommand = new ChannelPrepayCommand(
+                        paymentOrder,
+                        command.getPayerOpenId(),
+                        description,
+                        buildAttachJson(paymentOrder)
+                );
+                channelPrepayResult = paymentChannelGatewayRouter.prepay(channel, method, prepayCommand);
+            }
+
+            Map<String, Object> channelContext = channelPrepayResult == null ? null : channelPrepayResult.getChannelContext();
+
+            log.info("[payment-create] success paymentId={} tenantId={} storeId={} bizOrderNo={} channel={} method={} scene={} traceId={}",
+                    paymentOrder.getId(),
+                    paymentOrder.getTenantId(),
+                    paymentOrder.getStoreId(),
+                    paymentOrder.getBizOrderNo(),
+                    channel.getCode(),
+                    method.getCode(),
+                    scene.getCode(),
+                    MDC.get("traceId"));
+            return toCreateResult(paymentOrder, channelContext);
+        } catch (BizException ex) {
+            resultTag = "FAIL";
+            log.warn("[payment-create] biz error traceId={} tenantId={} storeId={} bizOrderNo={} msg={}",
+                    MDC.get("traceId"), command.getTenantId(), command.getStoreId(), command.getBizOrderNo(), ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            resultTag = "ERROR";
+            log.error("[payment-create] system error traceId={} tenantId={} storeId={} bizOrderNo={}",
+                    MDC.get("traceId"), command.getTenantId(), command.getStoreId(), command.getBizOrderNo(), ex);
+            throw ex;
+        } finally {
+            paymentMetricsRecorder.recordCreatePayment(
+                    channel == null ? null : channel.getCode(),
+                    method == null ? null : method.getCode(),
+                    scene == null ? null : scene.getCode(),
+                    resultTag,
+                    startNanos
+            );
         }
-
-        return toCreateResult(paymentOrder, channelContext);
     }
 
     @Override
@@ -243,5 +258,15 @@ public class PaymentApplicationService implements PaymentApi {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean requiresPrepay(PaymentChannel channel, PaymentMethod method) {
+        if (channel == PaymentChannel.WECHAT && method == PaymentMethod.WECHAT_JSAPI) {
+            return true;
+        }
+        if (channel == PaymentChannel.ALIPAY && method == PaymentMethod.ALIPAY_MINI) {
+            return true;
+        }
+        return false;
     }
 }

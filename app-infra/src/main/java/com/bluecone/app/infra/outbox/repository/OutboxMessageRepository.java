@@ -126,4 +126,21 @@ public class OutboxMessageRepository {
         }
         return mapper.update(null, wrapper) > 0;
     }
+
+    /**
+     * 统计指定状态、事件类型前缀、且创建时间早于阈值的消息数量，用于健康巡检。
+     */
+    public long countByStatusAndPrefix(final OutboxMessageStatus status,
+                                       final String eventTypePrefix,
+                                       final LocalDateTime createdBefore) {
+        LambdaQueryWrapper<OutboxMessageEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OutboxMessageEntity::getStatus, status);
+        if (eventTypePrefix != null && !eventTypePrefix.isBlank()) {
+            wrapper.likeRight(OutboxMessageEntity::getEventType, eventTypePrefix);
+        }
+        if (createdBefore != null) {
+            wrapper.le(OutboxMessageEntity::getCreatedAt, createdBefore);
+        }
+        return mapper.selectCount(wrapper);
+    }
 }

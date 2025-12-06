@@ -11,6 +11,7 @@ public enum PaymentMethod {
     WECHAT_NATIVE("WECHAT_NATIVE", "微信 Native 扫码支付"),
     WECHAT_APP("WECHAT_APP", "微信 App 支付"),
     WECHAT_H5("WECHAT_H5", "微信 H5 支付"),
+    ALIPAY_MINI("ALIPAY_MINI", "支付宝小程序支付"),
     ALIPAY_APP("ALIPAY_APP", "支付宝 App 支付"),
     ALIPAY_PAGE("ALIPAY_PAGE", "支付宝当面付/网页收银台"),
     BALANCE_DIRECT("BALANCE_DIRECT", "余额直接扣款"),
