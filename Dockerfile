@@ -1,50 +1,49 @@
-# 二开推荐阅读[如何提高项目构建效率](https://developers.weixin.qq.com/miniprogram/dev/wxcloudrun/src/scene/build/speed.html)
-# 选择构建用基础镜像。如需更换，请到[dockerhub官方仓库](https://hub.docker.com/_/java?tab=tags)自行选择后替换。
-FROM maven:3.6.0-jdk-8-slim as build
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 
-# 指定构建过程中的工作目录
-WORKDIR /app
+# 指定构建目录
+WORKDIR /workspace
 
-# 将src目录下所有文件，拷贝到工作目录中src目录下（.gitignore/.dockerignore中文件除外）
-COPY src /app/src
+# 仅拷贝 pom 文件，充分利用 Docker 层缓存
+COPY pom.xml ./
+COPY app-core/pom.xml app-core/
+COPY app-id/pom.xml app-id/
+COPY app-infra/pom.xml app-infra/
+COPY app-security/pom.xml app-security/
+COPY app-order/pom.xml app-order/
+COPY app-payment/pom.xml app-payment/
+COPY app-tenant/pom.xml app-tenant/
+COPY app-store/pom.xml app-store/
+COPY app-product/pom.xml app-product/
+COPY app-inventory/pom.xml app-inventory/
+COPY app-application/pom.xml app-application/
 
-# 将pom.xml文件，拷贝到工作目录下
-COPY settings.xml pom.xml /app/
+# 预先下载依赖，提升重复构建速度
+RUN mvn -B -pl app-application -am dependency:go-offline
 
-# 执行代码编译命令
-# 自定义settings.xml, 选用国内镜像源以提高下载速度
-RUN mvn -s /app/settings.xml -f /app/pom.xml clean package
+# 拷贝完整源码并构建
+COPY . .
+RUN mvn -B -pl app-application -am clean package -DskipTests
 
 # 选择运行时基础镜像
-FROM alpine:3.13
+FROM alpine:3.19
 
-# 安装依赖包，如需其他依赖包，请到alpine依赖包管理(https://pkgs.alpinelinux.org/packages?name=php8*imagick*&branch=v3.13)查找。
-# 选用国内镜像源以提高下载速度
+# 安装运行所需依赖并使用腾讯镜像，加速在微信云托管的构建
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tencent.com/g' /etc/apk/repositories \
-    && apk add --update --no-cache openjdk8-jre-base \
+    && apk add --update --no-cache openjdk21-jre ca-certificates \
     && rm -f /var/cache/apk/*
 
 # 容器默认时区为UTC，如需使用上海时间请启用以下时区设置命令
-RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo Asia/Shanghai > /etc/timezone
-
-# 使用 HTTPS 协议访问容器云调用证书安装
-RUN apk add ca-certificates
-
-# 设置时区环境变量
-ENV TZ=Asia/Shanghai
+# RUN apk add tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo Asia/Shanghai > /etc/timezone
 
 # 指定运行时的工作目录
 WORKDIR /app
 
-# 将构建产物jar包拷贝到运行时目录中
-COPY --from=build /app/target/*.jar .
+# 将构建产物 jar 包拷贝到运行时目录中
+COPY --from=build /workspace/app-application/target/bluecone-app.jar /app/app.jar
 
-# 暴露端口
-# 此处端口必须与「服务设置」-「流水线」以及「手动上传代码包」部署时填写的端口一致，否则会部署失败。
+# 暴露端口，并兼容云托管注入的 PORT 变量
 EXPOSE 80
+ENV JAVA_OPTS=""
 
-# 执行启动命令.
-# 写多行独立的CMD命令是错误写法！只有最后一行CMD命令会被执行，之前的都会被忽略，导致业务报错。
-# 请参考[Docker官方文档之CMD命令](https://docs.docker.com/engine/reference/builder/#cmd)
-# 添加 JVM 时区参数确保 Java 应用使用上海时区
-CMD ["sh", "-c", "java -Duser.timezone=Asia/Shanghai -jar /app/*.jar"]
+# 通过 PORT 变量监听微信云托管要求的端口
+CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar --server.port=${PORT:-80}"]
