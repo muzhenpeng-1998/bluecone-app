@@ -11,7 +11,7 @@ import lombok.Data;
 @Data
 public class PaymentOrderView {
 
-    private Long id;
+    private Long paymentId;
 
     private String paymentNo;
 

@@ -12,7 +12,7 @@ public class CreatePaymentResult {
 
     private Long paymentId;
 
-    private String paymentNo;
+    private String paymentNo;   // 如无专用字段暂用 paymentId 字符串
 
     private String bizType;
 

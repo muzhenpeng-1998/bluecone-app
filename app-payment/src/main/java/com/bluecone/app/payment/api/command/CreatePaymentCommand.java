@@ -58,4 +58,14 @@ public class CreatePaymentCommand {
      * - 若不为空，需 > 0。
      */
     private Integer expireMinutes;
+
+    /**
+     * 微信 JSAPI 支付所需的 openId：channelCode=WECHAT 且 methodCode=WECHAT_JSAPI 时必填。
+     */
+    private String payerOpenId;
+
+    /**
+     * 订单描述，传给三方支付渠道。
+     */
+    private String description;
 }

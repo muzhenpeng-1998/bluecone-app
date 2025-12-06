@@ -6,14 +6,26 @@ import com.bluecone.app.payment.api.PaymentApi;
 import com.bluecone.app.payment.api.command.CreatePaymentCommand;
 import com.bluecone.app.payment.api.dto.CreatePaymentResult;
 import com.bluecone.app.payment.api.dto.PaymentOrderView;
+import com.bluecone.app.payment.domain.channel.PaymentChannelConfig;
+import com.bluecone.app.payment.domain.channel.PaymentChannelConfigRepository;
+import com.bluecone.app.payment.domain.channel.PaymentChannelType;
 import com.bluecone.app.payment.domain.enums.PaymentChannel;
 import com.bluecone.app.payment.domain.enums.PaymentMethod;
 import com.bluecone.app.payment.domain.enums.PaymentScene;
+import com.bluecone.app.payment.domain.enums.PaymentStatus;
+import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayRequest;
+import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayResponse;
+import com.bluecone.app.payment.domain.gateway.WeChatPaymentGateway;
 import com.bluecone.app.payment.domain.model.PaymentOrder;
 import com.bluecone.app.payment.domain.repository.PaymentOrderRepository;
 import com.bluecone.app.payment.domain.service.PaymentDomainService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -34,11 +46,20 @@ public class PaymentApplicationService implements PaymentApi {
 
     private final PaymentDomainService paymentDomainService;
     private final PaymentOrderRepository paymentOrderRepository;
+    private final PaymentChannelConfigRepository paymentChannelConfigRepository;
+    private final WeChatPaymentGateway weChatPaymentGateway;
+    private final ObjectMapper objectMapper;
 
     public PaymentApplicationService(PaymentDomainService paymentDomainService,
-                                     PaymentOrderRepository paymentOrderRepository) {
+                                     PaymentOrderRepository paymentOrderRepository,
+                                     PaymentChannelConfigRepository paymentChannelConfigRepository,
+                                     WeChatPaymentGateway weChatPaymentGateway,
+                                     ObjectMapper objectMapper) {
         this.paymentDomainService = paymentDomainService;
         this.paymentOrderRepository = paymentOrderRepository;
+        this.paymentChannelConfigRepository = paymentChannelConfigRepository;
+        this.weChatPaymentGateway = weChatPaymentGateway;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -56,6 +77,13 @@ public class PaymentApplicationService implements PaymentApi {
             throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付场景");
         }
 
+        // 微信 JSAPI 必填 openId
+        if (channel == PaymentChannel.WECHAT && method == PaymentMethod.WECHAT_JSAPI) {
+            if (isBlank(command.getPayerOpenId())) {
+                throw new BizException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 支付需要提供 payerOpenId");
+            }
+        }
+
         int expireMinutes = command.getExpireMinutes() == null || command.getExpireMinutes() <= 0
                 ? DEFAULT_EXPIRE_MINUTES
                 : command.getExpireMinutes();
@@ -71,9 +99,13 @@ public class PaymentApplicationService implements PaymentApi {
         );
         if (existing.isPresent()) {
             PaymentOrder order = existing.get();
-            return toCreateResult(order);
+            PaymentStatus status = order.getStatus();
+            if (status != PaymentStatus.FAILED && status != PaymentStatus.CANCELED && status != PaymentStatus.CLOSED) {
+                return toCreateResult(order, order.getChannelContext());
+            }
         }
 
+        String currency = isBlank(command.getCurrency()) ? "CNY" : command.getCurrency();
         PaymentOrder paymentOrder = paymentDomainService.buildPaymentOrder(
                 command.getTenantId(),
                 command.getStoreId(),
@@ -84,14 +116,56 @@ public class PaymentApplicationService implements PaymentApi {
                 scene,
                 command.getTotalAmount(),
                 command.getDiscountAmount(),
-                command.getCurrency(),
+                currency,
                 command.getIdempotentKey(),
                 expireAt
         );
         paymentOrder.setUserId(command.getUserId());
 
         paymentOrderRepository.insert(paymentOrder);
-        return toCreateResult(paymentOrder);
+
+        Map<String, Object> channelContext = null;
+        PaymentChannelType channelType = PaymentChannelType.fromChannelAndMethod(channel, method);
+
+        if (channelType == PaymentChannelType.WECHAT_JSAPI) {
+            PaymentChannelConfig config = paymentChannelConfigRepository.findByTenantStoreAndChannel(
+                            command.getTenantId(),
+                            command.getStoreId(),
+                            channelType
+                    )
+                    .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 渠道未配置"));
+
+            BigDecimal payable = paymentOrder.getPayableAmount();
+            if (payable == null) {
+                throw new BizException(CommonErrorCode.SYSTEM_ERROR, "支付单缺少应付金额");
+            }
+            long fen = payable.multiply(BigDecimal.valueOf(100))
+                    .setScale(0, RoundingMode.HALF_UP)
+                    .longValueExact();
+
+            WeChatJsapiPrepayRequest req = new WeChatJsapiPrepayRequest();
+            req.setPaymentOrderId(paymentOrder.getId());
+            req.setTenantId(paymentOrder.getTenantId());
+            req.setStoreId(paymentOrder.getStoreId());
+            req.setUserId(paymentOrder.getUserId());
+            req.setAmountTotal(fen);
+            req.setCurrency(currency);
+            req.setDescription(isBlank(command.getDescription()) ? buildDefaultDescription(command) : command.getDescription());
+            req.setOutTradeNo(String.valueOf(paymentOrder.getId()));
+            req.setPayerOpenId(command.getPayerOpenId());
+            req.setAttach(buildAttachJson(paymentOrder));
+
+            WeChatJsapiPrepayResponse resp = weChatPaymentGateway.jsapiPrepay(req, config);
+            channelContext = new HashMap<>();
+            channelContext.put("appId", resp.getAppId());
+            channelContext.put("timeStamp", resp.getTimeStamp());
+            channelContext.put("nonceStr", resp.getNonceStr());
+            channelContext.put("package", resp.getPackageValue());
+            channelContext.put("signType", resp.getSignType());
+            channelContext.put("paySign", resp.getPaySign());
+        }
+
+        return toCreateResult(paymentOrder, channelContext);
     }
 
     @Override
@@ -107,10 +181,10 @@ public class PaymentApplicationService implements PaymentApi {
         return null;
     }
 
-    private CreatePaymentResult toCreateResult(PaymentOrder order) {
+    private CreatePaymentResult toCreateResult(PaymentOrder order, Map<String, Object> channelContext) {
         CreatePaymentResult result = new CreatePaymentResult();
         result.setPaymentId(order.getId());
-        result.setPaymentNo(order.getPaymentNo());
+        result.setPaymentNo(order.getPaymentNo() == null ? String.valueOf(order.getId()) : order.getPaymentNo());
         result.setBizType(order.getBizType());
         result.setBizOrderNo(order.getBizOrderNo());
         result.setChannelCode(order.getChannel() == null ? null : order.getChannel().getCode());
@@ -120,13 +194,13 @@ public class PaymentApplicationService implements PaymentApi {
         result.setDiscountAmount(order.getDiscountAmount());
         result.setPayableAmount(order.getPayableAmount());
         result.setStatus(order.getStatus() == null ? null : order.getStatus().getCode());
-        result.setChannelContext(order.getChannelContext() == null ? Map.of() : order.getChannelContext());
+        result.setChannelContext(channelContext);
         return result;
     }
 
     private PaymentOrderView toView(PaymentOrder order) {
         PaymentOrderView view = new PaymentOrderView();
-        view.setId(order.getId());
+        view.setPaymentId(order.getId());
         view.setPaymentNo(order.getPaymentNo());
         view.setTenantId(order.getTenantId());
         view.setStoreId(order.getStoreId());
@@ -148,5 +222,26 @@ public class PaymentApplicationService implements PaymentApi {
         view.setCreatedAt(order.getCreatedAt());
         view.setUpdatedAt(order.getUpdatedAt());
         return view;
+    }
+
+    private String buildDefaultDescription(CreatePaymentCommand command) {
+        return "BlueCone订单-" + command.getBizOrderNo();
+    }
+
+    private String buildAttachJson(PaymentOrder order) {
+        Map<String, Object> attach = new HashMap<>();
+        attach.put("tenantId", order.getTenantId());
+        attach.put("storeId", order.getStoreId());
+        attach.put("bizType", order.getBizType());
+        attach.put("bizOrderNo", order.getBizOrderNo());
+        try {
+            return objectMapper.writeValueAsString(attach);
+        } catch (JsonProcessingException e) {
+            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "支付附加信息序列化失败", e);
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }
