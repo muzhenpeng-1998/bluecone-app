@@ -1,7 +1,7 @@
 package com.bluecone.app.core.user.domain.member.service;
 
 import com.bluecone.app.core.user.domain.member.MemberLevel;
-import com.bluecone.app.core.user.domain.member.repository.MemberLevelRepository;
+import com.bluecone.app.core.user.domain.repository.MemberLevelRepository;
 import com.bluecone.app.core.user.domain.member.service.impl.MemberLevelPolicyImpl;
 import com.bluecone.app.core.user.testdata.UserTestDataFactory;
 import org.junit.jupiter.api.BeforeEach;

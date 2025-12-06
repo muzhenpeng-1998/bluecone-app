@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<!--
+  文件路径：app-application/src/main/resources/public/admin/index.html
+  用途：BlueCone Admin Ops UI 的入口 HTML，提供基础布局与 Alpine.js 绑定。
+-->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlueCone Admin Ops</title>
+    <link rel="stylesheet" href="/admin/style.css" />
+    <script src="https://cdn.tailwindcss.com" defer></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="/admin/app.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900" x-data="adminShell()" x-init="init()">
+    <div class="min-h-screen flex">
+        <aside class="w-64 bg-slate-900 text-white flex flex-col">
+            <div class="p-6 border-b border-white/10">
+                <p class="uppercase text-xs tracking-[0.2em] text-slate-400">BlueCone</p>
+                <p class="text-xl font-semibold">Admin Ops</p>
+                <p class="text-xs text-slate-400 mt-1">内嵌版运维面板</p>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-1 text-sm">
+                <button class="nav-item" :class="navClass('dashboard')" @click="switchPanel('dashboard')">Dashboard</button>
+                <button class="nav-item" :class="navClass('outbox')" @click="switchPanel('outbox')">Outbox 管理</button>
+                <button class="nav-item" :class="navClass('scheduler')" @click="switchPanel('scheduler')">Scheduler 任务</button>
+                <button class="nav-item" :class="navClass('config')" @click="switchPanel('config')">ConfigCenter</button>
+                <button class="nav-item" :class="navClass('notification')" @click="switchPanel('notification')">通知调试</button>
+            </nav>
+            <div class="p-4 border-t border-white/10 text-xs text-slate-400">
+                <p class="font-semibold text-white">提示</p>
+                <p>确保已经在右上角填写 Token，否则 API 会被拒绝。</p>
+            </div>
+        </aside>
+        <div class="flex-1 flex flex-col">
+            <header class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm uppercase tracking-wide text-slate-500">BlueCone Admin Ops</p>
+                    <p class="text-xl font-semibold text-slate-900">极简版后台</p>
+                    <p class="text-sm text-slate-500">直接运行在 Spring Boot 静态资源目录下</p>
+                </div>
+                <div class="flex-1 lg:px-8">
+                    <label class="block text-xs font-medium text-slate-500 mb-2">Admin Token</label>
+                    <div class="flex gap-2">
+                        <input x-model="tokenInput" type="password" placeholder="粘贴 JWT Token" class="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500" />
+                        <button class="btn-primary" @click="saveToken()">保存 Token</button>
+                        <button class="btn-muted" @click="clearToken()">清除</button>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1" x-text="tokenMessage" x-show="tokenMessage" x-cloak></p>
+                </div>
+                <div class="text-sm text-slate-500">
+                    <p>Tenant: <span class="font-semibold" x-text="context.tenantId || '未设置'"></span></p>
+                    <p>Env: <span class="font-semibold" x-text="context.env || 'N/A'"></span></p>
+                    <p>用户: <span class="font-semibold" x-text="context.user || '匿名'"></span></p>
+                </div>
+            </header>
+            <main class="flex-1 overflow-y-auto p-6 space-y-6">
+                <section x-show="activePanel === 'dashboard'" x-cloak>
+                    <div class="card">
+                        <h2 class="card-title">Dashboard</h2>
+                        <p class="card-desc">集中展示 Outbox / Scheduler / ConfigCenter / Notification 等运维视图。当前为占位，后续可扩展实时指标或健康检查。</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                            <div class="stat-card">
+                                <p class="stat-label">核心能力</p>
+                                <p class="stat-value">Outbox · Scheduler · Config · Notify</p>
+                            </div>
+                            <div class="stat-card">
+                                <p class="stat-label">当前状态</p>
+                                <p class="stat-value">内嵌 UI 已加载</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section x-show="activePanel === 'outbox'" x-data="outboxPanel()" x-init="load()" x-cloak>
+                    <div class="card">
+                        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h2 class="card-title">Outbox 管理</h2>
+                                <p class="card-desc">列出最近的 Outbox 事件，可手动触发重试。</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn-primary" @click="load()" :disabled="loading">
+                                    <span x-show="!loading">刷新列表</span>
+                                    <span x-show="loading">加载中...</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">API：GET /api/admin/outbox?page=1&pageSize=20 · POST /api/admin/outbox/{id}/retry</p>
+                        <div class="mt-4" x-show="error" x-cloak>
+                            <div class="alert-error" x-text="error"></div>
+                        </div>
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>事件类型</th>
+                                        <th>状态</th>
+                                        <th>重试次数</th>
+                                        <th>下次重试</th>
+                                        <th>创建时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr x-show="!loading && list.length === 0">
+                                        <td colspan="7" class="text-center text-slate-400">暂无 Outbox 数据</td>
+                                    </tr>
+                                    <template x-for="item in list" :key="item.id">
+                                        <tr>
+                                            <td class="font-mono" x-text="item.id"></td>
+                                            <td x-text="item.eventType"></td>
+                                            <td>
+                                                <span class="badge" :class="statusClass(item.status)" x-text="item.status"></span>
+                                            </td>
+                                            <td x-text="item.retryCount"></td>
+                                            <td x-text="formatDate(item.nextRetryAt)"></td>
+                                            <td x-text="formatDate(item.createdAt)"></td>
+                                            <td>
+                                                <button class="btn-muted" @click="retry(item.id)" :disabled="actionLoading === item.id">
+                                                    <span x-show="actionLoading !== item.id">重试</span>
+                                                    <span x-show="actionLoading === item.id">执行中...</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section x-show="activePanel === 'scheduler'" x-data="schedulerPanel()" x-init="load()" x-cloak>
+                    <div class="card">
+                        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h2 class="card-title">Scheduler 任务</h2>
+                                <p class="card-desc">查看 JobDefinition，并可手动触发。</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn-primary" @click="load()" :disabled="loading">
+                                    <span x-show="!loading">刷新列表</span>
+                                    <span x-show="loading">加载中...</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">API：GET /api/admin/scheduler/jobs · POST /api/admin/scheduler/jobs/{id}/trigger</p>
+                        <div class="mt-4" x-show="error" x-cloak>
+                            <div class="alert-error" x-text="error"></div>
+                        </div>
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Job</th>
+                                        <th>Cron</th>
+                                        <th>Enabled</th>
+                                        <th>最近状态</th>
+                                        <th>最近执行</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr x-show="!loading && jobs.length === 0">
+                                        <td colspan="6" class="text-center text-slate-400">暂无 Scheduler 数据</td>
+                                    </tr>
+                                    <template x-for="job in jobs" :key="job.id || job.jobName">
+                                        <tr>
+                                            <td>
+                                                <p class="font-semibold" x-text="job.jobName"></p>
+                                                <p class="text-xs text-slate-500" x-text="job.description"></p>
+                                            </td>
+                                            <td class="font-mono" x-text="job.cronExpression || job.cron"></td>
+                                            <td>
+                                                <span class="badge" :class="job.enabled ? 'badge-success' : 'badge-muted'" x-text="job.enabled ? '启用' : '禁用'"></span>
+                                            </td>
+                                            <td x-text="job.lastExecutionStatus || '-' "></td>
+                                            <td x-text="formatDate(job.lastExecutionTime)"></td>
+                                            <td>
+                                                <button class="btn-muted" @click="trigger(job.id || job.jobName)" :disabled="actionLoading === (job.id || job.jobName)">
+                                                    <span x-show="actionLoading !== (job.id || job.jobName)">手动触发</span>
+                                                    <span x-show="actionLoading === (job.id || job.jobName)">执行中...</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section x-show="activePanel === 'config'" x-data="configPanel()" x-init="load()" x-cloak>
+                    <div class="card">
+                        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h2 class="card-title">ConfigCenter 配置</h2>
+                                <p class="card-desc">按 tenant/env 查询配置，支持关键字过滤。</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn-primary" @click="load()" :disabled="loading">
+                                    <span x-show="!loading">重新拉取</span>
+                                    <span x-show="loading">加载中...</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">API：GET /api/admin/config/properties?tenantId=xxx&env=dev</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <div>
+                                <label class="input-label">Tenant ID</label>
+                                <input class="input" x-model="tenantId" placeholder="如 default" />
+                            </div>
+                            <div>
+                                <label class="input-label">Env</label>
+                                <input class="input" x-model="env" placeholder="如 dev / prod" />
+                            </div>
+                            <div>
+                                <label class="input-label">关键字过滤</label>
+                                <input class="input" x-model="query" placeholder="按 key 模糊搜索" />
+                            </div>
+                        </div>
+                        <div class="mt-4" x-show="error" x-cloak>
+                            <div class="alert-error" x-text="error"></div>
+                        </div>
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Key</th>
+                                        <th>Value</th>
+                                        <th>来源</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr x-show="!loading && filteredItems().length === 0">
+                                        <td colspan="3" class="text-center text-slate-400">暂无配置或未匹配到记录</td>
+                                    </tr>
+                                    <template x-for="item in filteredItems()" :key="item.key">
+                                        <tr>
+                                            <td class="font-mono" x-text="item.key"></td>
+                                            <td class="break-all" x-text="item.value"></td>
+                                            <td x-text="item.source || '-' "></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section x-show="activePanel === 'notification'" x-data="notificationPanel()" x-cloak>
+                    <div class="card">
+                        <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <h2 class="card-title">通知调试</h2>
+                                <p class="card-desc">临时发送通知到 WeChat 机器人或其它渠道。</p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">API：POST /api/admin/notify/test</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label class="input-label">Scenario Code</label>
+                                <input class="input" x-model="form.scenarioCode" placeholder="如 order_created" />
+                            </div>
+                            <div>
+                                <label class="input-label">Priority</label>
+                                <input class="input" x-model="form.priority" placeholder="如 HIGH / NORMAL" />
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="input-label">Title</label>
+                                <input class="input" x-model="form.title" placeholder="通知标题" />
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="input-label">内容</label>
+                                <textarea class="input h-32" x-model="form.content" placeholder="支持简单 Markdown" ></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex gap-2">
+                            <button class="btn-primary" @click="send()" :disabled="loading">
+                                <span x-show="!loading">发送测试通知</span>
+                                <span x-show="loading">发送中...</span>
+                            </button>
+                            <button class="btn-muted" @click="reset()" type="button">重置表单</button>
+                        </div>
+                        <div class="mt-4" x-show="message" x-cloak>
+                            <div class="alert-info" x-text="message"></div>
+                        </div>
+                        <div class="mt-2" x-show="error" x-cloak>
+                            <div class="alert-error" x-text="error"></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

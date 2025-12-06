@@ -4,7 +4,7 @@ import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.user.domain.event.MemberLevelChangedEvent;
 import com.bluecone.app.core.user.domain.member.MemberLevel;
 import com.bluecone.app.core.user.domain.member.TenantMember;
-import com.bluecone.app.core.user.domain.member.repository.TenantMemberRepository;
+import com.bluecone.app.core.user.domain.repository.TenantMemberRepository;
 import com.bluecone.app.core.user.domain.member.service.impl.GrowthDomainServiceImpl;
 import com.bluecone.app.core.user.testdata.UserTestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
