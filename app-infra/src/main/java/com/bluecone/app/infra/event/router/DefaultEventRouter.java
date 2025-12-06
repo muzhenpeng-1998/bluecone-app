@@ -45,8 +45,17 @@ public class DefaultEventRouter implements EventRouter {
     @Override
     public List<EventHandler<?>> route(final DomainEvent event) {
         Objects.requireNonNull(event, "event must not be null");
-        List<EventHandler<?>> handlers = handlerMapping.get(event.getClass());
-        if (handlers == null || handlers.isEmpty()) {
+        List<EventHandler<?>> handlers = new ArrayList<>();
+        List<EventHandler<?>> exact = handlerMapping.get(event.getClass());
+        if (exact != null) {
+            handlers.addAll(exact);
+        }
+        handlerMapping.forEach((eventType, handlerList) -> {
+            if (!eventType.equals(event.getClass()) && eventType.isAssignableFrom(event.getClass())) {
+                handlers.addAll(handlerList);
+            }
+        });
+        if (handlers.isEmpty()) {
             log.debug("No handlers registered for eventType={}, eventId={}", event.getEventType(), event.getEventId());
             return Collections.emptyList();
         }

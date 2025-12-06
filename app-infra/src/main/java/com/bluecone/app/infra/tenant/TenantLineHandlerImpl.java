@@ -104,6 +104,11 @@ public class TenantLineHandlerImpl implements TenantLineHandler {
          if ("bc_outbox_message".equalsIgnoreCase(tableName)) {
              return true;
          }
+         // Integration Hub 为全局事件通道，内部自行做 tenant 过滤
+         if ("bc_integration_subscription".equalsIgnoreCase(tableName)
+                 || "bc_integration_delivery".equalsIgnoreCase(tableName)) {
+             return true;
+         }
 
         // 当前返回 false，表示所有表都启用租户隔离
         return false;
