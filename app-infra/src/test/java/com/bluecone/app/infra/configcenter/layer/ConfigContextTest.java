@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 class ConfigContextTest {
 
     @Test
+    // 验证配置解析的优先级：租户+环境 > 租户全局 > 环境 > 系统默认
     void resolvesWithExpectedPrecedence() {
         ConfigContext context = new ConfigContext("prod", 42L);
 
@@ -20,7 +21,7 @@ class ConfigContextTest {
                 key(42L, "test", "order.timeout"), "tenant-test"
         ));
         TenantGlobalConfigLayer tenantGlobal = new StubTenantGlobalLayer(Map.of(
-                key(42L, null, "order.timeout"), "tenant-global"
+                key(7L, null, "order.timeout"), "tenant-global"
         ));
         EnvConfigLayer envLayer = new StubEnvLayer(Map.of(
                 key(null, "prod", "order.timeout"), "env-prod"

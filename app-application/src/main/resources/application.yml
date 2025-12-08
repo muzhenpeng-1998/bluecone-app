@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: bluecone-app
+  flyway:
+    # 本地启动容忍缺失迁移，避免历史库校验失败；正式环境请关闭
+    ignore-migration-patterns: "*:missing"
+    validate-on-migrate: false
 
   datasource:
     url: jdbc:mysql://rm-bp1xld3504q1gtf6b9o.mysql.rds.aliyuncs.com:3306/app?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8

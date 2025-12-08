@@ -13,13 +13,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
@@ -30,7 +32,7 @@ import org.testcontainers.utility.DockerImageName;
 /**
  * Boots the full application on a random port with containerized dependencies for HTTP level tests.
  */
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true) // 本地无 Docker 时跳过 Web 集成测试
 @ActiveProfiles("test")
 @SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestPropertySource(properties = {
@@ -145,7 +147,7 @@ public abstract class AbstractWebIntegrationTest {
     }
 
     protected void flushRedis() {
-        stringRedisTemplate.execute(connection -> {
+        stringRedisTemplate.execute((RedisCallback<Void>) connection -> {
             connection.serverCommands().flushDb();
             return null;
         });

@@ -11,6 +11,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +26,7 @@ import org.testcontainers.utility.DockerImageName;
  * Base class for infrastructure integration tests. Spins up containerized MySQL/Redis once and
  * wires Spring Boot against them. Provides utility helpers to keep state isolated.
  */
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true) // 本地无 Docker 环境时自动跳过集成测试
 @ActiveProfiles("test")
 @SpringBootTest(classes = InfraTestApplication.class)
 @ExtendWith(SpringExtension.class)
@@ -113,7 +115,7 @@ public abstract class AbstractIntegrationTest {
         if (stringRedisTemplate == null) {
             return;
         }
-        stringRedisTemplate.execute(connection -> {
+        stringRedisTemplate.execute((RedisCallback<Void>) connection -> {
             connection.serverCommands().flushDb();
             return null;
         });
