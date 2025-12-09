@@ -75,6 +75,20 @@ bluecone:
       access-key-secret: "i9DQDQ1y8ISRB4D0JqfBI0Pg800pU1"
       default-bucket: "bluecone"
       default-expire-seconds: 600
+      cdn-domain: "https://cdn.bluecone.com"
+      public-domain: "https://img.bluecone.com"
+
+  resource:
+    quota:
+      default-daily-upload-count-limit: 2000
+      default-daily-upload-bytes-limit: 10737418240
+      tenant-overrides:
+        1001:
+          daily-upload-count-limit: 10000
+          daily-upload-bytes-limit: 53687091200
+        1002:
+          daily-upload-count-limit: 500
+          daily-upload-bytes-limit: 1073741824
 
 logging:
   level:

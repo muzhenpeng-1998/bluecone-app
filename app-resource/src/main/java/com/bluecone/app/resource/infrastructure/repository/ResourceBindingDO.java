@@ -18,6 +18,9 @@ public class ResourceBindingDO {
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
+    @TableField("tenant_id")
+    private Long tenantId;
+
     @TableField("owner_type")
     private String ownerType;
 

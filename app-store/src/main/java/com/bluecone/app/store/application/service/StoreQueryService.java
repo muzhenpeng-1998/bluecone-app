@@ -10,6 +10,7 @@ import com.bluecone.app.store.dao.entity.BcStore;
 import com.bluecone.app.store.dao.service.IBcStoreService;
 import com.bluecone.app.store.domain.model.StoreConfig;
 import com.bluecone.app.store.application.service.StoreConfigService;
+import com.bluecone.app.store.application.service.StoreResourceService;
 import com.bluecone.app.store.domain.service.assembler.StoreViewAssembler;
 import com.bluecone.app.store.domain.error.StoreErrorCode;
 import org.springframework.stereotype.Service;
@@ -29,13 +30,16 @@ public class StoreQueryService {
     private final IBcStoreService bcStoreService;
     private final StoreConfigService storeConfigService;
     private final StoreViewAssembler storeViewAssembler;
+    private final StoreResourceService storeResourceService;
 
     public StoreQueryService(IBcStoreService bcStoreService,
                              StoreConfigService storeConfigService,
-                             StoreViewAssembler storeViewAssembler) {
+                             StoreViewAssembler storeViewAssembler,
+                             StoreResourceService storeResourceService) {
         this.bcStoreService = bcStoreService;
         this.storeConfigService = storeConfigService;
         this.storeViewAssembler = storeViewAssembler;
+        this.storeResourceService = storeResourceService;
     }
 
     /**
@@ -83,7 +87,14 @@ public class StoreQueryService {
         if (entity == null) {
             throw new BizException(StoreErrorCode.STORE_NOT_FOUND);
         }
-        return storeViewAssembler.toStoreBaseView(entity);
+        StoreBaseView view = storeViewAssembler.toStoreBaseView(entity);
+        if (view != null) {
+            String logoUrl = storeResourceService.resolveStoreLogoUrl(entity.getId());
+            if (logoUrl != null) {
+                view.setLogoUrl(logoUrl);
+            }
+        }
+        return view;
     }
 
     /**

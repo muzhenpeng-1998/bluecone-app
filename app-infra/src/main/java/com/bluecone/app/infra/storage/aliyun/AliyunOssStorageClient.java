@@ -8,6 +8,7 @@ import com.bluecone.app.infra.storage.GenerateDownloadUrlRequest;
 import com.bluecone.app.infra.storage.GenerateUploadPolicyRequest;
 import com.bluecone.app.infra.storage.StorageClient;
 import com.bluecone.app.infra.storage.StorageUploadPolicy;
+import org.springframework.util.StringUtils;
 
 import java.net.URI;
 import java.net.URL;
@@ -66,7 +67,7 @@ public class AliyunOssStorageClient implements StorageClient {
         final AccessLevel level = request.getAccessLevel() == null ? AccessLevel.PRIVATE : request.getAccessLevel();
 
         if (level == AccessLevel.PUBLIC_READ) {
-            return buildPublicUrl(bucket, storageKey);
+            return applyDomainForPublic(buildPublicUrl(bucket, storageKey), storageKey);
         }
 
         long expireSeconds = resolveExpireSeconds(request.getExpireSeconds());
@@ -74,7 +75,7 @@ public class AliyunOssStorageClient implements StorageClient {
         GeneratePresignedUrlRequest presign = new GeneratePresignedUrlRequest(bucket, storageKey, HttpMethod.GET);
         presign.setExpiration(expiration);
         URL url = ossClient.generatePresignedUrl(presign);
-        return url.toString();
+        return applyDomainForPrivate(url.toString(), storageKey);
     }
 
     @Override
@@ -108,5 +109,43 @@ public class AliyunOssStorageClient implements StorageClient {
         String basePath = storageKey.startsWith("/") ? storageKey.substring(1) : storageKey;
         return scheme + "://" + bucket + "." + host + "/" + basePath;
     }
-}
 
+    private String applyDomainForPublic(String defaultUrl, String storageKey) {
+        String domain = StringUtils.hasText(properties.getPublicDomain())
+                ? properties.getPublicDomain()
+                : properties.getCdnDomain();
+        return applyDomain(defaultUrl, storageKey, domain, false);
+    }
+
+    private String applyDomainForPrivate(String originalUrl, String storageKey) {
+        return applyDomain(originalUrl, storageKey, properties.getCdnDomain(), true);
+    }
+
+    private String applyDomain(String originalUrl, String storageKey, String domain, boolean keepQuery) {
+        if (!StringUtils.hasText(domain)) {
+            return originalUrl;
+        }
+        String normalizedDomain = trimTrailingSlash(domain);
+        String trimmedKey = storageKey.startsWith("/") ? storageKey.substring(1) : storageKey;
+        StringBuilder builder = new StringBuilder(normalizedDomain);
+        if (!normalizedDomain.endsWith("/")) {
+            builder.append("/");
+        }
+        builder.append(trimmedKey);
+        if (keepQuery) {
+            try {
+                URI uri = new URI(originalUrl);
+                String query = uri.getRawQuery();
+                if (StringUtils.hasText(query)) {
+                    builder.append("?").append(query);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return builder.toString();
+    }
+
+    private String trimTrailingSlash(String domain) {
+        return domain.replaceAll("/+$", "");
+    }
+}

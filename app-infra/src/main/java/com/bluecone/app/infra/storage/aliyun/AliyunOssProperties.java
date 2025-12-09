@@ -13,6 +13,8 @@ public class AliyunOssProperties {
     private String accessKeySecret;
     private String defaultBucket;
     private long defaultExpireSeconds = 600;
+    private String cdnDomain;
+    private String publicDomain;
 
     public String getEndpoint() {
         return endpoint;
@@ -53,5 +55,20 @@ public class AliyunOssProperties {
     public void setDefaultExpireSeconds(final long defaultExpireSeconds) {
         this.defaultExpireSeconds = defaultExpireSeconds;
     }
-}
 
+    public String getCdnDomain() {
+        return cdnDomain;
+    }
+
+    public void setCdnDomain(final String cdnDomain) {
+        this.cdnDomain = cdnDomain;
+    }
+
+    public String getPublicDomain() {
+        return publicDomain;
+    }
+
+    public void setPublicDomain(final String publicDomain) {
+        this.publicDomain = publicDomain;
+    }
+}
