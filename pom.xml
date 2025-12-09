@@ -35,17 +35,20 @@
 
     <modules>
         <module>app-core</module>
-        <module>app-id</module>
         <module>app-infra</module>
+        <module>app-id</module>
+        <module>app-resource-api</module>
+        <module>app-resource</module>
         <module>app-security</module>
+
+        <module>app-tenant</module>
+        <module>app-store</module>
+        <module>app-product</module>
         <module>app-order</module>
 
         <!-- 新增支付模块 -->
         <module>app-payment</module>
 
-        <module>app-tenant</module>
-        <module>app-store</module>
-        <module>app-product</module>
         <module>app-inventory</module>
         <module>app-application</module>
     </modules>

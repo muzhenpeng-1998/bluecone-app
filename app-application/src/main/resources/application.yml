@@ -67,6 +67,15 @@ bluecone:
     clean-retention-days: 7
     consumption-dedup-days: 7
 
+  storage:
+    provider: ALIYUN_OSS
+    aliyun:
+      endpoint: "https://oss-cn-hangzhou.aliyuncs.com"
+      access-key-id: "LTAI5tMZCj7ieTWeXX2kuEA1"
+      access-key-secret: "i9DQDQ1y8ISRB4D0JqfBI0Pg800pU1"
+      default-bucket: "bluecone"
+      default-expire-seconds: 600
+
 logging:
   level:
     com.bluecone.app.infra.outbox: DEBUG
