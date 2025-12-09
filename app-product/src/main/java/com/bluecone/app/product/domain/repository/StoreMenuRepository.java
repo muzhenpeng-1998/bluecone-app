@@ -1,18 +1,22 @@
 package com.bluecone.app.product.domain.repository;
 
-import com.bluecone.app.product.domain.enums.MenuScene;
-import com.bluecone.app.product.domain.enums.SaleChannel;
-import com.bluecone.app.product.domain.model.readmodel.StoreMenuSnapshot;
-import java.util.Optional;
+import com.bluecone.app.product.domain.model.menu.StoreSkuSnapshot;
+import com.bluecone.app.product.domain.model.menu.UserStoreMenu;
+import java.util.Collection;
+import java.util.Map;
 
 /**
- * 门店菜单快照的读模型仓储接口，对应 bc_store_menu_snapshot，支撑高并发菜单读取与失效控制。
+ * 门店菜单仓储，提供面向用户的菜单视图及 SKU 权威定价。
  */
 public interface StoreMenuRepository {
 
-    Optional<StoreMenuSnapshot> findSnapshot(Long tenantId, Long storeId, SaleChannel channel, MenuScene scene);
+    /**
+     * 加载某个门店在用户侧可见的菜单。
+     */
+    UserStoreMenu loadUserStoreMenu(Long tenantId, Long storeId);
 
-    void saveSnapshot(StoreMenuSnapshot snapshot);
-
-    void invalidateSnapshot(Long tenantId, Long storeId, SaleChannel channel, MenuScene scene);
+    /**
+     * 按门店 + SKU 列表加载权威 SKU 快照。
+     */
+    Map<Long, StoreSkuSnapshot> loadStoreSkuSnapshotMap(Long tenantId, Long storeId, Collection<Long> skuIds);
 }

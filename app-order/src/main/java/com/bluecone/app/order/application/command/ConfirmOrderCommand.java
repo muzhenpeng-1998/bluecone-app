@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.command;
 
 import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
-import com.bluecone.app.order.application.dto.ConfirmOrderRequest;
+import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -62,20 +62,17 @@ public class ConfirmOrderCommand {
                                                   Long tenantId,
                                                   Long storeId,
                                                   Long userId) {
+        // TODO: 后续应从登录态/上下文读取 tenantId/storeId/userId，当前阶段允许从请求体携带。
         return ConfirmOrderCommand.builder()
                 .tenantId(tenantId)
                 .storeId(storeId != null ? storeId : request.getStoreId())
                 .userId(userId != null ? userId : request.getUserId())
-                .orderId(request.getOrderId())
                 .clientOrderNo(request.getClientOrderNo())
                 .sessionId(request.getSessionId())
                 .sessionVersion(request.getSessionVersion())
-                .version(request.getVersion())
                 .payChannel(request.getPayChannel())
-                .payAmount(request.getPayAmount())
-                .currency(request.getCurrency())
+                .currency("CNY")
                 .remark(request.getRemark())
-                .extJson(request.getExtJson())
                 .channel(request.getChannel())
                 .bizType(request.getBizType())
                 .orderSource(request.getOrderSource())

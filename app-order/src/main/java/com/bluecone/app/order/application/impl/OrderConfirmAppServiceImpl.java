@@ -4,21 +4,16 @@ import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderResponse;
-import com.bluecone.app.order.application.CollaborativeOrderSessionAppService;
 import com.bluecone.app.order.application.OrderConfirmAppService;
-import com.bluecone.app.order.application.assembler.OrderAppAssembler;
+import com.bluecone.app.order.application.command.ConfirmOrderCommand;
 import com.bluecone.app.order.application.generator.OrderIdGenerator;
 import com.bluecone.app.order.application.generator.OrderNoGenerator;
-import com.bluecone.app.order.domain.enums.OrderEvent;
-import com.bluecone.app.order.domain.enums.OrderStatus;
-import com.bluecone.app.order.domain.enums.PayStatus;
+import com.bluecone.app.order.application.service.OrderPricingService;
+import com.bluecone.app.order.application.service.OrderPricingService.PricingResult;
 import com.bluecone.app.order.domain.model.Order;
-import com.bluecone.app.order.domain.model.OrderPayment;
-import com.bluecone.app.order.domain.model.OrderSession;
-import com.bluecone.app.order.domain.service.OrderDomainService;
-import com.bluecone.app.order.domain.service.OrderStateMachine;
-import com.bluecone.app.order.domain.repository.OrderPaymentRepository;
 import com.bluecone.app.order.domain.repository.OrderRepository;
+import com.bluecone.app.payment.simple.application.PaymentCreateAppService;
+import com.bluecone.app.payment.simple.application.dto.PaymentOrderDTO;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
@@ -30,29 +25,27 @@ import org.springframework.util.StringUtils;
 @Service
 public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
 
-    private final OrderDomainService orderDomainService;
     private final OrderRepository orderRepository;
-    private final OrderPaymentRepository orderPaymentRepository;
     private final OrderIdGenerator orderIdGenerator;
     private final OrderNoGenerator orderNoGenerator;
-    private final CollaborativeOrderSessionAppService sessionAppService;
-    private final OrderStateMachine orderStateMachine;
-    public OrderConfirmAppServiceImpl(OrderDomainService orderDomainService,
-                                      OrderRepository orderRepository,
-                                      OrderPaymentRepository orderPaymentRepository,
+    private final PaymentCreateAppService paymentCreateAppService;
+    private final OrderPricingService orderPricingService;
+
+    public OrderConfirmAppServiceImpl(OrderRepository orderRepository,
                                       OrderIdGenerator orderIdGenerator,
                                       OrderNoGenerator orderNoGenerator,
-                                      CollaborativeOrderSessionAppService sessionAppService,
-                                      OrderStateMachine orderStateMachine) {
-        this.orderDomainService = orderDomainService;
+                                      PaymentCreateAppService paymentCreateAppService,
+                                      OrderPricingService orderPricingService) {
         this.orderRepository = orderRepository;
-        this.orderPaymentRepository = orderPaymentRepository;
         this.orderIdGenerator = orderIdGenerator;
         this.orderNoGenerator = orderNoGenerator;
-        this.sessionAppService = sessionAppService;
-        this.orderStateMachine = orderStateMachine;
+        this.paymentCreateAppService = paymentCreateAppService;
+        this.orderPricingService = orderPricingService;
     }
 
+    /**
+     * 用户下单入口：转换命令、生成订单聚合并落库。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ConfirmOrderResponse confirmOrder(ConfirmOrderRequest request) {
@@ -61,40 +54,73 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
 
         Order existed = orderRepository.findByClientOrderNo(request.getTenantId(), request.getClientOrderNo());
         if (existed != null) {
-            return OrderAppAssembler.toConfirmResponse(existed);
+            log.info("clientOrderNo={} 已存在，直接返回已保存订单, orderId={}", request.getClientOrderNo(), existed.getId());
+            return toConfirmResponse(existed, request.getPayChannel());
         }
 
-        validateSession(request);
-
-        Order order = orderDomainService.buildConfirmedOrder(request);
-
+        ConfirmOrderCommand command = ConfirmOrderCommand.fromRequest(
+                request,
+                request.getTenantId(),
+                request.getStoreId(),
+                request.getUserId());
+        PricingResult pricing = orderPricingService.priceItems(request.getTenantId(), request.getStoreId(), request.getItems());
+        BigDecimal totalAmount = OrderPricingService.toDecimal(pricing.getTotalAmountCents());
+        request.setClientTotalAmount(totalAmount);
+        request.setClientPayableAmount(totalAmount);
+        request.setClientDiscountAmount(BigDecimal.ZERO);
+        Order order = Order.createFromConfirmCommand(command);
         long orderId = orderIdGenerator.nextId();
         order.setId(orderId);
         order.setOrderNo(orderNoGenerator.generate(order));
+        LocalDateTime now = LocalDateTime.now();
+        order.setCreatedAt(now);
+        order.setUpdatedAt(now);
         order.setCreatedBy(request.getUserId());
         order.setUpdatedBy(request.getUserId());
+        order.markCreated();
 
         orderRepository.save(order);
 
-        if (Boolean.TRUE.equals(request.getAutoCreatePayment())) {
-            createInitialPayment(order, request);
-        }
+        log.info("小程序用户订单入库成功，tenantId={}, storeId={}, userId={}, orderId={}",
+                order.getTenantId(), order.getStoreId(), order.getUserId(), order.getId());
 
-        if (request.getSessionId() != null) {
-            sessionAppService.closeSessionAfterConfirm(request.getTenantId(), request.getSessionId());
-        }
+        PaymentOrderDTO paymentOrder = paymentCreateAppService.createForOrder(
+                order.getTenantId(),
+                order.getStoreId(),
+                order.getUserId(),
+                order.getId(),
+                toCents(order.getPayableAmount()));
 
-        OrderStatus fromStatus = OrderStatus.DRAFT;
-        OrderStatus expectedStatus = orderStateMachine.transitOrThrow(order.getBizType(), fromStatus, OrderEvent.SUBMIT);
-        if (!expectedStatus.equals(order.getStatus())) {
-            log.warn("Order status differs from state machine result, tenantId={}, storeId={}, userId={}, clientOrderNo={}, actualStatus={}, expectedStatus={}",
-                    request.getTenantId(), request.getStoreId(), request.getUserId(), request.getClientOrderNo(), order.getStatus(), expectedStatus);
+        ConfirmOrderResponse response = toConfirmResponse(order, request.getPayChannel());
+        if (paymentOrder != null) {
+            response.setPayOrderId(paymentOrder.getId());
+            response.setPaymentStatus(paymentOrder.getStatus());
         }
-        log.info("Order submit via state machine, tenantId={}, storeId={}, userId={}, clientOrderNo={}, fromStatus={}, toStatus={}",
-                request.getTenantId(), request.getStoreId(), request.getUserId(), request.getClientOrderNo(),
-                fromStatus, order.getStatus());
+        return response;
+    }
 
-        return OrderAppAssembler.toConfirmResponse(order);
+    /**
+     * 构建确认结果响应。
+     */
+    private ConfirmOrderResponse toConfirmResponse(Order order, String payChannel) {
+        ConfirmOrderResponse response = new ConfirmOrderResponse();
+        response.setOrderId(order.getId());
+        response.setOrderNo(order.getOrderNo());
+        response.setStatus(order.getStatus() != null ? order.getStatus().getCode() : null);
+        response.setPayStatus(order.getPayStatus() != null ? order.getPayStatus().getCode() : null);
+        response.setPayableAmount(order.getPayableAmount());
+        response.setCurrency(order.getCurrency());
+        response.setPayChannel(payChannel);
+        response.setNeedPay(Boolean.TRUE);
+        response.setPaymentTimeoutSeconds(0);
+        return response;
+    }
+
+    private long toCents(BigDecimal amount) {
+        if (amount == null) {
+            return 0L;
+        }
+        return amount.multiply(BigDecimal.valueOf(100)).longValue();
     }
 
     private void requireClientOrderNo(ConfirmOrderRequest request) {
@@ -106,36 +132,6 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
     private void requireTenantId(ConfirmOrderRequest request) {
         if (request.getTenantId() == null) {
             throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId 不能为空");
-        }
-    }
-
-    private void createInitialPayment(Order order, ConfirmOrderRequest request) {
-        OrderPayment payment = OrderPayment.builder()
-                .id(orderIdGenerator.nextId())
-                .tenantId(order.getTenantId())
-                .storeId(order.getStoreId())
-                .orderId(order.getId())
-                .payChannel(request.getPayChannel())
-                .payStatus(PayStatus.INIT)
-                .payAmount(order.getPayableAmount() == null ? BigDecimal.ZERO : order.getPayableAmount())
-                .currency(order.getCurrency())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-        orderPaymentRepository.save(payment);
-    }
-
-    private void validateSession(ConfirmOrderRequest request) {
-        if (request.getSessionId() == null) {
-            return;
-        }
-        OrderSession session = sessionAppService.getSession(request.getTenantId(), request.getSessionId());
-        if (session == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "会话不存在或已失效");
-        }
-        Integer clientVersion = request.getSessionVersion();
-        if (clientVersion != null && !clientVersion.equals(session.getVersion())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "会话版本冲突，请刷新后重试");
         }
     }
 }

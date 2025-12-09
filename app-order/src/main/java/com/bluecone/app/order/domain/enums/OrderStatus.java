@@ -7,6 +7,13 @@ import java.util.Arrays;
  */
 public enum OrderStatus {
 
+    INIT("INIT", "初始化"),
+    WAIT_PAY("WAIT_PAY", "待支付"),
+    PAID("PAID", "已支付"),
+    WAIT_ACCEPT("WAIT_ACCEPT", "待接单"),
+    ACCEPTED("ACCEPTED", "已接单"),
+    CANCELED("CANCELED", "已取消"),
+
     DRAFT("DRAFT", "草稿/预下单"),
     LOCKED_FOR_CHECKOUT("LOCKED_FOR_CHECKOUT", "草稿锁定"),
     PENDING_CONFIRM("PENDING_CONFIRM", "待确认"),
@@ -43,5 +50,12 @@ public enum OrderStatus {
                 .filter(item -> item.code.equalsIgnoreCase(code))
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * 判断订单是否处于允许商户接单的状态。
+     */
+    public boolean canAccept() {
+        return this == WAIT_ACCEPT;
     }
 }

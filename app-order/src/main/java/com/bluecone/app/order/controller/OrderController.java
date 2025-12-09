@@ -7,13 +7,16 @@ import com.bluecone.app.order.api.dto.ConfirmOrderPreviewRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderPreviewResponse;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderResponse;
+import com.bluecone.app.order.api.dto.MerchantAcceptOrderRequest;
 import com.bluecone.app.order.api.dto.MerchantOrderDetailView;
 import com.bluecone.app.order.api.dto.MerchantOrderListQuery;
 import com.bluecone.app.order.api.dto.MerchantOrderSummaryView;
+import com.bluecone.app.order.api.dto.MerchantOrderView;
 import com.bluecone.app.order.api.dto.UserOrderDetailView;
 import com.bluecone.app.order.api.dto.UserOrderListQuery;
 import com.bluecone.app.order.api.dto.UserOrderRefundRequest;
 import com.bluecone.app.order.api.dto.UserOrderSummaryView;
+import com.bluecone.app.order.application.MerchantOrderCommandAppService;
 import com.bluecone.app.order.application.MerchantOrderQueryAppService;
 import com.bluecone.app.order.application.OrderConfirmAppService;
 import com.bluecone.app.order.application.UserOrderCommandAppService;
@@ -21,6 +24,7 @@ import com.bluecone.app.order.application.UserOrderPreviewAppService;
 import com.bluecone.app.order.application.UserOrderQueryAppService;
 import com.bluecone.app.order.application.UserOrderRefundAppService;
 import com.bluecone.app.order.application.command.ConfirmOrderCommand;
+import com.bluecone.app.order.application.command.MerchantAcceptOrderCommand;
 import com.bluecone.app.order.service.ConfigDrivenOrderService;
 import com.bluecone.app.order.service.OrderService;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -50,6 +54,7 @@ public class OrderController {
     private final UserOrderQueryAppService userOrderQueryAppService;
     private final UserOrderRefundAppService userOrderRefundAppService;
     private final MerchantOrderQueryAppService merchantOrderQueryAppService;
+    private final MerchantOrderCommandAppService merchantOrderCommandAppService;
 
     @GetMapping("/hello")
     @ApiLog("测试事件日志")
@@ -59,7 +64,7 @@ public class OrderController {
 
     @PostMapping("/confirm")
     @ApiLog("确认订单")
-    public ConfirmOrderResponse confirmOrder(@RequestBody com.bluecone.app.order.application.dto.ConfirmOrderRequest request) {
+    public ConfirmOrderResponse confirmOrder(@RequestBody com.bluecone.app.order.api.dto.ConfirmOrderRequest request) {
         ConfirmOrderCommand command = ConfirmOrderCommand.fromRequest(request, request.getTenantId(), request.getStoreId(), null);
         return configDrivenOrderService.confirmOrder(command);
     }
@@ -252,6 +257,22 @@ public class OrderController {
         log.info("Merchant get order detail, tenantId={}, storeId={}, operatorId={}, orderId={}",
                 tenantId, storeId, operatorId, orderId);
         MerchantOrderDetailView view = merchantOrderQueryAppService.getStoreOrderDetail(tenantId, storeId, operatorId, orderId);
+        return ApiResponse.success(view);
+    }
+
+    /**
+     * 商户接单接口。
+     */
+    @PostMapping("/merchant/orders/{orderId}/accept")
+    @ApiLog("商户接单")
+    public ApiResponse<MerchantOrderView> acceptMerchantOrder(
+            @PathVariable("orderId") Long orderId,
+            @jakarta.validation.Valid @RequestBody MerchantAcceptOrderRequest request) {
+        // TODO: tenantId/storeId/operatorId 后续应从登录态上下文注入。
+        log.info("Merchant accept order request, tenantId={}, storeId={}, operatorId={}, orderId={}",
+                request.getTenantId(), request.getStoreId(), request.getOperatorId(), orderId);
+        MerchantAcceptOrderCommand command = MerchantAcceptOrderCommand.fromRequest(request, orderId);
+        MerchantOrderView view = merchantOrderCommandAppService.acceptOrder(command);
         return ApiResponse.success(view);
     }
 }

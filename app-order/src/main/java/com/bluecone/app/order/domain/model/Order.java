@@ -2,9 +2,11 @@ package com.bluecone.app.order.domain.model;
 
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.order.application.command.ConfirmOrderCommand;
+import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
+import com.bluecone.app.order.domain.command.SubmitOrderFromDraftCommand;
 import com.bluecone.app.order.domain.enums.BizType;
 import com.bluecone.app.order.domain.enums.OrderSource;
-import com.bluecone.app.order.domain.command.SubmitOrderFromDraftCommand;
 import com.bluecone.app.order.domain.enums.OrderStatus;
 import com.bluecone.app.order.domain.enums.PayStatus;
 import java.io.Serializable;
@@ -16,10 +18,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 @Data
 @Builder
@@ -101,6 +105,13 @@ public class Order implements Serializable {
     private LocalDateTime userDeletedAt;
 
     /**
+     * 商户接单记录：操作人和接单时间。
+     */
+    private Long acceptOperatorId;
+
+    private LocalDateTime acceptedAt;
+
+    /**
      * 根据 items 重算 totalAmount、discountAmount、payableAmount 等金额字段。
      */
     public void recalculateAmounts() {
@@ -154,8 +165,35 @@ public class Order implements Serializable {
     public void markPaid() {
         this.payStatus = PayStatus.PAID;
         if (status != OrderStatus.CANCELLED && status != OrderStatus.COMPLETED && status != OrderStatus.REFUNDED) {
-            this.status = OrderStatus.PENDING_ACCEPT;
+            this.status = OrderStatus.WAIT_ACCEPT;
         }
+    }
+
+    /**
+     * 由支付链路调用，记录支付单信息并流转状态。
+     */
+    public void markPaid(Long payOrderId, Long paidAmountCents) {
+        markPaid();
+        updateExt("payOrderId", payOrderId);
+        updateExt("paidAmountCents", paidAmountCents);
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 商户接单：只允许从 WAIT_ACCEPT 状态进入 ACCEPTED，重复接单直接返回。
+     */
+    public void accept(Long operatorId) {
+        if (OrderStatus.ACCEPTED.equals(this.status)) {
+            return;
+        }
+        if (this.status == null || !this.status.canAccept()) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "ORDER_STATUS_NOT_ALLOW_ACCEPT");
+        }
+        this.status = OrderStatus.ACCEPTED;
+        this.acceptOperatorId = operatorId;
+        LocalDateTime now = LocalDateTime.now();
+        this.acceptedAt = now;
+        this.updatedAt = now;
     }
 
     /**
@@ -376,5 +414,58 @@ public class Order implements Serializable {
 
     private BigDecimal defaultBigDecimal(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    /**
+     * 根据确认订单命令创建聚合根，并完成金额初始值的计算。
+     */
+    public static Order createFromConfirmCommand(ConfirmOrderCommand command) {
+        if (command == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "确认订单命令不能为空");
+        }
+        if (command.getTenantId() == null || command.getStoreId() == null || command.getUserId() == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户/门店/用户信息不能为空");
+        }
+        if (command.getItems() == null || command.getItems().isEmpty()) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单明细不能为空");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        List<OrderItem> items = command.getItems().stream()
+                .filter(Objects::nonNull)
+                .map(dto -> OrderItem.fromConfirmItem(dto, command.getTenantId(), command.getStoreId(), now))
+                .collect(Collectors.toList());
+        Order order = Order.builder()
+                .tenantId(command.getTenantId())
+                .storeId(command.getStoreId())
+                .userId(command.getUserId())
+                .clientOrderNo(command.getClientOrderNo())
+                .channel(command.getChannel())
+                .bizType(BizType.fromCode(command.getBizType()))
+                .orderSource(OrderSource.fromCode(command.getOrderSource()))
+                .currency(StringUtils.hasText(command.getCurrency()) ? command.getCurrency() : "CNY")
+                .remark(command.getRemark())
+                .status(OrderStatus.INIT)
+                .payStatus(PayStatus.UNPAID)
+                .items(items)
+                .version(0)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+        order.setDiscountAmount(defaultNumber(command.getClientDiscountAmount()));
+        order.recalculateAmounts();
+        return order;
+    }
+
+    private static BigDecimal defaultNumber(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    /**
+     * 将订单标记为已创建，流转到 WAIT_PAY 状态。
+     */
+    public void markCreated() {
+        this.status = OrderStatus.WAIT_PAY;
+        this.payStatus = PayStatus.UNPAID;
+        this.updatedAt = LocalDateTime.now();
     }
 }

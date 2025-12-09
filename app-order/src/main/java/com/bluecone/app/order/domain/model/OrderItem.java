@@ -1,5 +1,6 @@
 package com.bluecone.app.order.domain.model;
 
+import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -94,5 +95,32 @@ public class OrderItem implements Serializable {
             return true;
         }
         return Objects.equals(left, right);
+    }
+
+    /**
+     * 由确认订单 DTO 构建明细行。
+     */
+    public static OrderItem fromConfirmItem(ConfirmOrderItemDTO dto, Long tenantId, Long storeId, LocalDateTime now) {
+        OrderItem item = new OrderItem();
+        item.setProductId(dto.getProductId());
+        item.setSkuId(dto.getSkuId());
+        item.setTenantId(tenantId);
+        item.setStoreId(storeId);
+        item.setProductName(dto.getProductName());
+        item.setSkuName(dto.getSkuName());
+        item.setProductCode(dto.getProductCode());
+        item.setQuantity(dto.getQuantity());
+        item.setUnitPrice(defaultOrZero(dto.getClientUnitPrice()));
+        item.setDiscountAmount(BigDecimal.ZERO);
+        item.setAttrs(dto.getAttrs() == null ? Collections.emptyMap() : dto.getAttrs());
+        item.setRemark(dto.getRemark());
+        item.setCreatedAt(now);
+        item.setUpdatedAt(now);
+        item.recalculateAmounts();
+        return item;
+    }
+
+    private static BigDecimal defaultOrZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 }

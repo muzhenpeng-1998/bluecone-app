@@ -67,6 +67,16 @@ public class ConfirmOrderResponse {
     private Integer paymentTimeoutSeconds = 0;
 
     /**
+     * 关联的支付单ID（便于前端直接拉起支付或调试）。
+     */
+    private Long payOrderId;
+
+    /**
+     * 关联支付单的状态，如 WAIT_PAY/SUCCESS 等。
+     */
+    private String paymentStatus;
+
+    /**
      * 预留的支付参数占位，例如微信 JSAPI 的 prepayId。
      */
     @Builder.Default

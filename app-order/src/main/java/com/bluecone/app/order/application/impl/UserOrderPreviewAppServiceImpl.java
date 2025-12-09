@@ -1,76 +1,78 @@
 package com.bluecone.app.order.application.impl;
 
+import com.bluecone.app.core.error.CommonErrorCode;
+import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
 import com.bluecone.app.order.api.dto.ConfirmOrderPreviewRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderPreviewResponse;
-import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.application.UserOrderPreviewAppService;
-import com.bluecone.app.order.domain.model.Order;
-import com.bluecone.app.order.domain.service.OrderDomainService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.Map;
+import com.bluecone.app.order.application.service.OrderPricingService;
+import com.bluecone.app.order.application.service.OrderPricingService.PricingResult;
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
 public class UserOrderPreviewAppServiceImpl implements UserOrderPreviewAppService {
 
-    private final OrderDomainService orderDomainService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final OrderPricingService orderPricingService;
 
     @Override
     public ConfirmOrderPreviewResponse preview(ConfirmOrderPreviewRequest previewRequest) {
-        ConfirmOrderRequest confirmRequest = new ConfirmOrderRequest();
-        confirmRequest.setTenantId(previewRequest.getTenantId());
-        confirmRequest.setStoreId(previewRequest.getStoreId());
-        confirmRequest.setUserId(previewRequest.getUserId());
-        confirmRequest.setBizType(previewRequest.getBizType());
-        confirmRequest.setOrderSource(previewRequest.getOrderSource());
-        confirmRequest.setChannel(previewRequest.getChannel());
-        confirmRequest.setItems(previewRequest.getItems());
-        confirmRequest.setClientTotalAmount(previewRequest.getClientPayableAmount() != null
-                ? previewRequest.getClientPayableAmount()
-                : java.math.BigDecimal.ZERO);
-        confirmRequest.setClientDiscountAmount(java.math.BigDecimal.ZERO);
-        confirmRequest.setClientPayableAmount(previewRequest.getClientPayableAmount() != null
-                ? previewRequest.getClientPayableAmount()
-                : java.math.BigDecimal.ZERO);
-        confirmRequest.setSessionId(previewRequest.getSessionId());
-        confirmRequest.setSessionVersion(previewRequest.getSessionVersion());
-        confirmRequest.setRemark(previewRequest.getRemark());
-        confirmRequest.setExt(parseExt(previewRequest.getExt()));
-        confirmRequest.setClientOrderNo("PREVIEW-" + Instant.now().toEpochMilli());
-        confirmRequest.setAutoCreatePayment(false);
-        confirmRequest.setPayChannel(null);
-
-        Order order = orderDomainService.buildConfirmedOrder(confirmRequest);
-
-        ConfirmOrderPreviewResponse resp = new ConfirmOrderPreviewResponse();
-        resp.setCanPlaceOrder(true);
-        resp.setTotalAmount(order.getTotalAmount());
-        resp.setDiscountAmount(order.getDiscountAmount());
-        resp.setPayableAmount(order.getPayableAmount());
-        resp.setCurrency(order.getCurrency());
-        resp.setExpectedReadyTimeSeconds(600);
-        resp.setStoreOpenStatus("UNKNOWN");
-        resp.setMessage(null);
-        resp.setSessionVersion(order.getSessionVersion());
-        resp.setExt(previewRequest.getExt());
-        return resp;
+        validatePreviewRequest(previewRequest);
+        List<ConfirmOrderItemDTO> items = previewRequest.getItems();
+        PricingResult pricing = orderPricingService.priceItems(
+                previewRequest.getTenantId(), previewRequest.getStoreId(), items);
+        BigDecimal totalAmount = OrderPricingService.toDecimal(pricing.getTotalAmountCents());
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        BigDecimal payableAmount = totalAmount.subtract(discountAmount);
+        if (payableAmount.compareTo(BigDecimal.ZERO) < 0) {
+            payableAmount = BigDecimal.ZERO;
+        }
+        ConfirmOrderPreviewResponse response = new ConfirmOrderPreviewResponse();
+        response.setCanPlaceOrder(true);
+        response.setTotalAmount(totalAmount);
+        response.setDiscountAmount(discountAmount);
+        response.setPayableAmount(payableAmount);
+        response.setCurrency("CNY");
+        response.setExpectedReadyTimeSeconds(600);
+        response.setStoreOpenStatus("UNKNOWN");
+        response.setMessage("当前为小程序 MVP 预览，后续由商品模块提供更多信息");
+        response.setSessionVersion(previewRequest.getSessionVersion());
+        response.setExt(previewRequest.getExt());
+        return response;
     }
 
-    private Map<String, Object> parseExt(String ext) {
-        if (ext == null || ext.isBlank()) {
-            return Collections.emptyMap();
+    private void validatePreviewRequest(ConfirmOrderPreviewRequest previewRequest) {
+        if (previewRequest == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单预览请求不能为空");
         }
-        try {
-            return objectMapper.readValue(ext, new TypeReference<>() {
-            });
-        } catch (Exception e) {
-            return Collections.emptyMap();
+        if (previewRequest.getTenantId() == null || previewRequest.getStoreId() == null || previewRequest.getUserId() == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/storeId/userId 必填");
+        }
+        if (!StringUtils.hasText(previewRequest.getBizType())) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "bizType 不能为空");
+        }
+        if (!StringUtils.hasText(previewRequest.getOrderSource())) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "orderSource 不能为空");
+        }
+        if (!StringUtils.hasText(previewRequest.getChannel())) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "channel 不能为空");
+        }
+        if (CollectionUtils.isEmpty(previewRequest.getItems())) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "明细不能为空");
+        }
+        for (ConfirmOrderItemDTO item : previewRequest.getItems()) {
+            if (item == null || item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new BizException(CommonErrorCode.BAD_REQUEST, "每条明细数量必须大于 0");
+            }
+            if (item.getSkuId() == null) {
+                throw new BizException(CommonErrorCode.BAD_REQUEST, "SKU ID 必填");
+            }
         }
     }
 }
