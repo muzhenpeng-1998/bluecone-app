@@ -2,7 +2,9 @@ package com.bluecone.app.product.domain.repository;
 
 import com.bluecone.app.product.domain.enums.ProductStatus;
 import com.bluecone.app.product.domain.model.Product;
+import com.bluecone.app.product.domain.model.ProductSku;
 import com.bluecone.app.product.domain.model.readmodel.StoreMenuSnapshot;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,11 @@ public interface ProductRepository {
     List<Product> findByIds(Long tenantId, Collection<Long> productIds);
 
     /**
+     * 根据 SKU ID 精确读取单个 SKU（包含已下架 SKU）。
+     */
+    Optional<ProductSku> findSkuById(Long tenantId, Long skuId);
+
+    /**
      * 新建商品聚合，返回生成的 productId。
      */
     Long save(Product product);
@@ -33,6 +40,18 @@ public interface ProductRepository {
      * 修改商品状态（草稿/启用/禁用），可结合操作人做审计。
      */
     void changeStatus(Long tenantId, Long productId, ProductStatus newStatus, Long operatorId);
+
+    /**
+     * 更新 SKU 状态，用于上下架或逻辑删除。
+     */
+    void updateSkuStatus(Long tenantId, Long skuId, ProductStatus status, Long operatorId);
+
+    /**
+     * 更新 SKU 售价（基础价），支持运营改价等业务场景。
+     *
+     * @param newPrice 新售价（单位：元，对应数据库 DECIMAL）
+     */
+    void updateSkuPrice(Long tenantId, Long skuId, BigDecimal newPrice, Long operatorId);
 
     /**
      * 高并发读路径：加载单个商品在指定门店与渠道下的完整聚合（可直接用于缓存）。

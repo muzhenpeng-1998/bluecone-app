@@ -24,12 +24,14 @@ import com.bluecone.app.gateway.middleware.LoggingMiddleware;
 import com.bluecone.app.gateway.middleware.RateLimitMiddleware;
 import com.bluecone.app.gateway.middleware.ResponseWrapperMiddleware;
 import com.bluecone.app.gateway.middleware.SignatureMiddleware;
+import com.bluecone.app.gateway.middleware.StoreMiddleware;
 import com.bluecone.app.gateway.middleware.TenantMiddleware;
 import com.bluecone.app.gateway.middleware.VersionMiddleware;
 import com.bluecone.app.gateway.response.ResponseEnvelope;
 import com.bluecone.app.gateway.routing.ApiRoute;
 import com.bluecone.app.gateway.routing.ApiRouteRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.bluecone.app.gateway.context.ApiContextHolder;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +53,7 @@ public class ApiGateway {
     private final VersionMiddleware versionMiddleware;
     private final AuthMiddleware authMiddleware;
     private final TenantMiddleware tenantMiddleware;
+    private final StoreMiddleware storeMiddleware;
     private final RateLimitMiddleware rateLimitMiddleware;
     private final IdempotentMiddleware idempotentMiddleware;
     private final SignatureMiddleware signatureMiddleware;
@@ -80,6 +83,7 @@ public class ApiGateway {
         ApiMiddlewareChain dispatcher = new DefaultApiMiddlewareChain(chain);
 
         try {
+            ApiContextHolder.set(ctx);
             dispatcher.next(ctx);
             return Optional.ofNullable(ctx.getResponse())
                     .orElse(ResponseEnvelope.builder()
@@ -89,6 +93,8 @@ public class ApiGateway {
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException(ex);
+        } finally {
+            ApiContextHolder.clear();
         }
     }
 
@@ -111,6 +117,8 @@ public class ApiGateway {
         if (contract.isTenantRequired()) {
             chain.add(tenantMiddleware);
         }
+        // After tenant binding, resolve store context if needed
+        chain.add(storeMiddleware);
         if (contract.isRateLimitEnabled()) {
             chain.add(rateLimitMiddleware);
         }

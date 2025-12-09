@@ -1,6 +1,7 @@
 package com.bluecone.app.inventory.application.service;
 
 import com.bluecone.app.core.error.CommonErrorCode;
+import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.infra.cache.core.CacheKey;
 import com.bluecone.app.infra.cache.facade.CacheClient;
@@ -15,6 +16,9 @@ import com.bluecone.app.inventory.api.dto.LockStockCommand;
 import com.bluecone.app.inventory.api.dto.LockStockResult;
 import com.bluecone.app.inventory.api.dto.ReleaseStockCommand;
 import com.bluecone.app.inventory.application.assembler.InventoryAssembler;
+import com.bluecone.app.inventory.domain.event.InventoryAdjustedEvent;
+import com.bluecone.app.inventory.domain.event.InventoryReleasedEvent;
+import com.bluecone.app.inventory.domain.event.InventoryReservedEvent;
 import com.bluecone.app.inventory.domain.model.InventoryLock;
 import com.bluecone.app.inventory.domain.model.InventoryPolicy;
 import com.bluecone.app.inventory.domain.model.InventoryStock;
@@ -47,6 +51,8 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
     private final StockAdjustDomainService stockAdjustDomainService;
     private final CacheClient cacheClient;
     private final CacheProfileRegistry cacheProfileRegistry;
+    /** 领域事件发布器，负责将库存变更写入 Outbox */
+    private final DomainEventPublisher domainEventPublisher;
 
     @Override
     @Idempotent(key = "'inv:lock:' + #command.tenantId + ':' + #command.requestId", expireSeconds = 600)
@@ -89,6 +95,15 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
         );
 
         evictStockCache(tenantId, storeId, itemId, locationId);
+        InventoryReservedEvent event = new InventoryReservedEvent(
+                tenantId,
+                storeId,
+                command.getOrderId(),
+                itemId,
+                nullSafe(lock.getLockQty()),
+                resolveReserveReason(command)
+        );
+        domainEventPublisher.publish(event);
 
         return LockStockResult.ok(lock.getId(), InventoryAssembler.toStockView(stock));
     }
@@ -145,6 +160,20 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
                 .collect(Collectors.toList());
         stockReleaseDomainService.releaseLocks(locks, command.getRequestId(), command.isExpired());
         locks.forEach(lock -> evictStockCache(lock.getTenantId(), lock.getStoreId(), lock.getItemId(), lock.getLocationId()));
+        if (!locks.isEmpty()) {
+            String releaseReason = resolveReleaseReason(command);
+            locks.forEach(lock -> {
+                InventoryReleasedEvent event = new InventoryReleasedEvent(
+                        lock.getTenantId(),
+                        lock.getStoreId(),
+                        lock.getOrderId(),
+                        lock.getItemId(),
+                        nullSafe(lock.getLockQty()),
+                        releaseReason
+                );
+                domainEventPublisher.publish(event);
+            });
+        }
     }
 
     @Override
@@ -171,6 +200,7 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
                     + ", storeId=" + storeId + ", itemId=" + itemId + ", locationId=" + locationId);
         }
 
+        long beforeAvailable = nullSafe(stock.getAvailableQty());
         switch (command.getAdjustType()) {
             case INBOUND -> stockAdjustDomainService.inbound(
                     stock,
@@ -194,6 +224,20 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
         }
 
         evictStockCache(tenantId, storeId, itemId, locationId);
+        long afterAvailable = nullSafe(stock.getAvailableQty());
+        long delta = afterAvailable - beforeAvailable;
+        if (delta != 0L) {
+            InventoryAdjustedEvent event = new InventoryAdjustedEvent(
+                    tenantId,
+                    storeId,
+                    itemId,
+                    delta,
+                    afterAvailable,
+                    resolveAdjustSource(command),
+                    command.getOperatorId()
+            );
+            domainEventPublisher.publish(event);
+        }
     }
 
     private void evictStockCache(Long tenantId, Long storeId, Long itemId, Long locationId) {
@@ -201,5 +245,33 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
         String bizId = tenantId + ":" + storeId + ":" + (locationId == null ? 0L : locationId) + ":" + itemId;
         CacheKey key = CacheKey.generic(String.valueOf(tenantId), profile.domain(), bizId);
         cacheClient.evict(CacheProfileName.INVENTORY_STOCK, key);
+    }
+
+    private String resolveReserveReason(LockStockCommand command) {
+        if (command.getReason() != null && !command.getReason().isBlank()) {
+            return command.getReason();
+        }
+        return "ORDER_PLACE";
+    }
+
+    private String resolveReleaseReason(ReleaseStockCommand command) {
+        if (command.getReason() != null && !command.getReason().isBlank()) {
+            return command.getReason();
+        }
+        return command.isExpired() ? "PAYMENT_TIMEOUT" : "ORDER_CANCEL";
+    }
+
+    private String resolveAdjustSource(AdjustStockCommand command) {
+        if (command.getSource() != null && !command.getSource().isBlank()) {
+            return command.getSource();
+        }
+        if (command.getBizRefType() != null && !command.getBizRefType().isBlank()) {
+            return command.getBizRefType();
+        }
+        return command.getAdjustType().name();
+    }
+
+    private long nullSafe(Long value) {
+        return value == null ? 0L : value;
     }
 }

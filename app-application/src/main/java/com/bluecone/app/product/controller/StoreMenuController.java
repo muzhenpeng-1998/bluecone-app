@@ -1,6 +1,9 @@
 package com.bluecone.app.product.controller;
 
 import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.exception.BusinessException;
+import com.bluecone.app.core.exception.ErrorCode;
+import com.bluecone.app.gateway.context.RuntimeContextUtil;
 import com.bluecone.app.product.application.menu.StoreMenuSnapshotApplicationService;
 import com.bluecone.app.product.dto.view.StoreMenuSnapshotView;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +28,18 @@ public class StoreMenuController {
      * 获取门店菜单快照。
      */
     @GetMapping("/snapshot")
-    public ApiResponse<StoreMenuSnapshotView> getSnapshot(@RequestParam Long storeId,
+    public ApiResponse<StoreMenuSnapshotView> getSnapshot(@RequestParam(required = false) Long storeId,
                                                           @RequestParam(required = false, defaultValue = "ALL") String channel,
                                                           @RequestParam(required = false, defaultValue = "DEFAULT") String orderScene) {
+        Long resolvedStoreId = RuntimeContextUtil.currentStoreId();
+        if (resolvedStoreId == null) {
+            resolvedStoreId = storeId; // 兼容旧参数
+        }
+        if (resolvedStoreId == null) {
+            throw BusinessException.of(ErrorCode.PARAM_MISSING.getCode(), "storeId missing");
+        }
         StoreMenuSnapshotView view = storeMenuSnapshotApplicationService
-                .getStoreMenuSnapshot(null, storeId, channel, orderScene);
+                .getStoreMenuSnapshot(null, resolvedStoreId, channel, orderScene);
         return ApiResponse.success(view);
     }
 }

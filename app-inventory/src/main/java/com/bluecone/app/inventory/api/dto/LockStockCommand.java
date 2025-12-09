@@ -43,4 +43,9 @@ public class LockStockCommand {
      * 锁的过期时长（秒），为空则走默认配置。
      */
     private Integer lockExpireSeconds;
+
+    /**
+     * 预留原因（订单占用、人工锁定等），用于事件侧传递上下文。
+     */
+    private String reason;
 }

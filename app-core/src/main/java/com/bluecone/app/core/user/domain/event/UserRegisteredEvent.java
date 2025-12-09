@@ -1,25 +1,48 @@
 package com.bluecone.app.core.user.domain.event;
 
-import java.time.LocalDateTime;
-
-import com.bluecone.app.core.user.domain.identity.RegisterChannel;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.bluecone.app.core.event.DomainEvent;
+import com.bluecone.app.core.event.EventMetadata;
+import java.util.HashMap;
+import java.util.Map;
+import lombok.Getter;
 
 /**
- * 用户注册完成事件，用于跨领域通知。
+ * 用户注册事件（User Registered Event）。
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserRegisteredEvent {
+@Getter
+public class UserRegisteredEvent extends DomainEvent {
 
-    private Long userId;
+    public static final String EVENT_TYPE = "USER_REGISTERED";
+    private static final String AGGREGATE_TYPE = "USER";
 
-    private Long firstTenantId;
+    private final Long userId;
+    private final Long firstTenantId;
+    private final String unionId;
+    private final String phone;
+    private final String registerChannel;
 
-    private RegisterChannel registerChannel;
+    public UserRegisteredEvent(Long userId,
+                               Long firstTenantId,
+                               String unionId,
+                               String phone,
+                               String registerChannel) {
+        super(EVENT_TYPE, buildMetadata(userId, firstTenantId));
+        this.userId = userId;
+        this.firstTenantId = firstTenantId;
+        this.unionId = unionId;
+        this.phone = phone;
+        this.registerChannel = registerChannel;
+    }
 
-    private LocalDateTime occurredAt;
+    private static EventMetadata buildMetadata(Long userId, Long tenantId) {
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("aggregateType", AGGREGATE_TYPE);
+        if (userId != null) {
+            attributes.put("aggregateId", String.valueOf(userId));
+        }
+        if (tenantId != null) {
+            attributes.put("tenantId", String.valueOf(tenantId));
+        }
+        return EventMetadata.of(attributes);
+    }
 }

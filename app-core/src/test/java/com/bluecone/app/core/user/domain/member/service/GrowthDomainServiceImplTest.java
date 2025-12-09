@@ -4,6 +4,7 @@ import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.user.domain.event.MemberLevelChangedEvent;
 import com.bluecone.app.core.user.domain.member.MemberLevel;
 import com.bluecone.app.core.user.domain.member.TenantMember;
+import com.bluecone.app.core.user.domain.repository.MemberLevelRepository;
 import com.bluecone.app.core.user.domain.repository.TenantMemberRepository;
 import com.bluecone.app.core.user.domain.member.service.impl.GrowthDomainServiceImpl;
 import com.bluecone.app.core.user.testdata.UserTestDataFactory;
@@ -28,13 +29,15 @@ class GrowthDomainServiceImplTest {
     @Mock
     private MemberLevelPolicy memberLevelPolicy;
     @Mock
+    private MemberLevelRepository memberLevelRepository;
+    @Mock
     private DomainEventPublisher domainEventPublisher;
 
     private GrowthDomainServiceImpl growthDomainService;
 
     @BeforeEach
     void setUp() {
-        growthDomainService = new GrowthDomainServiceImpl(tenantMemberRepository, memberLevelPolicy, domainEventPublisher);
+        growthDomainService = new GrowthDomainServiceImpl(tenantMemberRepository, memberLevelRepository, memberLevelPolicy, domainEventPublisher);
     }
 
     @Test
@@ -42,7 +45,9 @@ class GrowthDomainServiceImplTest {
         TenantMember member = UserTestDataFactory.aTenantMember();
         member.setLevelId(1L);
         when(tenantMemberRepository.findById(10L)).thenReturn(Optional.of(member));
+        MemberLevel oldLevel = UserTestDataFactory.aMemberLevel(1L, "L1", 0, 9);
         MemberLevel newLevel = UserTestDataFactory.aMemberLevel(2L, "L2", 10, 100);
+        when(memberLevelRepository.findById(1L)).thenReturn(Optional.of(oldLevel));
         when(memberLevelPolicy.determineLevel(100L, member.getGrowthValue() + 10)).thenReturn(Optional.of(newLevel));
 
         growthDomainService.increaseGrowthAndCheckLevel(100L, 10L, 10, "ORDER", "BIZ1");
@@ -51,6 +56,7 @@ class GrowthDomainServiceImplTest {
         ArgumentCaptor<MemberLevelChangedEvent> captor = ArgumentCaptor.forClass(MemberLevelChangedEvent.class);
         verify(domainEventPublisher).publish(captor.capture());
         assertThat(captor.getValue().getNewLevelId()).isEqualTo(2L);
+        assertThat(captor.getValue().getOldLevelCode()).isEqualTo("L1");
     }
 
     @Test

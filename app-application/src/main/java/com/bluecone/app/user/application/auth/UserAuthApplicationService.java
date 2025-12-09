@@ -1,10 +1,13 @@
 package com.bluecone.app.user.application.auth;
 
+import com.bluecone.app.core.event.DomainEventPublisher;
+import com.bluecone.app.core.user.domain.event.UserRegisteredEvent;
 import com.bluecone.app.core.user.domain.identity.RegisterChannel;
 import com.bluecone.app.core.user.domain.identity.UserIdentity;
 import com.bluecone.app.core.user.domain.member.TenantMember;
 import com.bluecone.app.core.user.domain.service.MemberDomainService;
 import com.bluecone.app.core.user.domain.service.UserDomainService;
+import com.bluecone.app.core.user.domain.service.UserDomainService.UserRegistrationResult;
 import com.bluecone.app.infra.wechat.WeChatCode2SessionResult;
 import com.bluecone.app.infra.wechat.WeChatMiniAppClient;
 import com.bluecone.app.infra.wechat.WeChatPhoneNumberResult;
@@ -24,6 +27,7 @@ import org.springframework.util.StringUtils;
 public class UserAuthApplicationService {
 
     private final WeChatMiniAppClient weChatMiniAppClient;
+    private final DomainEventPublisher domainEventPublisher;
     private final UserDomainService userDomainService;
     private final MemberDomainService memberDomainService;
     private final AuthSessionManager authSessionManager;
@@ -50,13 +54,25 @@ public class UserAuthApplicationService {
         }
 
         // 3. 注册或加载用户
-        UserIdentity identity = userDomainService.registerOrLoadByWeChatUnionId(
+        UserRegistrationResult registerResult = userDomainService.registerOrLoadByWeChatUnionId(
                 sessionResult.getUnionId(),
                 phone,
                 countryCode,
                 cmd.getSourceTenantId(),
                 RegisterChannel.WECHAT_MINI
         );
+        UserIdentity identity = registerResult.identity();
+
+        if (registerResult.isNew()) {
+            UserRegisteredEvent event = new UserRegisteredEvent(
+                    identity.getId(),
+                    identity.getFirstTenantId(),
+                    identity.getUnionId(),
+                    identity.getPhone(),
+                    identity.getRegisterChannel() != null ? identity.getRegisterChannel().name() : null
+            );
+            domainEventPublisher.publish(event);
+        }
 
         // 4. TODO: 更新画像（昵称、头像等）
 

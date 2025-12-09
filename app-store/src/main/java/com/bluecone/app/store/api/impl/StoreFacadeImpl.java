@@ -16,7 +16,7 @@ import com.bluecone.app.store.application.query.StoreListQuery;
 import com.bluecone.app.store.application.service.StoreCommandService;
 import com.bluecone.app.store.application.service.StoreQueryService;
 import com.bluecone.app.store.domain.model.StoreConfig;
-import com.bluecone.app.store.domain.service.StoreContextProvider;
+import com.bluecone.app.store.api.StoreContextProvider;
 import com.bluecone.app.store.domain.service.StoreOpenStateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

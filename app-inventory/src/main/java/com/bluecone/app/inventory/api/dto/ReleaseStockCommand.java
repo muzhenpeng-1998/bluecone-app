@@ -26,4 +26,9 @@ public class ReleaseStockCommand {
      * 是否为超时释放。
      */
     private boolean expired;
+
+    /**
+     * 释放原因，默认 ORDER_CANCEL，可结合 expired 转化为 PAYMENT_TIMEOUT 等。
+     */
+    private String reason;
 }

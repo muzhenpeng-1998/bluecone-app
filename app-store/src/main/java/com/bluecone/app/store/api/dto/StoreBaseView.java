@@ -17,13 +17,21 @@ public class StoreBaseView {
 
     private Long tenantId;
     private Long storeId;
+    /** 兼容老字段 name，同时补充 storeName 便于下游使用 */
+    private String storeName;
     private String storeCode;
     private String name;
     private String shortName;
     private String industryType;
     private String cityCode;
+    /** 业务状态（示例：1=营业，0=关闭，-1=审核中），后续用枚举收敛 */
+    private Integer bizStatus;
     private String status;
     private Boolean openForOrders;
+    /** 能力预留 */
+    private Boolean takeoutEnabled;
+    private Boolean pickupEnabled;
+    private Boolean dineInEnabled;
     private String logoUrl;
     private String coverUrl;
 }

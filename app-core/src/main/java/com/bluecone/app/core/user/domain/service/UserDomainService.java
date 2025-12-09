@@ -12,14 +12,17 @@ public interface UserDomainService {
     /**
      * 基于微信 UnionId 或手机号注册/加载用户。
      */
-    UserIdentity registerOrLoadByWeChatUnionId(String unionId,
-                                               String phone,
-                                               String countryCode,
-                                               Long firstTenantId,
-                                               RegisterChannel registerChannel);
+    UserRegistrationResult registerOrLoadByWeChatUnionId(String unionId,
+                                                         String phone,
+                                                         String countryCode,
+                                                         Long firstTenantId,
+                                                         RegisterChannel registerChannel);
 
     /**
      * 初始化或更新用户画像。
      */
     UserProfile initOrUpdateProfile(Long userId, UserProfile profileInput);
+
+    record UserRegistrationResult(UserIdentity identity, boolean isNew) {
+    }
 }

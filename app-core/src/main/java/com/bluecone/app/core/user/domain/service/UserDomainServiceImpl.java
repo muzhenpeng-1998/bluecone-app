@@ -24,11 +24,11 @@ public class UserDomainServiceImpl implements UserDomainService {
     private final UserProfileRepository userProfileRepository;
 
     @Override
-    public UserIdentity registerOrLoadByWeChatUnionId(String unionId,
-                                                      String phone,
-                                                      String countryCode,
-                                                      Long firstTenantId,
-                                                      RegisterChannel registerChannel) {
+    public UserRegistrationResult registerOrLoadByWeChatUnionId(String unionId,
+                                                                String phone,
+                                                                String countryCode,
+                                                                Long firstTenantId,
+                                                                RegisterChannel registerChannel) {
         Optional<UserIdentity> existing = Optional.empty();
         if (StringUtils.hasText(unionId)) {
             existing = userIdentityRepository.findByUnionId(unionId);
@@ -37,7 +37,7 @@ public class UserDomainServiceImpl implements UserDomainService {
             existing = userIdentityRepository.findByPhone(countryCode, phone);
         }
         if (existing.isPresent()) {
-            return existing.get();
+            return new UserRegistrationResult(existing.get(), false);
         }
 
         UserIdentity identity = new UserIdentity();
@@ -50,7 +50,8 @@ public class UserDomainServiceImpl implements UserDomainService {
         identity.setCreatedAt(LocalDateTime.now());
         identity.setUpdatedAt(LocalDateTime.now());
         // TODO: 完善邮箱/风控字段等
-        return userIdentityRepository.save(identity);
+        UserIdentity saved = userIdentityRepository.save(identity);
+        return new UserRegistrationResult(saved, true);
     }
 
     @Override

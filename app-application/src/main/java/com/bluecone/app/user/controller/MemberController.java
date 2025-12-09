@@ -2,6 +2,7 @@ package com.bluecone.app.user.controller;
 
 import com.bluecone.app.api.ApiResponse;
 import com.bluecone.app.user.application.member.MemberApplicationService;
+import com.bluecone.app.user.dto.member.ChangeMemberLevelCommand;
 import com.bluecone.app.user.dto.member.EnrollMemberCommand;
 import com.bluecone.app.user.dto.member.MemberLevelDTO;
 import com.bluecone.app.user.dto.member.MemberSummaryDTO;
@@ -53,5 +54,14 @@ public class MemberController {
     public ApiResponse<List<MemberLevelDTO>> listLevels() {
         List<MemberLevelDTO> levels = memberApplicationService.listMemberLevels(null);
         return ApiResponse.success(levels);
+    }
+
+    /**
+     * 调整会员等级。
+     */
+    @PostMapping("/change-level")
+    public ApiResponse<Void> changeLevel(@RequestBody ChangeMemberLevelCommand command) {
+        memberApplicationService.changeMemberLevel(command);
+        return ApiResponse.success(null);
     }
 }

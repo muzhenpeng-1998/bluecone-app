@@ -4,8 +4,10 @@ import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderResponse;
+import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.order.application.OrderConfirmAppService;
 import com.bluecone.app.order.application.command.ConfirmOrderCommand;
+import com.bluecone.app.order.domain.event.OrderSubmittedEvent;
 import com.bluecone.app.order.application.generator.OrderIdGenerator;
 import com.bluecone.app.order.application.generator.OrderNoGenerator;
 import com.bluecone.app.order.application.service.OrderPricingService;
@@ -30,17 +32,20 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
     private final OrderNoGenerator orderNoGenerator;
     private final PaymentCreateAppService paymentCreateAppService;
     private final OrderPricingService orderPricingService;
+    private final DomainEventPublisher eventPublisher;
 
     public OrderConfirmAppServiceImpl(OrderRepository orderRepository,
                                       OrderIdGenerator orderIdGenerator,
                                       OrderNoGenerator orderNoGenerator,
                                       PaymentCreateAppService paymentCreateAppService,
-                                      OrderPricingService orderPricingService) {
+                                      OrderPricingService orderPricingService,
+                                      DomainEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
         this.orderIdGenerator = orderIdGenerator;
         this.orderNoGenerator = orderNoGenerator;
         this.paymentCreateAppService = paymentCreateAppService;
         this.orderPricingService = orderPricingService;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -96,6 +101,16 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
             response.setPayOrderId(paymentOrder.getId());
             response.setPaymentStatus(paymentOrder.getStatus());
         }
+        long totalAmountCents = toCents(order.getPayableAmount());
+        OrderSubmittedEvent submittedEvent = new OrderSubmittedEvent(
+                order.getTenantId(),
+                order.getStoreId(),
+                order.getUserId(),
+                order.getId(),
+                paymentOrder != null ? paymentOrder.getId() : null,
+                totalAmountCents,
+                order.getChannel() != null ? order.getChannel() : request.getChannel());
+        eventPublisher.publish(submittedEvent);
         return response;
     }
 

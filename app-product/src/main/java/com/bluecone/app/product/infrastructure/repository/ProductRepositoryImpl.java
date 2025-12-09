@@ -38,11 +38,13 @@ import com.bluecone.app.product.domain.enums.MenuScene;
 import com.bluecone.app.product.domain.enums.ProductStatus;
 import com.bluecone.app.product.domain.enums.SaleChannel;
 import com.bluecone.app.product.domain.model.Product;
+import com.bluecone.app.product.domain.model.ProductSku;
 import com.bluecone.app.product.domain.model.readmodel.StoreMenuSnapshot;
 import com.bluecone.app.product.domain.repository.ProductRepository;
 import com.bluecone.app.product.infrastructure.assembler.ProductConfigAssembler;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -331,6 +333,17 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public Optional<ProductSku> findSkuById(Long tenantId, Long skuId) {
+        if (skuId == null) {
+            return Optional.empty();
+        }
+        BcProductSku entity = productSkuMapper.selectOne(new LambdaQueryWrapper<BcProductSku>()
+                .eq(BcProductSku::getId, skuId)
+                .eq(tenantId != null, BcProductSku::getTenantId, tenantId));
+        return Optional.ofNullable(toSkuModel(entity));
+    }
+
+    @Override
     public Long save(Product product) {
         BcProduct entity = toEntity(product);
         productMapper.insert(entity);
@@ -392,6 +405,32 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .set(BcProduct::getUpdatedAt, LocalDateTime.now()));
     }
 
+    @Override
+    public void updateSkuStatus(Long tenantId, Long skuId, ProductStatus status, Long operatorId) {
+        if (skuId == null) {
+            return;
+        }
+        productSkuMapper.update(null, new LambdaUpdateWrapper<BcProductSku>()
+                .eq(BcProductSku::getId, skuId)
+                .eq(tenantId != null, BcProductSku::getTenantId, tenantId)
+                .set(BcProductSku::getStatus, status == null ? null : status.getCode())
+                .set(BcProductSku::getUpdatedBy, operatorId)
+                .set(BcProductSku::getUpdatedAt, LocalDateTime.now()));
+    }
+
+    @Override
+    public void updateSkuPrice(Long tenantId, Long skuId, BigDecimal newPrice, Long operatorId) {
+        if (skuId == null) {
+            return;
+        }
+        productSkuMapper.update(null, new LambdaUpdateWrapper<BcProductSku>()
+                .eq(BcProductSku::getId, skuId)
+                .eq(tenantId != null, BcProductSku::getTenantId, tenantId)
+                .set(BcProductSku::getBasePrice, newPrice)
+                .set(BcProductSku::getUpdatedBy, operatorId)
+                .set(BcProductSku::getUpdatedAt, LocalDateTime.now()));
+    }
+
     private BcProduct toEntity(Product product) {
         if (product == null) {
             return null;
@@ -411,6 +450,26 @@ public class ProductRepositoryImpl implements ProductRepository {
         entity.setProductMeta(toJson(product.getProductMeta()));
         entity.setUpdatedAt(LocalDateTime.now());
         return entity;
+    }
+
+    private ProductSku toSkuModel(BcProductSku entity) {
+        if (entity == null) {
+            return null;
+        }
+        return ProductSku.builder()
+                .id(entity.getId())
+                .tenantId(entity.getTenantId())
+                .productId(entity.getProductId())
+                .skuCode(entity.getSkuCode())
+                .name(entity.getName())
+                .basePrice(entity.getBasePrice())
+                .marketPrice(entity.getMarketPrice())
+                .costPrice(entity.getCostPrice())
+                .barcode(entity.getBarcode())
+                .defaultSku(Boolean.TRUE.equals(entity.getIsDefault()))
+                .status(ProductStatus.fromCode(entity.getStatus()))
+                .sortOrder(entity.getSortOrder())
+                .build();
     }
 
     private String toJson(Object obj) {

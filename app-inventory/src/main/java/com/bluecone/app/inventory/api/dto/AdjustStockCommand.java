@@ -25,6 +25,16 @@ public class AdjustStockCommand {
 
     private Long bizRefId;
 
+    /**
+     * 操作来源，例如 MANUAL_ADJUST / STOCK_TAKING。
+     */
+    private String source;
+
+    /**
+     * 操作人 ID，便于审计。
+     */
+    private Long operatorId;
+
     private String requestId;
 
     private AdjustType adjustType;

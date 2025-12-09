@@ -2,6 +2,7 @@ package com.bluecone.app.store.domain.service;
 
 import com.bluecone.app.store.api.dto.StoreOrderAcceptResult;
 import com.bluecone.app.store.domain.model.StoreConfig;
+import com.bluecone.app.store.domain.model.runtime.StoreRuntime;
 
 import java.time.LocalDateTime;
 
@@ -30,4 +31,13 @@ public interface StoreOpenStateService {
      * @return 是否可接单及原因
      */
     StoreOrderAcceptResult check(StoreConfig config, String capability, LocalDateTime now, String channelType);
+
+    /**
+     * 最小版：仅基于运行时快照判断是否可接单。
+     *
+     * @param runtime 门店运行时快照
+     * @param now     当前时间
+     * @return true 可接单；false 不可接单
+     */
+    boolean isStoreOpenForOrder(StoreRuntime runtime, LocalDateTime now);
 }

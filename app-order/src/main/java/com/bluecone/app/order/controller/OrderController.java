@@ -3,6 +3,11 @@ package com.bluecone.app.order.controller;
 import com.bluecone.app.core.log.annotation.ApiLog;
 import com.bluecone.app.core.user.domain.member.repository.read.PageResult;
 import com.bluecone.app.order.api.ApiResponse;
+import com.bluecone.app.core.exception.BusinessException;
+import com.bluecone.app.core.exception.ErrorCode;
+import com.bluecone.app.core.error.CommonErrorCode;
+import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
 import com.bluecone.app.order.api.dto.ConfirmOrderPreviewRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderPreviewResponse;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
@@ -27,6 +32,7 @@ import com.bluecone.app.order.application.command.ConfirmOrderCommand;
 import com.bluecone.app.order.application.command.MerchantAcceptOrderCommand;
 import com.bluecone.app.order.service.ConfigDrivenOrderService;
 import com.bluecone.app.order.service.OrderService;
+import com.bluecone.app.order.controller.support.RequestContextHelper;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -76,11 +82,23 @@ public class OrderController {
     @ApiLog("用户提交订单")
     public ApiResponse<ConfirmOrderResponse> submitUserOrder(
             @jakarta.validation.Valid @RequestBody ConfirmOrderRequest request) {
-        // TODO: tenantId/storeId/userId 应从登录态上下文注入，当前阶段从请求体读取。
+        Long tenantId = RequestContextHelper.currentTenantId();
+        Long storeId = RequestContextHelper.currentStoreId();
+        Long userId = RequestContextHelper.currentUserId();
+        if (tenantId == null || storeId == null || userId == null) {
+            throw BusinessException.of(ErrorCode.PARAM_MISSING.getCode(), "tenantId/userId/storeId missing");
+        }
+        request.setTenantId(tenantId);
+        request.setStoreId(storeId);
+        request.setUserId(userId);
+        StoreOrderSnapshot snapshot = RequestContextHelper.currentStoreSnapshot();
+        if (snapshot == null || !Boolean.TRUE.equals(snapshot.getCanAcceptOrder())) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "门店已打烊或暂停接单");
+        }
         log.info("User submit order, tenantId={}, storeId={}, userId={}, clientOrderNo={}, items={}",
-                request.getTenantId(),
-                request.getStoreId(),
-                request.getUserId(),
+                tenantId,
+                storeId,
+                userId,
                 request.getClientOrderNo(),
                 request.getItems() != null ? request.getItems().size() : 0);
         ConfirmOrderResponse response = orderConfirmAppService.confirmOrder(request);
@@ -94,11 +112,23 @@ public class OrderController {
     @ApiLog("用户确认订单预览")
     public ApiResponse<ConfirmOrderPreviewResponse> previewUserOrder(
             @jakarta.validation.Valid @RequestBody ConfirmOrderPreviewRequest request) {
-        // TODO: tenantId/storeId/userId 应从登录态上下文注入，当前阶段从请求体读取。
+        Long tenantId = RequestContextHelper.currentTenantId();
+        Long storeId = RequestContextHelper.currentStoreId();
+        Long userId = RequestContextHelper.currentUserId();
+        if (tenantId == null || storeId == null || userId == null) {
+            throw BusinessException.of(ErrorCode.PARAM_MISSING.getCode(), "tenantId/userId/storeId missing");
+        }
+        request.setTenantId(tenantId);
+        request.setStoreId(storeId);
+        request.setUserId(userId);
+        StoreOrderSnapshot snapshot = RequestContextHelper.currentStoreSnapshot();
+        if (snapshot == null || !Boolean.TRUE.equals(snapshot.getCanAcceptOrder())) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "门店已打烊或暂停接单");
+        }
         log.info("User preview order, tenantId={}, storeId={}, userId={}, items={}",
-                request.getTenantId(),
-                request.getStoreId(),
-                request.getUserId(),
+                tenantId,
+                storeId,
+                userId,
                 request.getItems() != null ? request.getItems().size() : 0);
         ConfirmOrderPreviewResponse resp = userOrderPreviewAppService.preview(request);
         return ApiResponse.success(resp);

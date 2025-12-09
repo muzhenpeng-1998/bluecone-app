@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.bluecone.app.gateway.endpoint.ApiEndpoint;
+import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,6 +32,12 @@ public class ApiContext {
 
     @Setter
     private Long userId;
+
+    @Setter
+    private Long storeId;
+
+    @Setter
+    private StoreOrderSnapshot storeOrderSnapshot;
 
     @Setter
     private String clientType;

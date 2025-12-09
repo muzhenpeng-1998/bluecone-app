@@ -18,10 +18,13 @@ import java.util.Set;
 @AllArgsConstructor
 public class StoreOrderSnapshot {
 
+    private Long tenantId;
     private Long storeId;
     private String storeName;
     private String cityCode;
     private String industryType;
+    /** 业务状态（示例：1=营业，0=关闭，-1=审核中），待统一枚举 */
+    private Integer bizStatus;
     private String status;
     private Boolean openForOrders;
 
@@ -34,6 +37,16 @@ public class StoreOrderSnapshot {
      * 当前时间是否处于营业状态（可选字段，后续在领域服务中填充）。
      */
     private Boolean currentlyOpen;
+
+    /**
+     * 是否当前可接单（结合运行时判断）。
+     */
+    private Boolean canAcceptOrder;
+
+    /** 能力预留：外卖/自提/堂食。 */
+    private Boolean takeoutEnabled;
+    private Boolean pickupEnabled;
+    private Boolean dineInEnabled;
 
     /**
      * 是否命中特殊日配置。

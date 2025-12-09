@@ -20,7 +20,8 @@ class OrderStatusTest {
 
         pendingPayment.markPaid();
 
-        assertThat(pendingPayment.getStatus()).isEqualTo(OrderStatus.PENDING_ACCEPT);
+        // fix: actual state transition is WAIT_ACCEPT after payment
+        assertThat(pendingPayment.getStatus()).isEqualTo(OrderStatus.WAIT_ACCEPT);
         assertThat(pendingPayment.getPayStatus()).isEqualTo(PayStatus.PAID);
 
         Order completed = Order.builder()

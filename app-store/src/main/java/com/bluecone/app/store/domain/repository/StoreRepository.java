@@ -3,6 +3,9 @@ package com.bluecone.app.store.domain.repository;
 import com.bluecone.app.store.domain.model.StoreCapabilityModel;
 import com.bluecone.app.store.domain.model.StoreConfig;
 import com.bluecone.app.store.domain.model.StoreOpeningSchedule;
+import com.bluecone.app.store.domain.model.runtime.StoreRuntime;
+
+import java.util.Optional;
 
 /**
  * 领域仓储接口，屏蔽 MyBatis-Plus 细节，向领域层提供语义化的持久化能力。
@@ -39,4 +42,13 @@ public interface StoreRepository {
      * 更新能力列表配置（预留，后续补充具体实现）。
      */
     void updateCapabilities(Long tenantId, Long storeId, Iterable<StoreCapabilityModel> capabilities);
+
+    /**
+     * 加载门店运行时快照，供下游订单/菜单等模块消费。
+     *
+     * @param tenantId 租户 ID
+     * @param storeId  门店 ID
+     * @return 门店运行时快照（Optional 包装）
+     */
+    Optional<StoreRuntime> loadStoreRuntime(Long tenantId, Long storeId);
 }

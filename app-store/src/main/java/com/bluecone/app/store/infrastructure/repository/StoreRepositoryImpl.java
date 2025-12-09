@@ -24,12 +24,14 @@ import com.bluecone.app.store.domain.exception.StoreConfigVersionConflictExcepti
 import com.bluecone.app.store.domain.model.StoreCapabilityModel;
 import com.bluecone.app.store.domain.model.StoreConfig;
 import com.bluecone.app.store.domain.model.StoreOpeningSchedule;
+import com.bluecone.app.store.domain.model.runtime.StoreRuntime;
 import com.bluecone.app.store.domain.repository.StoreRepository;
 import com.bluecone.app.store.infrastructure.assembler.StoreConfigAssembler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 门店仓储实现，基于已有 Mapper 从多张表组装 StoreConfig。
@@ -151,5 +153,29 @@ public class StoreRepositoryImpl implements StoreRepository {
     public void updateCapabilities(Long tenantId, Long storeId, Iterable<StoreCapabilityModel> capabilities) {
         // TODO: 补充具体更新逻辑（批量 upsert），并结合 configVersion 保护并发；完成后需要刷新缓存
         throw new UnsupportedOperationException("TODO implement updateCapabilities");
+    }
+
+    @Override
+    public Optional<StoreRuntime> loadStoreRuntime(Long tenantId, Long storeId) {
+        BcStore store = bcStoreMapper.selectOne(new LambdaQueryWrapper<BcStore>()
+                .eq(BcStore::getTenantId, tenantId)
+                .eq(BcStore::getId, storeId)
+                .eq(BcStore::getIsDeleted, false));
+        if (store == null) {
+            return Optional.empty();
+        }
+        StoreRuntime runtime = new StoreRuntime();
+        runtime.setTenantId(store.getTenantId());
+        runtime.setStoreId(store.getId());
+        runtime.setStoreName(store.getName());
+        // fix: 底表 status 为字符串，后续引入枚举时映射为数字 bizStatus
+        runtime.setBizStatus(null);
+        runtime.setForceClosed(Boolean.FALSE.equals(store.getOpenForOrders()) ? Boolean.TRUE : null);
+        // 底表暂无能力字段，预留字段保持 null，后续结合能力表映射
+        runtime.setTakeoutEnabled(null);
+        runtime.setPickupEnabled(null);
+        runtime.setDineInEnabled(null);
+        runtime.setExtJson(store.getExtJson());
+        return Optional.of(runtime);
     }
 }

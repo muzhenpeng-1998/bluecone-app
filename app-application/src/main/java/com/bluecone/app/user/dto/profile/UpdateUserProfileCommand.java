@@ -29,4 +29,9 @@ public class UpdateUserProfileCommand {
     private String country;
 
     private String language;
+
+    /**
+     * 更新来源：USER_SELF / ADMIN / MERCHANT 等。
+     */
+    private String source;
 }

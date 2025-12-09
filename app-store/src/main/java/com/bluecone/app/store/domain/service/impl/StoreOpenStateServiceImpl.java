@@ -3,6 +3,7 @@ package com.bluecone.app.store.domain.service.impl;
 import com.bluecone.app.store.api.dto.StoreOrderAcceptResult;
 import com.bluecone.app.store.domain.error.StoreErrorCode;
 import com.bluecone.app.store.domain.model.StoreConfig;
+import com.bluecone.app.store.domain.model.runtime.StoreRuntime;
 import com.bluecone.app.store.domain.service.StoreOpenStateService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,5 +92,26 @@ public class StoreOpenStateServiceImpl implements StoreOpenStateService {
                 .reasonCode("OK")
                 .reasonMessage("允许接单")
                 .build();
+    }
+
+    @Override
+    public boolean isStoreOpenForOrder(StoreRuntime runtime, LocalDateTime now) {
+        if (runtime == null) {
+            return false;
+        }
+        // 1）后台强制打烊
+        if (Boolean.TRUE.equals(runtime.getForceClosed())) {
+            return false;
+        }
+        // 2）业务状态判定，示例：1=营业中，其他视为不可接单
+        Integer bizStatus = runtime.getBizStatus();
+        if (bizStatus == null) {
+            return false;
+        }
+        if (bizStatus != 1) {
+            return false;
+        }
+        // 3）暂不校验营业时段/节假日，后续扩展
+        return true;
     }
 }

@@ -1,5 +1,7 @@
 package com.bluecone.app.payment.simple.application;
 
+import com.bluecone.app.core.event.DomainEventPublisher;
+import com.bluecone.app.payment.domain.event.PaymentSuccessEvent;
 import com.bluecone.app.payment.simple.application.dto.PaymentOrderDTO;
 import com.bluecone.app.payment.simple.domain.enums.PaymentStatus;
 import com.bluecone.app.payment.simple.domain.model.PaymentOrder;
@@ -11,9 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentCommandAppService {
 
     private final SimplePaymentOrderRepository repository;
+    private final DomainEventPublisher eventPublisher;
 
-    public PaymentCommandAppService(SimplePaymentOrderRepository repository) {
+    public PaymentCommandAppService(SimplePaymentOrderRepository repository,
+                                    DomainEventPublisher eventPublisher) {
         this.repository = repository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -29,6 +34,20 @@ public class PaymentCommandAppService {
         Long totalAmount = paymentOrder.getTotalAmount() == null ? 0L : paymentOrder.getTotalAmount();
         paymentOrder.markSuccess(totalAmount, "debug-" + payOrderId);
         repository.save(paymentOrder);
-        return PaymentOrderDTO.from(paymentOrder);
+
+        PaymentOrderDTO dto = PaymentOrderDTO.from(paymentOrder);
+        PaymentSuccessEvent event = new PaymentSuccessEvent(
+                paymentOrder.getTenantId(),
+                paymentOrder.getStoreId(),
+                paymentOrder.getUserId(),
+                paymentOrder.getOrderId(),
+                paymentOrder.getId(),
+                paymentOrder.getTotalAmount(),
+                paymentOrder.getPaidAmount(),
+                paymentOrder.getChannel() != null ? paymentOrder.getChannel().name() : null,
+                paymentOrder.getOutTransactionNo()
+        );
+        eventPublisher.publish(event);
+        return dto;
     }
 }
