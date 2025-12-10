@@ -23,37 +23,60 @@ public class Tenant implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    // 主键 ID，自增
     @Schema(description = "主键ID")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    // 租户编码（业务唯一键）
     @Schema(description = "租户编码")
     private String tenantCode;
 
+    // 租户名称
     @Schema(description = "租户名称")
     private String tenantName;
 
+    // 租户状态：0-禁用，1-启用
     @Schema(description = "租户状态：0-禁用，1-启用")
     private Integer status;
 
+    // 入驻状态：0-草稿（DRAFT），1-入驻完成（ACTIVE），2-关闭/终止（CLOSED）
+    @Schema(description = "入驻状态：0-草稿（DRAFT），1-入驻完成（ACTIVE），2-关闭/终止（CLOSED）")
+    private Integer onboardStatus;
+
+    // 获客/招商渠道代码，例如 coffee-2025、douyin-ad-01
+    @Schema(description = "获客/招商渠道代码，例如 coffee-2025、douyin-ad-01")
+    private String sourceChannel;
+
+    // 租户默认绑定的小程序 appid，用于该租户下大部分场景的默认小程序入口。
+    @Schema(description = "租户默认绑定的小程序 appid，用于该租户下大部分场景的默认小程序入口。")
+    private String defaultMiniappAppid;
+
+    // 联系人姓名
     @Schema(description = "联系人")
     private String contactPerson;
 
+    // 联系人电话
     @Schema(description = "联系电话")
     private String contactPhone;
 
+    // 联系人邮箱
     @Schema(description = "联系邮箱")
     private String contactEmail;
 
+    // 备注信息
     @Schema(description = "备注")
     private String remark;
 
+    // 逻辑删除标记：0-未删除，1-已删除
     @Schema(description = "逻辑删除：0-未删除，1-已删除")
     private Integer deleted;
 
+    // 创建时间
     @Schema(description = "创建时间")
     private LocalDateTime createdAt;
 
+    // 更新时间
     @Schema(description = "更新时间")
     private LocalDateTime updatedAt;
 
@@ -64,6 +87,12 @@ public class Tenant implements Serializable {
     public static final String TENANT_NAME = "tenant_name";
 
     public static final String STATUS = "status";
+
+    public static final String ONBOARD_STATUS = "onboard_status";
+
+    public static final String SOURCE_CHANNEL = "source_channel";
+
+    public static final String DEFAULT_MINIAPP_APPID = "default_miniapp_appid";
 
     public static final String CONTACT_PERSON = "contact_person";
 

@@ -21,6 +21,7 @@ import java.util.List;
  */
 public interface TenantApplicationService {
 
+    // 创建租户聚合，返回新建租户的主键 ID
     Long createTenant(CreateTenantCommand command);
 
     void updateTenantBasicInfo(UpdateTenantBasicInfoCommand command);

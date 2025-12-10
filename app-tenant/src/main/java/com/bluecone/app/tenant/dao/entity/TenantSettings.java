@@ -20,18 +20,23 @@ import lombok.Data;
 public class TenantSettings implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    // 主键 ID，自增
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    // 租户 ID，关联 tenant.id
     @Schema(description = "租户ID")
     private Long tenantId;
 
+    // 配置 key，例如 plan.id / plan.expireAt
     @Schema(description = "配置Key")
     private String keyName;
 
+    // 配置值，以字符串形式存储
     @Schema(description = "配置值")
     private String keyValue;
 
+    // 最后一次更新时间
     private LocalDateTime updatedAt;
 
 }

@@ -53,6 +53,12 @@ public class BcStore implements Serializable {
 
     private String status;
 
+    // 入驻状态：0-草稿，1-可营业（READY），2-关闭/停业（CLOSED）
+    private Integer onboardStatus;
+
+    // 门店级绑定的小程序 appid，当门店与租户默认小程序不一致时可单独覆盖使用。
+    private String miniappAppid;
+
     private Boolean openForOrders;
 
     private Long configVersion;

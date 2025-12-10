@@ -12,6 +12,8 @@ public final class SecurityConstants {
     public static final String BEARER_PREFIX = "Bearer ";
 
     public static final String[] PERMIT_ALL_PATHS = {
+            "/",
+            "/website/**",
             "/api/auth/**",
             "/api/gw/auth/**",
             "/actuator/health",

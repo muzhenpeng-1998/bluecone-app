@@ -97,9 +97,10 @@ public class TenantLineHandlerImpl implements TenantLineHandler {
         // if ("sys_dict".equalsIgnoreCase(tableName)) {
         //     return true;
         // }
-        // if ("tenant".equalsIgnoreCase(tableName)) {
-        //     return true;
-        // }
+        // 租户元数据表本身不做租户隔离，避免插入时附加 tenant_id 字段
+        if ("tenant".equalsIgnoreCase(tableName)) {
+            return true;
+        }
          // Outbox 表为全局队列，不做租户隔离
          if ("bc_outbox_message".equalsIgnoreCase(tableName)) {
              return true;
@@ -110,7 +111,7 @@ public class TenantLineHandlerImpl implements TenantLineHandler {
              return true;
          }
 
-        // 当前返回 false，表示所有表都启用租户隔离
+        // 其他表默认启用租户隔离
         return false;
     }
 }

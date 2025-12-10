@@ -20,21 +20,27 @@ import lombok.Data;
 public class TenantAuditLog implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    // 主键 ID，自增
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
+    // 租户 ID，关联 tenant.id
     @Schema(description = "租户ID")
     private Long tenantId;
 
+    // 操作人用户 ID（平台管理员/店铺管理员）
     @Schema(description = "操作者用户ID（平台管理员/店铺管理员）")
     private Long operatorId;
 
+    // 操作行为编码：修改资料/套餐变更/认证审核等
     @Schema(description = "操作行为：修改资料/套餐变更/认证审核等")
     private String action;
 
+    // 操作详情描述
     @Schema(description = "操作详情")
     private String detail;
 
+    // 日志创建时间
     private LocalDateTime createdAt;
 
 }

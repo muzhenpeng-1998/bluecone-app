@@ -78,41 +78,70 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
     @Override
     @Transactional
     public Long createTenant(CreateTenantCommand command) {
+        // 1. 构建租户基础信息实体
         Tenant tenant = new Tenant();
+        // 生成全局唯一的租户编码（时间戳 + 随机数）
         tenant.setTenantCode(generateTenantCode());
+        // 设置租户名称
         tenant.setTenantName(command.tenantName());
+        // 默认状态置为启用（1）
         tenant.setStatus(1);
+        // 设置联系人姓名
         tenant.setContactPerson(command.contactPerson());
+        // 设置联系人电话
         tenant.setContactPhone(command.contactPhone());
+        // 设置联系人邮箱
         tenant.setContactEmail(command.contactEmail());
+        // 设置备注信息
         tenant.setRemark(command.remark());
+        // 插入 tenant 表，生成主键 ID
         tenantService.save(tenant);
 
+        // 2. 构建租户主体详情（profile）
         TenantProfile profile = new TenantProfile();
+        // 关联刚刚创建的租户 ID
         profile.setTenantId(tenant.getId());
+        // 设置主体类型
         profile.setTenantType(command.tenantType());
+        // 设置工商主体名称
         profile.setBusinessName(command.businessName());
+        // 设置营业执照注册号
         profile.setBusinessLicenseNo(command.businessLicenseNo());
+        // 设置营业执照图片地址
         profile.setBusinessLicenseUrl(command.businessLicenseUrl());
+        // 设置法人姓名
         profile.setLegalPersonName(command.legalPersonName());
+        // 设置法人身份证号
         profile.setLegalPersonIdNo(command.legalPersonIdNo());
+        // 设置主体注册地址
         profile.setAddress(command.address());
+        // 插入 tenant_profile 表
         tenantProfileService.save(profile);
 
+        // 3. 初始化租户配置（如套餐 ID / 到期时间等）
         initializeDefaultSettings(tenant.getId(), command.initialPlanId(), command.planExpireAt());
 
+        // 4. 如有传入初始化套餐，则走一遍套餐变更流程写入 billing & settings
         if (command.initialPlanId() != null) {
             changeTenantPlan(new ChangeTenantPlanCommand(
+                    // 新建租户 ID
                     tenant.getId(),
+                    // 初始化套餐 ID
                     command.initialPlanId(),
+                    // 创建时暂不记录具体支付金额
                     null,
+                    // 创建时暂不记录具体支付方式
                     null,
+                    // 初始化套餐到期时间
                     command.planExpireAt(),
+                    // 操作人 ID 用于审计
                     command.operatorId()));
         }
 
+        // 5. 记录审计日志，标记“租户已创建”
         recordAudit(tenant.getId(), command.operatorId(), "TENANT_CREATED",
                 "Tenant created with code " + tenant.getTenantCode());
+        // 返回新建租户的主键 ID 给上层
         return tenant.getId();
     }
 
@@ -316,35 +345,53 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
     }
 
     private void initializeDefaultSettings(Long tenantId, Long planId, LocalDateTime expireAt) {
+        // 构建要批量写入的配置列表
         List<TenantSettings> settings = new ArrayList<>();
+        // 记录租户当前套餐 ID 的配置项
         TenantSettings planSetting = new TenantSettings();
+        // 绑定租户 ID
         planSetting.setTenantId(tenantId);
+        // key 为 plan.id，表示当前套餐
         planSetting.setKeyName(SETTING_PLAN_ID);
+        // 如果传了套餐 ID 则使用，否则标记为 "free"（免费版）
         planSetting.setKeyValue(planId != null ? planId.toString() : "free");
+        // 加入待保存列表
         settings.add(planSetting);
+        // 如传入到期时间，则一并写入 plan.expireAt 配置
         if (expireAt != null) {
             TenantSettings expireSetting = new TenantSettings();
+            // 绑定租户 ID
             expireSetting.setTenantId(tenantId);
+            // key 为 plan.expireAt，表示套餐到期时间
             expireSetting.setKeyName(SETTING_PLAN_EXPIRE_AT);
+            // 以字符串形式保存到期时间
             expireSetting.setKeyValue(expireAt.toString());
+            // 加入待保存列表
             settings.add(expireSetting);
         }
+        // 批量保存配置项，避免多次数据库往返
         if (!settings.isEmpty()) {
             tenantSettingsService.saveBatch(settings);
         }
     }
 
     private void upsertSetting(Long tenantId, String key, String value) {
+        // 按租户 + key 查询已有配置
         TenantSettings settings = tenantSettingsService.lambdaQuery()
                 .eq(TenantSettings::getTenantId, tenantId)
                 .eq(TenantSettings::getKeyName, key)
                 .one();
+        // 如果不存在则新建一条
         if (settings == null) {
             settings = new TenantSettings();
+            // 绑定租户 ID
             settings.setTenantId(tenantId);
+            // 设置配置项 key
             settings.setKeyName(key);
         }
+        // 更新配置值
         settings.setKeyValue(value);
+        // 保存或更新到数据库，实现 upsert 效果
         tenantSettingsService.saveOrUpdate(settings);
     }
 
@@ -436,13 +483,30 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
     }
 
     private void recordAudit(Long tenantId, Long operatorId, String action, String detail) {
+        // 创建一条审计日志记录
         TenantAuditLog auditLog = new TenantAuditLog();
+        // 关联租户 ID
         auditLog.setTenantId(tenantId);
+        // 记录操作者 ID（可为空，视安全上下文而定）
         auditLog.setOperatorId(operatorId);
+        // 写入本次操作的类型编码
         auditLog.setAction(action);
-        auditLog.setDetail(detail);
+        // 组装 JSON 格式的详情，兼容 MySQL JSON 字段类型
+        auditLog.setDetail(buildAuditDetailJson(action, detail));
+        // 记录创建时间
         auditLog.setCreatedAt(LocalDateTime.now());
+        // 插入 tenant_audit_log 表
         tenantAuditLogService.save(auditLog);
+    }
+
+    /**
+     * 构建审计日志 detail 字段的 JSON 字符串
+     * 说明：tenant_audit_log.detail 列为 JSON 类型，必须保存合法 JSON 文本
+     */
+    private String buildAuditDetailJson(String action, String detail) {
+        String safeAction = action == null ? "" : action.replace("\\", "\\\\").replace("\"", "\\\"");
+        String safeDetail = detail == null ? "" : detail.replace("\\", "\\\\").replace("\"", "\\\"");
+        return "{\"action\":\"" + safeAction + "\",\"detail\":\"" + safeDetail + "\"}";
     }
 
     private TenantVerificationInfo buildVerification(TenantProfile profile) {
@@ -485,8 +549,11 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
     }
 
     private String generateTenantCode() {
+        // 使用当前时间（精确到秒）作为前缀，便于排序和排查问题
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+        // 生成 4 位随机数，降低碰撞概率
         int random = 1000 + new Random().nextInt(9000);
+        // 拼接成形如 TEN202512031230309999 的编码
         return "TEN" + LocalDateTime.now().format(formatter) + random;
     }
 }

@@ -47,8 +47,10 @@ public class TenantController {
 
     private final TenantApplicationService tenantApplicationService;
 
+    // 处理 POST /api/tenants 创建租户请求
     @PostMapping
     public Long createTenant(@Valid @RequestBody TenantCreateRequest request) {
+        // 将校验通过的请求转换为命令并委派给应用服务
         return tenantApplicationService.createTenant(toCreateCommand(request));
     }
 
@@ -128,20 +130,35 @@ public class TenantController {
 
     private CreateTenantCommand toCreateCommand(TenantCreateRequest request) {
         return new CreateTenantCommand(
+                // 租户名称
                 request.getTenantName(),
+                // 联系人姓名
                 request.getContactPerson(),
+                // 联系人电话
                 request.getContactPhone(),
+                // 联系人邮箱
                 request.getContactEmail(),
+                // 备注信息
                 request.getRemark(),
+                // 租户类型
                 request.getTenantType(),
+                // 主体名称
                 request.getBusinessName(),
+                // 营业执照编号
                 request.getBusinessLicenseNo(),
+                // 营业执照附件
                 request.getBusinessLicenseUrl(),
+                // 法人姓名
                 request.getLegalPersonName(),
+                // 法人证件号
                 request.getLegalPersonIdNo(),
+                // 主体地址
                 request.getAddress(),
+                // 操作人 ID
                 request.getOperatorId(),
+                // 首次订阅方案 ID
                 request.getInitialPlanId(),
+                // 方案到期时间
                 request.getPlanExpireAt());
     }
 
