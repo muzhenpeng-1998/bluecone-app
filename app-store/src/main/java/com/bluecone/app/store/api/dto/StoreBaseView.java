@@ -1,5 +1,6 @@
 package com.bluecone.app.store.api.dto;
 
+import com.bluecone.app.core.domain.IndustryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +23,7 @@ public class StoreBaseView {
     private String storeCode;
     private String name;
     private String shortName;
-    private String industryType;
+    private IndustryType industryType;
     private String cityCode;
     /** 业务状态（示例：1=营业，0=关闭，-1=审核中），后续用枚举收敛 */
     private Integer bizStatus;

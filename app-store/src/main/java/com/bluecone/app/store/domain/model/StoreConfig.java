@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import com.bluecone.app.core.domain.IndustryType;
 
 /**
  * 门店完整配置聚合根，聚合 bc_store 及多张子表后的领域模型。
@@ -47,7 +48,7 @@ public class StoreConfig {
     /**
      * 行业类型，用于后续场景扩展（餐饮、零售、场馆等）。
      */
-    private String industryType;
+    private IndustryType industryType;
 
     /**
      * 城市编码，部分区域逻辑或运力逻辑会依赖。

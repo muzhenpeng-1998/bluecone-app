@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 
 import java.io.Serializable;
+import com.bluecone.app.core.domain.IndustryType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -29,7 +30,7 @@ public class BcStore implements Serializable {
 
     private String shortName;
 
-    private String industryType;
+    private IndustryType industryType;
 
     private Long brandId;
 

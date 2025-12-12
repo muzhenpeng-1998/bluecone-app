@@ -1,6 +1,7 @@
 package com.bluecone.app.core.log.service;
 
 import com.bluecone.app.core.log.ApiEvent;
+import com.bluecone.app.core.log.LogProperties;
 import com.bluecone.app.core.log.pipeline.EventPipeline;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -19,9 +20,13 @@ public class ServiceMethodAspect {
     private final ServiceEventFactory factory;
     private final ServiceEventEnricher enricher;
     private final EventPipeline eventPipeline;
+    private final LogProperties logProperties;
 
     @Around("@within(org.springframework.stereotype.Service)")
     public Object traceService(ProceedingJoinPoint pjp) throws Throwable {
+        if (!logProperties.isEnabled()) {
+            return pjp.proceed();
+        }
         long start = System.currentTimeMillis();
         try {
             Object result = pjp.proceed();

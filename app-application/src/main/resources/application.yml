@@ -90,6 +90,9 @@ bluecone:
           daily-upload-count-limit: 500
           daily-upload-bytes-limit: 1073741824
 
+  log:
+    enabled: false
+
 logging:
   level:
-    com.bluecone.app.infra.outbox: DEBUG
+    com.bluecone.app.infra.outbox: WARN

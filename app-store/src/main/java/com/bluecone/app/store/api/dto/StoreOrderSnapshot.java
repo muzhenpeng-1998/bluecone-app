@@ -1,5 +1,6 @@
 package com.bluecone.app.store.api.dto;
 
+import com.bluecone.app.core.domain.IndustryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,7 +23,7 @@ public class StoreOrderSnapshot {
     private Long storeId;
     private String storeName;
     private String cityCode;
-    private String industryType;
+    private IndustryType industryType;
     /** 业务状态（示例：1=营业，0=关闭，-1=审核中），待统一枚举 */
     private Integer bizStatus;
     private String status;

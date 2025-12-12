@@ -1,5 +1,6 @@
 package com.bluecone.app.store.application.query;
 
+import com.bluecone.app.core.domain.IndustryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,5 +21,5 @@ public class StoreListQuery {
     /**
      * 行业类型过滤，供后台按业态筛选。
      */
-    private String industryType;
+    private IndustryType industryType;
 }

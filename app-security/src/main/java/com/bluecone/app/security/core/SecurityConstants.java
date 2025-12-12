@@ -14,6 +14,7 @@ public final class SecurityConstants {
     public static final String[] PERMIT_ALL_PATHS = {
             "/",
             "/website/**",
+            "/api/admin/",
             "/api/auth/**",
             "/api/gw/auth/**",
             "/actuator/health",

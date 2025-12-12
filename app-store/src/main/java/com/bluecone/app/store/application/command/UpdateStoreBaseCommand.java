@@ -1,5 +1,6 @@
 package com.bluecone.app.store.application.command;
 
+import com.bluecone.app.core.domain.IndustryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +18,7 @@ public class UpdateStoreBaseCommand {
     private Long storeId;
     private String name;
     private String shortName;
-    private String industryType;
+    private IndustryType industryType;
     private String cityCode;
     private Boolean openForOrders;
     private Long expectedConfigVersion;

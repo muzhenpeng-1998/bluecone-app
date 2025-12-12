@@ -26,7 +26,7 @@ public class OutboxDispatchJob implements JobHandler {
 
     @Override
     public void handle(JobContext context) {
-        log.info("[Scheduler] OutboxDispatch tick traceId={}", context.getTraceId());
+        log.debug("[Scheduler] OutboxDispatch tick traceId={}", context.getTraceId());
         dispatchService.dispatchDueMessages();
     }
 }

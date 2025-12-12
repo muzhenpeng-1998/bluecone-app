@@ -1,5 +1,6 @@
 package com.bluecone.app.tenant.application.onboarding;
 
+import com.bluecone.app.core.domain.IndustryType;
 import com.bluecone.app.store.dao.entity.BcStore;
 import com.bluecone.app.store.dao.mapper.BcStoreMapper;
 import com.bluecone.app.tenant.dao.entity.Tenant;
@@ -68,7 +69,7 @@ public class TenantOnboardingCreateService {
         store.setDistrictCode(command.district());
         store.setAddress(command.address());
         // 业态/经营场景映射到行业类型字段
-        store.setIndustryType(command.bizScene());
+        store.setIndustryType(IndustryType.fromCode(command.bizScene()));
         store.setContactPhone(command.contactPhone());
         // 保持原有门店状态默认值：OPEN
         store.setStatus("OPEN");
@@ -99,4 +100,3 @@ public class TenantOnboardingCreateService {
         return "S" + System.currentTimeMillis();
     }
 }
-
