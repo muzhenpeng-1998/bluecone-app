@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.bluecone.app.gateway.endpoint.ApiEndpoint;
 import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
+import com.bluecone.app.inventory.runtime.api.InventoryPolicySnapshot;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Builder;
 import lombok.Getter;
@@ -38,6 +39,9 @@ public class ApiContext {
 
     @Setter
     private StoreOrderSnapshot storeOrderSnapshot;
+
+    @Setter
+    private InventoryPolicySnapshot inventoryPolicySnapshot;
 
     @Setter
     private String clientType;

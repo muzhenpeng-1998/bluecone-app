@@ -76,12 +76,14 @@ public class StoreQueryService {
         LambdaQueryWrapper<BcStore> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BcStore::getTenantId, query.getTenantId());
         wrapper.eq(BcStore::getIsDeleted, false);
-        if (query.getStoreId() != null) {
+        if (query.getStorePublicId() != null && !query.getStorePublicId().isBlank()) {
+            wrapper.eq(BcStore::getPublicId, query.getStorePublicId());
+        } else if (query.getStoreId() != null) {
             wrapper.eq(BcStore::getId, query.getStoreId());
         } else if (query.getStoreCode() != null) {
             wrapper.eq(BcStore::getStoreCode, query.getStoreCode());
         } else {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "需要提供 storeId 或 storeCode");
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "需要提供 storePublicId、storeId 或 storeCode");
         }
         BcStore entity = bcStoreService.getOne(wrapper, false);
         if (entity == null) {

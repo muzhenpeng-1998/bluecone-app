@@ -1,7 +1,9 @@
 package com.bluecone.app.config;
 
 import com.bluecone.app.infra.tenant.TenantWebInterceptor;
+import com.bluecone.app.web.idresolve.PublicIdArgumentResolver;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -30,14 +32,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final TenantWebInterceptor tenantWebInterceptor;
+    private final PublicIdArgumentResolver publicIdArgumentResolver;
 
     /**
      * 构造函数注入
      *
      * @param tenantWebInterceptor 租户 Web 拦截器
      */
-    public WebMvcConfig(TenantWebInterceptor tenantWebInterceptor) {
+    public WebMvcConfig(TenantWebInterceptor tenantWebInterceptor,
+                        PublicIdArgumentResolver publicIdArgumentResolver) {
         this.tenantWebInterceptor = tenantWebInterceptor;
+        this.publicIdArgumentResolver = publicIdArgumentResolver;
     }
 
     /**
@@ -62,5 +67,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         //         .addPathPatterns("/**")
         //         .excludePathPatterns("/login", "/register")
         //         .order(2);
+    }
+
+    @Override
+    public void addArgumentResolvers(java.util.List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(publicIdArgumentResolver);
     }
 }

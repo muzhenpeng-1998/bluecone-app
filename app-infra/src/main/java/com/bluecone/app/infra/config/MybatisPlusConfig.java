@@ -38,6 +38,7 @@ import org.springframework.context.annotation.Configuration;
         "com.bluecone.app.infra.user.query",
         "com.bluecone.app.infra.idempotency",
         "com.bluecone.app.infra.event.consume",
+        "com.bluecone.app.infra.idresolve",
         // 支付模块 Mapper（位于 infrastructure.persistence 包下）
         "com.bluecone.app.payment.infrastructure.persistence"
 })

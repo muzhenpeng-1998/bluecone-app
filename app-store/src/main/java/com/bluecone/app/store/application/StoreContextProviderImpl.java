@@ -59,6 +59,7 @@ public class StoreContextProviderImpl implements StoreContextProvider {
     private StoreOrderSnapshot mapToStoreOrderSnapshot(StoreRuntime runtime, boolean canAcceptOrder) {
         StoreOrderSnapshot snapshot = new StoreOrderSnapshot();
         snapshot.setTenantId(runtime.getTenantId());
+        snapshot.setStorePublicId(runtime.getStorePublicId());
         snapshot.setStoreId(runtime.getStoreId());
         snapshot.setStoreName(runtime.getStoreName());
         snapshot.setBizStatus(runtime.getBizStatus());
@@ -72,4 +73,3 @@ public class StoreContextProviderImpl implements StoreContextProvider {
         return snapshot;
     }
 }
-

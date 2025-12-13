@@ -68,9 +68,9 @@ public class StoreFacadeImpl implements StoreFacade {
     }
 
     @Override
-    public void createStore(CreateStoreCommand command) {
+    public String createStore(CreateStoreCommand command) {
         // Facade 不做复杂校验，直接交给写侧应用服务
-        storeCommandService.createStore(command);
+        return storeCommandService.createStore(command);
     }
 
     @Override

@@ -19,6 +19,10 @@ public class StoreRuntime {
 
     /** 门店 ID。 */
     private Long storeId;
+    /**
+     * 对外门店 ID（PublicId），供上下游展示和透传。
+     */
+    private String storePublicId;
 
     /** 门店名称。 */
     private String storeName;
@@ -44,4 +48,3 @@ public class StoreRuntime {
     /** 预留扩展字段（JSON）。 */
     private String extJson;
 }
-

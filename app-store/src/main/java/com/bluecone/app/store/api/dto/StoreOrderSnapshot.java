@@ -20,6 +20,13 @@ import java.util.Set;
 public class StoreOrderSnapshot {
 
     private Long tenantId;
+    /**
+     * 对外门店 ID（PublicId），供上层透传使用。
+     */
+    private String storePublicId;
+    /**
+     * 内部门店 ID（仅内部使用，外部不应依赖）。
+     */
     private Long storeId;
     private String storeName;
     private String cityCode;

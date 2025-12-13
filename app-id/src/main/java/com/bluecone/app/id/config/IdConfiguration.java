@@ -8,11 +8,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 
 import com.bluecone.app.id.api.IdService;
+import com.bluecone.app.id.config.BlueconeIdProperties.LongId;
+import com.bluecone.app.id.config.InstanceNodeIdProvider;
+import com.bluecone.app.id.core.PublicIdFactory;
+import com.bluecone.app.id.core.SnowflakeLongIdGenerator;
 import com.bluecone.app.id.core.UlidIdGenerator;
 import com.bluecone.app.id.core.UlidIdService;
+import com.bluecone.app.id.jackson.Ulid128JacksonModule;
 import com.bluecone.app.id.metrics.UlidMetrics;
+import com.bluecone.app.id.publicid.api.PublicIdCodec;
+import com.bluecone.app.id.publicid.core.DefaultPublicIdCodec;
+import com.fasterxml.jackson.databind.Module;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -83,7 +92,48 @@ public class IdConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public IdService idService(UlidIdGenerator ulidIdGenerator) {
-        return new UlidIdService(ulidIdGenerator);
+    @ConditionalOnProperty(prefix = "bluecone.id.long", name = "enabled", havingValue = "true")
+    public SnowflakeLongIdGenerator snowflakeLongIdGenerator(BlueconeIdProperties props,
+                                                             Environment environment) {
+        if (props == null || props.getLong() == null || !props.getLong().isEnabled()) {
+            return new SnowflakeLongIdGenerator(0L, 0L);
+        }
+        LongId longProps = props.getLong();
+        long nodeId = InstanceNodeIdProvider.resolveNodeId(longProps, environment);
+        return new SnowflakeLongIdGenerator(longProps.getEpochMillis(), nodeId);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(PublicIdCodec.class)
+    @ConditionalOnProperty(prefix = "bluecone.id.public-id", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public PublicIdCodec publicIdCodec(BlueconeIdProperties props) {
+        BlueconeIdProperties.PublicId publicIdProps = props != null ? props.getPublicId() : null;
+        return new DefaultPublicIdCodec(publicIdProps);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnBean(PublicIdCodec.class)
+    public PublicIdFactory publicIdFactory(PublicIdCodec codec) {
+        return new PublicIdFactory(codec);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public IdService idService(UlidIdGenerator ulidIdGenerator,
+                               ObjectProvider<SnowflakeLongIdGenerator> longIdGeneratorProvider,
+                               ObjectProvider<PublicIdFactory> publicIdFactoryProvider) {
+        SnowflakeLongIdGenerator longIdGenerator = longIdGeneratorProvider.getIfAvailable();
+        PublicIdFactory publicIdFactory = publicIdFactoryProvider.getIfAvailable();
+        return new UlidIdService(ulidIdGenerator, longIdGenerator, publicIdFactory);
+    }
+
+    /**
+     * Ulid128 Jackson Module Bean（兼容旧版配置方式）。
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "ulid128JacksonModule")
+    public Module ulid128JacksonModule() {
+        return new Ulid128JacksonModule();
     }
 }

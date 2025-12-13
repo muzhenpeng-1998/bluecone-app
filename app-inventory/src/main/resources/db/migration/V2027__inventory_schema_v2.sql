@@ -131,3 +131,4 @@ CREATE TABLE `bc_inv_policy` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存策略配置表：单品扣减/超卖/限售规则';
 
 SET FOREIGN_KEY_CHECKS = 1;
+

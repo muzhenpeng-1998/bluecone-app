@@ -93,6 +93,11 @@ bluecone:
   log:
     enabled: false
 
+  id:
+    long:
+      enabled: true
+      node-id: 1
+
 logging:
   level:
     com.bluecone.app.infra.outbox: WARN

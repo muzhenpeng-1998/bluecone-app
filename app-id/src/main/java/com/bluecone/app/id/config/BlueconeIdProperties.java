@@ -21,6 +21,11 @@ public class BlueconeIdProperties {
     private Ulid ulid = new Ulid();
 
     /**
+     * Snowflake long ID 相关配置。
+     */
+    private LongId longId = new LongId();
+
+    /**
      * 对外公开 ID（PublicId）配置。
      */
     private PublicId publicId = new PublicId();
@@ -47,6 +52,17 @@ public class BlueconeIdProperties {
         this.ulid = (ulid != null ? ulid : new Ulid());
     }
 
+    /**
+     * Snowflake long ID 相关配置。
+     */
+    public LongId getLong() {
+        return longId;
+    }
+
+    public void setLong(LongId longId) {
+        this.longId = (longId != null ? longId : new LongId());
+    }
+
     public PublicId getPublicId() {
         return publicId;
     }
@@ -69,6 +85,11 @@ public class BlueconeIdProperties {
     public static class Ulid {
 
         /**
+         * 是否启用 ULID 生成能力。
+         */
+        private boolean enabled = true;
+
+        /**
          * ULID 生成模式：STRICT（单锁全序）或 STRIPED（多分片以提升并发）。
          */
         private Mode mode = Mode.STRIPED;
@@ -87,6 +108,14 @@ public class BlueconeIdProperties {
          * 时钟回拨处理策略配置。
          */
         private Rollback rollback = new Rollback();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
 
         public Mode getMode() {
             return mode;
@@ -219,6 +248,11 @@ public class BlueconeIdProperties {
         private String separator = "_";
 
         /**
+         * 是否将 ULID/Base32 载荷转换为小写形式。
+         */
+        private boolean lowerCase = true;
+
+        /**
          * 编码格式，默认使用 ULID 的 Base32 字符串形式。
          */
         private Format format = Format.ULID_BASE32;
@@ -247,6 +281,14 @@ public class BlueconeIdProperties {
 
         public void setSeparator(String separator) {
             this.separator = separator;
+        }
+
+        public boolean isLowerCase() {
+            return lowerCase;
+        }
+
+        public void setLowerCase(boolean lowerCase) {
+            this.lowerCase = lowerCase;
         }
 
         public Format getFormat() {
@@ -306,6 +348,60 @@ public class BlueconeIdProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    /**
+     * Snowflake long ID 相关配置。
+     */
+    public static class LongId {
+
+        /**
+         * 是否启用 long 型 ID 生成。
+         */
+        private boolean enabled = false;
+
+        /**
+         * 节点 ID，范围 [0, 1023]。
+         *
+         * <p>当 {@code bluecone.id.long.enabled=true} 时，必须为当前实例提供唯一的 nodeId：</p>
+         * <ul>
+         *     <li>推荐通过配置属性 {@code bluecone.id.long.node-id} 明确配置；</li>
+         *     <li>也可以省略该属性，改为在运行环境中注入 {@code BLUECONE_NODE_ID}
+         *     （兼容 {@code BLUECONE_ID_NODE_ID}），由 {@link InstanceNodeIdProvider} 解析。</li>
+         * </ul>
+         *
+         * <p>若启用了 long ID 但既未配置属性、也未提供环境变量，则应用启动会失败，以避免隐性 nodeId 撞号。</p>
+         */
+        private Long nodeId;
+
+        /**
+         * 自定义纪元毫秒。
+         */
+        private long epochMillis = 0L;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Long getNodeId() {
+            return nodeId;
+        }
+
+        public void setNodeId(Long nodeId) {
+            this.nodeId = nodeId;
+        }
+
+        public long getEpochMillis() {
+            return epochMillis;
+        }
+
+        public void setEpochMillis(long epochMillis) {
+            this.epochMillis = epochMillis;
         }
     }
 }

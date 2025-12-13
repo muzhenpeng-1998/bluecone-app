@@ -1,6 +1,7 @@
 package com.bluecone.app.id.publicid.core;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -44,7 +45,8 @@ public class DefaultPublicIdCodec implements PublicIdCodec {
             payload = Base62.encodeFixed16(id.toBytes());
         } else {
             // 默认为 ULID_BASE32
-            payload = id.toString();
+            String ulid = id.toString();
+            payload = props.isLowerCase() ? ulid.toLowerCase(Locale.ROOT) : ulid;
         }
         String raw = buildRaw(type, payload);
         return new PublicId(type, raw);
@@ -96,8 +98,11 @@ public class DefaultPublicIdCodec implements PublicIdCodec {
                 byte[] bytes = Base62.decodeToFixed16(payload);
                 id = Ulid128.fromBytes(bytes);
             } else {
-                // 默认为 ULID_BASE32
-                ULID.Value value = ULID.parseULID(payload);
+                // 默认为 ULID_BASE32，解码时对大小写不敏感
+                String normalized = props.isLowerCase()
+                        ? payload.toUpperCase(Locale.ROOT)
+                        : payload;
+                ULID.Value value = ULID.parseULID(normalized);
                 id = new Ulid128(value.getMostSignificantBits(), value.getLeastSignificantBits());
             }
         } catch (IllegalArgumentException ex) {
@@ -143,4 +148,3 @@ public class DefaultPublicIdCodec implements PublicIdCodec {
         return raw;
     }
 }
-

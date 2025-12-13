@@ -8,6 +8,8 @@ import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.core.log.error.ExceptionEvent;
 import com.bluecone.app.core.log.error.ExceptionEventFactory;
 import com.bluecone.app.core.log.error.ExceptionEventPipeline;
+import com.bluecone.app.core.idresolve.api.PublicIdInvalidException;
+import com.bluecone.app.core.idresolve.api.PublicIdNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -54,5 +56,33 @@ public class GlobalExceptionHandler {
         exceptionEventPipeline.process(event);
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    @ExceptionHandler(PublicIdInvalidException.class)
+    public ResponseEntity<ApiErrorResponse> handlePublicIdInvalid(PublicIdInvalidException ex,
+                                                                  HttpServletRequest request) {
+        String path = request.getRequestURI();
+        ApiErrorResponse response = ApiErrorResponse.of(
+                ErrorCode.INVALID_PARAM.getCode(),
+                ex.getMessage(),
+                path
+        );
+        ExceptionEvent event = exceptionEventFactory.fromException(ex, request, HttpStatus.BAD_REQUEST.value());
+        exceptionEventPipeline.process(event);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(PublicIdNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handlePublicIdNotFound(PublicIdNotFoundException ex,
+                                                                   HttpServletRequest request) {
+        String path = request.getRequestURI();
+        ApiErrorResponse response = ApiErrorResponse.of(
+                ErrorCode.NOT_FOUND.getCode(),
+                ex.getMessage(),
+                path
+        );
+        ExceptionEvent event = exceptionEventFactory.fromException(ex, request, HttpStatus.NOT_FOUND.value());
+        exceptionEventPipeline.process(event);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 }

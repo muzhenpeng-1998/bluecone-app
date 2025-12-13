@@ -37,7 +37,6 @@ public class IdempotencyConfiguration {
     }
 
     @Bean
-    @ConditionalOnBean({IdService.class, PublicIdCodec.class, IdempotencyRepository.class, PlatformTransactionManager.class})
     @ConditionalOnProperty(prefix = "bluecone.create", name = "enabled", havingValue = "true", matchIfMissing = true)
     public IdempotentCreateTemplate idempotentCreateTemplate(IdService idService,
                                                              PublicIdCodec publicIdCodec,

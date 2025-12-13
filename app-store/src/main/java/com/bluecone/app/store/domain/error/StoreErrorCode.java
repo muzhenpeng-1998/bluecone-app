@@ -16,6 +16,8 @@ public enum StoreErrorCode implements ErrorCode {
     STORE_OUT_OF_BUSINESS_HOURS("ST-400-003", "当前不在营业时间内"),
     STORE_NO_OPENING_CONFIG("ST-400-004", "门店未配置营业时间"),
     STORE_CAPABILITY_DISABLED("ST-400-005", "当前服务类型暂不支持"),
+    STORE_DISABLED("ST-410-001", "门店已停用"),
+    STORE_CLOSED_FOR_ORDERS("ST-409-002", "门店当前不可接单"),
 
     // ========= 渠道相关 =========
     CHANNEL_NOT_FOUND("ST-404-010", "门店渠道不存在"),

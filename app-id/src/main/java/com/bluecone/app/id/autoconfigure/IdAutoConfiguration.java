@@ -4,13 +4,18 @@ import java.time.Clock;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 
 import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.id.config.BlueconeIdProperties;
+import com.bluecone.app.id.config.InstanceNodeIdProvider;
+import com.bluecone.app.id.core.PublicIdFactory;
+import com.bluecone.app.id.core.SnowflakeLongIdGenerator;
 import com.bluecone.app.id.core.UlidIdGenerator;
 import com.bluecone.app.id.core.UlidIdService;
 import com.bluecone.app.id.metrics.UlidMetrics;
@@ -88,6 +93,23 @@ public class IdAutoConfiguration {
     }
 
     /**
+     * 装配 Snowflake long ID 生成器。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "bluecone.id.long", name = "enabled", havingValue = "true")
+    public SnowflakeLongIdGenerator snowflakeLongIdGenerator(BlueconeIdProperties props,
+                                                             Environment environment) {
+        if (props == null || props.getLong() == null || !props.getLong().isEnabled()) {
+            // 按条件注解，此分支理论上不会被命中，兜底返回一个禁用配置
+            return new SnowflakeLongIdGenerator(0L, 0L);
+        }
+        BlueconeIdProperties.LongId longProps = props.getLong();
+        long nodeId = InstanceNodeIdProvider.resolveNodeId(longProps, environment);
+        return new SnowflakeLongIdGenerator(longProps.getEpochMillis(), nodeId);
+    }
+
+    /**
      * 装配统一 ID 服务门面。
      *
      * @param ulidIdGenerator ULID 生成器
@@ -95,8 +117,12 @@ public class IdAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public IdService idService(UlidIdGenerator ulidIdGenerator) {
-        return new UlidIdService(ulidIdGenerator);
+    public IdService idService(UlidIdGenerator ulidIdGenerator,
+                               ObjectProvider<SnowflakeLongIdGenerator> longIdGeneratorProvider,
+                               ObjectProvider<PublicIdFactory> publicIdFactoryProvider) {
+        SnowflakeLongIdGenerator longIdGenerator = longIdGeneratorProvider.getIfAvailable();
+        PublicIdFactory publicIdFactory = publicIdFactoryProvider.getIfAvailable();
+        return new UlidIdService(ulidIdGenerator, longIdGenerator, publicIdFactory);
     }
 
     /**
@@ -108,5 +134,15 @@ public class IdAutoConfiguration {
     public PublicIdCodec publicIdCodec(BlueconeIdProperties props) {
         BlueconeIdProperties.PublicId publicIdProps = props != null ? props.getPublicId() : null;
         return new DefaultPublicIdCodec(publicIdProps);
+    }
+
+    /**
+     * 装配 PublicIdFactory，基于 PublicIdCodec 生成字符串形式的 PublicId。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(PublicIdCodec.class)
+    public PublicIdFactory publicIdFactory(PublicIdCodec codec) {
+        return new PublicIdFactory(codec);
     }
 }

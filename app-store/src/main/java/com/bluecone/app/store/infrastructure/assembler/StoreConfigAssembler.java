@@ -45,6 +45,7 @@ public class StoreConfigAssembler {
         return StoreConfig.builder()
                 .tenantId(store.getTenantId())
                 .storeId(store.getId())
+                .storePublicId(store.getPublicId())
                 .storeCode(store.getStoreCode())
                 .name(store.getName())
                 .shortName(store.getShortName())

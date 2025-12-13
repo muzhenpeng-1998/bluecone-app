@@ -8,6 +8,7 @@ import com.bluecone.app.store.application.command.UpdateStoreBaseCommand;
 import com.bluecone.app.store.application.command.UpdateStoreCapabilitiesCommand;
 import com.bluecone.app.store.application.command.UpdateStoreOpeningHoursCommand;
 import com.bluecone.app.store.application.command.UpdateStoreSpecialDaysCommand;
+import com.bluecone.app.core.idresolve.api.PublicIdRegistrar;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.store.dao.entity.BcStore;
 import com.bluecone.app.store.dao.entity.BcStoreCapability;
@@ -83,6 +84,10 @@ public class StoreCommandService {
      * PublicId 编解码器，用于生成对外可见的门店编码。
      */
     private final PublicIdCodec publicIdCodec;
+    /**
+     * 公共 ID 映射注册器，在创建门店时写入 bc_public_id_map。
+     */
+    private final PublicIdRegistrar publicIdRegistrar;
 
     /**
      * 构造器注入门店相关持久化服务及配置变更服务。
@@ -99,7 +104,8 @@ public class StoreCommandService {
                                IBcStoreSpecialDayService bcStoreSpecialDayService,
                                StoreConfigChangeService storeConfigChangeService,
                                IdService idService,
-                               PublicIdCodec publicIdCodec) {
+                               PublicIdCodec publicIdCodec,
+                               PublicIdRegistrar publicIdRegistrar) {
         // 保存门店主表服务引用，后续用于新增/更新门店基础数据
         this.bcStoreService = bcStoreService;
         // 保存门店能力配置表服务引用
@@ -112,6 +118,7 @@ public class StoreCommandService {
         this.storeConfigChangeService = storeConfigChangeService;
         this.idService = idService;
         this.publicIdCodec = publicIdCodec;
+        this.publicIdRegistrar = publicIdRegistrar;
     }
 
     /**
@@ -120,15 +127,51 @@ public class StoreCommandService {
      * <p>流程概述：</p>
      * <ol>
      *     <li>校验必填参数（租户、门店名称、行业类型）；</li>
-     *     <li>生成或校验门店编码，保证同一租户下唯一；</li>
+     *     <li>生成 internal_id/public_id/store_no 并保证门店编码在租户内唯一；</li>
      *     <li>写入门店主表，初始化 {@code configVersion = 1}；</li>
      *     <li>触发配置变更通知，便于缓存或下游系统感知新门店。</li>
      * </ol>
      *
+     * <p>该方法主要用于非幂等场景；在接入 {@code IdempotentCreateTemplate} 时，推荐调用
+     * {@link #createStoreWithPreallocatedIds(CreateStoreCommand, Ulid128, String, Long)}，由模板统一生成 ID。</p>
+     *
      * @param command 创建门店命令对象
+     * @return 新建门店的对外 public_id
      */
     @Transactional(rollbackFor = Exception.class)
-    public void createStore(CreateStoreCommand command) {
+    public String createStore(CreateStoreCommand command) {
+        Objects.requireNonNull(command.getTenantId(), "tenantId 不能为空");
+        Objects.requireNonNull(command.getName(), "门店名称不能为空");
+        Objects.requireNonNull(command.getIndustryType(), "行业类型不能为空");
+
+        Ulid128 internalId = idService.nextUlid();
+        String publicId = publicIdCodec.encode("sto", internalId).asString();
+        Long storeNo;
+        try {
+            storeNo = idService.nextLongId();
+        } catch (UnsupportedOperationException ex) {
+            storeNo = null;
+        }
+
+        createStoreWithPreallocatedIds(command, internalId, publicId, storeNo);
+        return publicId;
+    }
+
+    /**
+     * 使用预生成的 internalId/publicId/storeNo 创建门店。
+     *
+     * <p>该方法不会再次生成 ID，适用于幂等创建模板等场景。</p>
+     *
+     * @param command    创建门店命令对象
+     * @param internalId 预生成的内部 ULID
+     * @param publicId   预生成的对外 public_id
+     * @param storeNo    预生成的门店数字编号（可为 null 表示暂不使用）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void createStoreWithPreallocatedIds(CreateStoreCommand command,
+                                               Ulid128 internalId,
+                                               String publicId,
+                                               Long storeNo) {
         // 校验必填字段，避免后续持久化或业务逻辑出现空指针
         Objects.requireNonNull(command.getTenantId(), "tenantId 不能为空");
         Objects.requireNonNull(command.getName(), "门店名称不能为空");
@@ -138,13 +181,11 @@ public class StoreCommandService {
         Long tenantId = command.getTenantId();
 
         // 生成/校验门店编码：
-        // 1）若未传入编码，则按时间戳生成一个简单编码；
+        // 1）若未传入编码，则使用 public_id 作为 storeCode；
         // 2）若传入编码，则在当前租户下做唯一性校验。
         String storeCode = command.getStoreCode();
         if (storeCode == null || storeCode.isBlank()) {
-            // 使用统一 ID 组件生成门店 public_id 作为 storeCode
-            Ulid128 internalId = idService.nextUlid();
-            storeCode = publicIdCodec.encode("sto", internalId).asString();
+            storeCode = publicId;
         } else {
             long cnt = bcStoreService.lambdaQuery()
                     .eq(BcStore::getTenantId, tenantId)
@@ -161,6 +202,11 @@ public class StoreCommandService {
         BcStore entity = new BcStore();
         // 归属租户
         entity.setTenantId(tenantId);
+        // 内部/对外 ID
+        entity.setInternalId(internalId);
+        entity.setPublicId(publicId);
+        // 数字门店编号
+        entity.setStoreNo(storeNo);
         // 门店编码（系统生成或前端传入）
         entity.setStoreCode(storeCode);
         // 门店名称
@@ -185,14 +231,19 @@ public class StoreCommandService {
         // 写入门店主表
         bcStoreService.save(entity);
 
+        // 将 publicId 映射到内部 ULID，在同一事务内写入映射表。
+        publicIdRegistrar.register(tenantId, com.bluecone.app.id.api.ResourceType.STORE, publicId, internalId);
+
         // 自增主键作为门店 ID
         Long storeId = entity.getId();
         // 默认能力/营业时间等配置当前暂不初始化，留给后续更新接口处理
 
         // 首次创建即认为配置有变更，触发一次配置变更通知（版本号为 1）
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, entity.getConfigVersion());
-        // 打印关键日志，方便排查问题或做审计
-        log.info("[createStore] tenantId={}, storeId={}, storeCode={}", tenantId, storeId, storeCode);
+        // 打印关键日志，方便排查问题或做审计（仅打印 public_id 前缀）
+        String publicIdPrefix = publicId != null ? publicId.substring(0, Math.min(8, publicId.length())) : null;
+        log.info("[createStore] tenantId={}, storeId={}, publicIdPrefix={}, storeCode={}, storeNo={}",
+                tenantId, storeId, publicIdPrefix, storeCode, storeNo);
     }
 
     /**

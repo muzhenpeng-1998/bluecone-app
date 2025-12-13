@@ -43,10 +43,12 @@ public class OpenStoreController {
      * 获取订单视角快照，下单前可先调用用于前端展示和本地校验。
      */
     @GetMapping("/order-snapshot")
-    public ApiResponse<StoreOrderSnapshot> getOrderSnapshot(@RequestParam Long storeId,
+    public ApiResponse<StoreOrderSnapshot> getOrderSnapshot(@RequestParam(required = false) Long storeId,
+                                                            @RequestParam(required = false, name = "storePublicId") String storePublicId,
                                                             @RequestParam(required = false) String channelType) {
         Long tenantId = requireTenantId();
         LocalDateTime now = LocalDateTime.now();
+        // 当前 StoreFacade 仍按 Long storeId 查询快照，storePublicId 主要用于透传和前端标识。
         StoreOrderSnapshot snapshot = storeFacade.getOrderSnapshot(tenantId, storeId, now, channelType);
         return ApiResponse.success(snapshot);
     }
@@ -55,7 +57,8 @@ public class OpenStoreController {
      * 检查当前是否允许接指定类型订单，订单模块可作为后端兜底校验。
      */
     @GetMapping("/check-acceptable")
-    public ApiResponse<StoreOrderAcceptResult> checkAcceptable(@RequestParam Long storeId,
+    public ApiResponse<StoreOrderAcceptResult> checkAcceptable(@RequestParam(required = false) Long storeId,
+                                                               @RequestParam(required = false, name = "storePublicId") String storePublicId,
                                                                @RequestParam String capability,
                                                                @RequestParam(required = false) String channelType) {
         Long tenantId = requireTenantId();

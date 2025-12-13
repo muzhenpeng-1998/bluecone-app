@@ -1,9 +1,18 @@
 package com.bluecone.app.controller.store;
 
 import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.create.api.CreateRequest;
+import com.bluecone.app.core.create.api.CreateWorkWithEvents;
+import com.bluecone.app.core.create.api.CreateWorkWithEventsResult;
+import com.bluecone.app.core.create.api.IdempotentCreateResult;
+import com.bluecone.app.core.create.api.IdempotentCreateTemplate;
+import com.bluecone.app.core.create.api.TxMode;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.event.EventMetadata;
 import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.id.api.IdService;
+import com.bluecone.app.id.api.ResourceType;
 import com.bluecone.app.store.api.StoreFacade;
 import com.bluecone.app.store.api.dto.StoreBaseView;
 import com.bluecone.app.store.application.command.ChangeStoreStatusCommand;
@@ -15,10 +24,19 @@ import com.bluecone.app.store.application.command.UpdateStoreOpeningHoursCommand
 import com.bluecone.app.store.application.command.UpdateStoreSpecialDaysCommand;
 import com.bluecone.app.store.application.query.StoreDetailQuery;
 import com.bluecone.app.store.application.query.StoreListQuery;
+import com.bluecone.app.store.application.service.StoreCommandService;
+import com.bluecone.app.store.event.StoreCreatedEvent;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.util.HashMap;
+import org.slf4j.MDC;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,14 +74,28 @@ public class AdminStoreController {
      */
     private final StoreFacade storeFacade;
 
+    private final StoreCommandService storeCommandService;
+
+    private final IdempotentCreateTemplate idempotentCreateTemplate;
+
+    private final IdService idService;
+
     /**
-     * 通过构造器注入 {@link StoreFacade}。
+     * 通过构造器注入依赖的门店门面与应用服务。
      *
-     * @param storeFacade 门店门面，用于承接所有门店相关的用例。
+     * @param storeFacade              门店门面，用于承接门店读写能力
+     * @param storeCommandService      门店写侧应用服务
+     * @param idempotentCreateTemplate 幂等创建模板
+     * @param idService                ID 生成服务（用于生成 long 型 store_no 及兜底幂等键）
      */
-    public AdminStoreController(StoreFacade storeFacade) {
-        // 保存依赖的门店门面实例，用于后续接口调用
+    public AdminStoreController(StoreFacade storeFacade,
+                                StoreCommandService storeCommandService,
+                                IdempotentCreateTemplate idempotentCreateTemplate,
+                                IdService idService) {
         this.storeFacade = storeFacade;
+        this.storeCommandService = storeCommandService;
+        this.idempotentCreateTemplate = idempotentCreateTemplate;
+        this.idService = idService;
     }
 
     /**
@@ -132,6 +164,8 @@ public class AdminStoreController {
         return ApiResponse.success(view);
     }
 
+    public record CreateStoreResponse(String storePublicId) {}
+
     /**
      * 创建门店（含默认配置）。
      *
@@ -142,23 +176,67 @@ public class AdminStoreController {
      * <ul>
      *     <li>通过 {@link CreateStoreCommand} 接收前端传入的门店基础信息与初始配置；</li>
      *     <li>方法内部会补充租户 ID，确保门店归属于当前租户；</li>
-     *     <li>具体的校验与默认配置逻辑由门店领域层处理。</li>
+     *     <li>返回新建门店的对外 public_id，供前端或其他系统引用。</li>
      * </ul>
      * </p>
      *
      * @param command 创建门店命令对象，从请求体 JSON 反序列化而来。
-     * @return 空结果的统一成功响应。
+     * @return 包含门店 public_id 的成功响应。
      */
     @PostMapping
-    public ApiResponse<Void> create(@RequestBody CreateStoreCommand command) {
+    public ApiResponse<CreateStoreResponse> create(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idemKey,
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idemKeyAlt,
+            @RequestBody CreateStoreCommand command) {
         // 获取当前登录租户 ID，并在缺失时抛出未授权异常
         Long tenantId = requireTenantId();
         // 将租户 ID 设置到创建命令中，确保新建门店归属于该租户
         command.setTenantId(tenantId);
-        // 调用门店门面执行业务逻辑，包括参数校验、默认配置、持久化等
-        storeFacade.createStore(command);
-        // 创建成功后返回统一的空成功响应，前端可根据需要再次查询详情
-        return ApiResponse.success();
+        // 解析幂等键：优先使用请求头传入的 Idempotency-Key / X-Idempotency-Key
+        String resolvedIdemKey = resolveIdempotencyKey(idemKey, idemKeyAlt);
+        // 构造请求摘要（SHA-256）：tenantId + 关键业务字段
+        String requestHash = hashCreateStoreRequest(tenantId, command);
+
+        CreateRequest request = new CreateRequest(
+                tenantId,
+                "STORE_CREATE",
+                ResourceType.STORE.prefix(),
+                resolvedIdemKey,
+                requestHash,
+                Duration.ofHours(24),
+                Duration.ofSeconds(30),
+                TxMode.REQUIRES_NEW,
+                false,
+                null
+        );
+
+        IdempotentCreateResult<String> result = idempotentCreateTemplate.create(
+                request,
+                (CreateWorkWithEvents<String>) (internalId, publicId) -> {
+                    Long storeNo;
+                    try {
+                        storeNo = idService.nextLongId();
+                    } catch (UnsupportedOperationException ex) {
+                        storeNo = null;
+                    }
+                    storeCommandService.createStoreWithPreallocatedIds(command, internalId, publicId, storeNo);
+
+                    StoreCreatedEvent event = new StoreCreatedEvent(
+                            internalId,
+                            publicId,
+                            storeNo,
+                            command.getName(),
+                            buildEventMetadata(tenantId)
+                    );
+                    return new CreateWorkWithEventsResult<>(publicId, java.util.List.of(event));
+                }
+        );
+
+        if (result.inProgress()) {
+            throw new BizException(CommonErrorCode.CONFLICT, "创建门店请求正在处理，请稍后重试");
+        }
+
+        return ApiResponse.success(new CreateStoreResponse(result.publicId()));
     }
 
     /**
@@ -365,5 +443,58 @@ public class AdminStoreController {
             // 如果转换失败，说明上下文中携带的租户标识不是合法的数字，返回 400 错误
             throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
         }
+    }
+
+    private String resolveIdempotencyKey(String primary, String secondary) {
+        String key = (primary != null && !primary.isBlank()) ? primary : secondary;
+        if (key != null && !key.isBlank()) {
+            return key;
+        }
+        // 不推荐：仅在调用方未提供幂等键时临时生成一个，便于降级使用。
+        try {
+            return idService.nextUlidString();
+        } catch (Exception ex) {
+            // 回退到随机字符串，避免因 ID 模块配置问题影响主流程
+            return java.util.UUID.randomUUID().toString();
+        }
+    }
+
+    private String hashCreateStoreRequest(long tenantId, CreateStoreCommand command) {
+        String payload = tenantId + "|" +
+                safe(command.getName()) + "|" +
+                safe(command.getShortName()) + "|" +
+                safe(command.getCityCode()) + "|" +
+                safe(command.getStoreCode());
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encoded = digest.digest(payload.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(encoded.length * 2);
+            for (byte b : encoded) {
+                String hex = Integer.toHexString(b & 0xff);
+                if (hex.length() == 1) {
+                    sb.append('0');
+                }
+                sb.append(hex);
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private EventMetadata buildEventMetadata(Long tenantId) {
+        HashMap<String, String> meta = new HashMap<>();
+        if (tenantId != null) {
+            meta.put("tenantId", tenantId.toString());
+        }
+        String traceId = MDC.get("traceId");
+        if (traceId != null && !traceId.isBlank()) {
+            meta.put("traceId", traceId);
+        }
+        return meta.isEmpty() ? EventMetadata.empty() : EventMetadata.of(meta);
     }
 }

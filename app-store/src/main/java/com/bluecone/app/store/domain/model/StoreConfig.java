@@ -29,6 +29,10 @@ public class StoreConfig {
      * 门店主键，等同于 bc_store.id。
      */
     private Long storeId;
+    /**
+     * 对外门店 ID（PublicId）。
+     */
+    private String storePublicId;
 
     /**
      * 门店编码，通常对外展示使用。

@@ -27,6 +27,8 @@ import com.bluecone.app.gateway.middleware.SignatureMiddleware;
 import com.bluecone.app.gateway.middleware.StoreMiddleware;
 import com.bluecone.app.gateway.middleware.TenantMiddleware;
 import com.bluecone.app.gateway.middleware.VersionMiddleware;
+import com.bluecone.app.gateway.middleware.InventoryMiddleware;
+import com.bluecone.app.gateway.middleware.UserMiddleware;
 import com.bluecone.app.gateway.response.ResponseEnvelope;
 import com.bluecone.app.gateway.routing.ApiRoute;
 import com.bluecone.app.gateway.routing.ApiRouteRegistry;
@@ -119,6 +121,20 @@ public class ApiGateway {
         }
         // After tenant binding, resolve store context if needed
         chain.add(storeMiddleware);
+        // User context middleware (optional)
+        try {
+            UserMiddleware userMiddleware = applicationContext.getBean(UserMiddleware.class);
+            chain.add(userMiddleware);
+        } catch (org.springframework.beans.BeansException ignored) {
+        }
+        InventoryMiddleware inventoryMiddleware = null;
+        try {
+            inventoryMiddleware = applicationContext.getBean(InventoryMiddleware.class);
+        } catch (org.springframework.beans.BeansException ignored) {
+        }
+        if (inventoryMiddleware != null) {
+            chain.add(inventoryMiddleware);
+        }
         if (contract.isRateLimitEnabled()) {
             chain.add(rateLimitMiddleware);
         }

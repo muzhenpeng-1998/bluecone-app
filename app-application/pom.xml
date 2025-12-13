@@ -54,6 +54,11 @@
         </dependency>
         <dependency>
             <groupId>com.bluecone</groupId>
+            <artifactId>app-inventory</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bluecone</groupId>
             <artifactId>app-product</artifactId>
             <version>${project.version}</version>
         </dependency>

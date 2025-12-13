@@ -53,7 +53,7 @@ public interface StoreFacade {
     /**
      * 创建门店及其默认配置。
      */
-    void createStore(CreateStoreCommand command);
+    String createStore(CreateStoreCommand command);
 
     /**
      * 更新门店基础信息，需依赖 configVersion 做并发保护。
