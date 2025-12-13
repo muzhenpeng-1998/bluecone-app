@@ -6,8 +6,10 @@ import com.bluecone.app.core.id.IdService;
 import com.bluecone.app.core.id.IdType;
 import com.bluecone.app.core.id.TypedId;
 import com.bluecone.app.id.core.UlidIdGenerator;
+import com.bluecone.app.id.governance.AllowIdInfraAccess;
 
 @Service
+@AllowIdInfraAccess
 public class DefaultIdService implements IdService {
 
     private final UlidIdGenerator ulidIdGenerator;

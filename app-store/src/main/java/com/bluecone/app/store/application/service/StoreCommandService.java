@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
@@ -142,6 +143,7 @@ public class StoreCommandService {
 
         // 构造门店主实体并填充基础属性
         BcStore entity = new BcStore();
+//        entity.setId(UlidIdGenerator);
         // 归属租户
         entity.setTenantId(tenantId);
         // 门店编码（系统生成或前端传入）
@@ -160,6 +162,7 @@ public class StoreCommandService {
         entity.setOpenForOrders(Boolean.TRUE.equals(command.getOpenForOrders()));
         // 初始化配置版本号为 1，后续所有配置更新都基于此版本做乐观锁
         entity.setConfigVersion(1L);
+        entity.setCreatedAt(LocalDateTime.now());
         // 逻辑删除标记，默认未删除
         entity.setIsDeleted(false);
         // TODO 审计字段补充（createdAt/createdBy 等），可根据整体审计方案统一处理
