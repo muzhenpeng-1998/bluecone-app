@@ -143,4 +143,63 @@ public class OutboxMessageRepository {
         }
         return mapper.selectCount(wrapper);
     }
+
+    /**
+     * Find the oldest createdAt timestamp for the given status, or null if none.
+     */
+    public LocalDateTime findOldestCreatedAtByStatus(final OutboxMessageStatus status) {
+        LambdaQueryWrapper<OutboxMessageEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OutboxMessageEntity::getStatus, status)
+                .orderByAsc(OutboxMessageEntity::getCreatedAt)
+                .last("limit 1");
+        OutboxMessageEntity entity = mapper.selectOne(wrapper);
+        return entity != null ? entity.getCreatedAt() : null;
+    }
+
+    /**
+     * Read-only list for ops console drill-down, using id cursor and limited columns.
+     */
+    public List<OutboxMessageEntity> listForOps(final List<OutboxMessageStatus> statuses,
+                                                final Long beforeId,
+                                                final int limit,
+                                                final boolean includePayload) {
+        LambdaQueryWrapper<OutboxMessageEntity> wrapper = new LambdaQueryWrapper<>();
+        if (includePayload) {
+            wrapper.select(
+                    OutboxMessageEntity::getId,
+                    OutboxMessageEntity::getEventType,
+                    OutboxMessageEntity::getEventKey,
+                    OutboxMessageEntity::getStatus,
+                    OutboxMessageEntity::getRetryCount,
+                    OutboxMessageEntity::getNextRetryAt,
+                    OutboxMessageEntity::getCreatedAt,
+                    OutboxMessageEntity::getUpdatedAt,
+                    OutboxMessageEntity::getPayload,
+                    OutboxMessageEntity::getHeaders
+            );
+        } else {
+            wrapper.select(
+                    OutboxMessageEntity::getId,
+                    OutboxMessageEntity::getEventType,
+                    OutboxMessageEntity::getEventKey,
+                    OutboxMessageEntity::getStatus,
+                    OutboxMessageEntity::getRetryCount,
+                    OutboxMessageEntity::getNextRetryAt,
+                    OutboxMessageEntity::getCreatedAt,
+                    OutboxMessageEntity::getUpdatedAt
+            );
+        }
+        if (statuses != null && !statuses.isEmpty()) {
+            wrapper.in(OutboxMessageEntity::getStatus, statuses);
+        } else {
+            // No valid status requested -> return empty result quickly.
+            wrapper.eq(OutboxMessageEntity::getId, -1L);
+        }
+        if (beforeId != null) {
+            wrapper.lt(OutboxMessageEntity::getId, beforeId);
+        }
+        wrapper.orderByDesc(OutboxMessageEntity::getId)
+                .last("limit " + limit);
+        return mapper.selectList(wrapper);
+    }
 }

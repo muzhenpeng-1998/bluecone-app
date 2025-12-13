@@ -1,0 +1,4 @@
+com.bluecone.app.id.autoconfigure.IdAutoConfiguration
+com.bluecone.app.id.autoconfigure.IdJacksonAutoConfiguration
+com.bluecone.app.id.autoconfigure.IdMybatisAutoConfiguration
+com.bluecone.app.core.event.consume.autoconfigure.EventConsumeAutoConfiguration

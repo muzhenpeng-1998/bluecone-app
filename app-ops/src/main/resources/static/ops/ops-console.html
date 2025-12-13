@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BlueCone Minimal Ops Console</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        header {
+            background-color: #1f2933;
+            color: #ffffff;
+            padding: 12px 16px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .meta {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        main {
+            padding: 16px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+            padding: 12px 14px;
+            font-size: 13px;
+        }
+        .card h2 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            padding: 4px 6px;
+            text-align: left;
+        }
+        th {
+            background-color: #f1f5f9;
+        }
+        tr:nth-child(even) td {
+            background-color: #f9fafb;
+        }
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        .token-input {
+            margin-top: 6px;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .token-input input {
+            flex: 1;
+            padding: 4px 6px;
+            font-size: 12px;
+        }
+        .token-input button {
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .error {
+            margin-top: 8px;
+            color: #b91c1c;
+            font-size: 12px;
+        }
+        .tabs {
+            margin: 12px 0;
+        }
+        .tab-btn {
+            padding: 6px 10px;
+            margin-right: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+            background-color: #e5e7eb;
+        }
+        .tab-btn.active {
+            background-color: #ffffff;
+            border-bottom-color: #ffffff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .pill-btn {
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            background-color: #f1f5f9;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .modal.hidden {
+            display: none;
+        }
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 40;
+        }
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(15, 23, 42, 0.45);
+        }
+        .modal-content {
+            position: relative;
+            background-color: #ffffff;
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: 0 10px 15px rgba(15,23,42,0.4);
+            max-width: 520px;
+            width: 90%;
+            font-size: 13px;
+        }
+        .modal-body > div {
+            margin-bottom: 4px;
+        }
+        .modal-actions {
+            margin-top: 10px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>BlueCone Minimal Ops Console</h1>
+    <div class="meta">
+        <span id="meta-instance" class="mono"></span>
+        &nbsp;|&nbsp;
+        <span id="meta-version" class="mono"></span>
+        &nbsp;|&nbsp;
+        <span id="meta-started" class="mono"></span>
+        &nbsp;|&nbsp;
+        <span id="meta-now" class="mono"></span>
+    </div>
+    <div class="token-input">
+        <input id="token-input" type="password" placeholder="Ops token (stored in localStorage, not sent to console)">
+        <button id="token-save">Save Token</button>
+        <span id="token-status" class="mono" style="font-size: 11px;"></span>
+    </div>
+</header>
+<main>
+    <div id="error" class="error"></div>
+
+    <div class="tabs">
+        <button id="tab-btn-summary" class="tab-btn active">Summary</button>
+        <button id="tab-btn-outbox" class="tab-btn">Outbox</button>
+        <button id="tab-btn-consume" class="tab-btn">Consume</button>
+        <button id="tab-btn-idem" class="tab-btn">Idempotency Conflicts</button>
+    </div>
+
+    <div id="tab-summary" class="tab-content active">
+        <div class="grid">
+            <div class="card">
+                <h2>Outbox</h2>
+                <table>
+                    <tbody>
+                    <tr><th>Ready</th><td id="outbox-ready" class="mono"></td></tr>
+                    <tr><th>Processing</th><td id="outbox-processing" class="mono"></td></tr>
+                    <tr><th>Failed</th><td id="outbox-failed" class="mono"></td></tr>
+                    <tr><th>Oldest Age (s)</th><td id="outbox-oldest-age" class="mono"></td></tr>
+                    <tr><th>Send Success Rate (5m)</th><td id="outbox-success-rate" class="mono"></td></tr>
+                    <tr><th>Send Failure Rate (5m)</th><td id="outbox-failure-rate" class="mono"></td></tr>
+                    </tbody>
+                </table>
+                <h3 style="margin-top:8px;font-size:13px;">Recent Errors</h3>
+                <ul id="outbox-errors" style="padding-left:18px;margin:4px 0 0 0;font-size:12px;"></ul>
+            </div>
+
+            <div class="card">
+                <h2>Consume</h2>
+                <table>
+                    <tbody>
+                    <tr><th>Retry Ready</th><td id="consume-retry-ready" class="mono"></td></tr>
+                    <tr><th>In-Progress Locks</th><td id="consume-in-progress" class="mono"></td></tr>
+                    </tbody>
+                </table>
+                <h3 style="margin-top:8px;font-size:13px;">Groups (5m)</h3>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Group</th>
+                        <th>Succ</th>
+                        <th>Fail</th>
+                        <th>Avg(ms)</th>
+                        <th>P95(ms)</th>
+                    </tr>
+                    </thead>
+                    <tbody id="consume-groups"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Idempotency / Create</h2>
+                <table>
+                    <tbody>
+                    <tr><th>Idem Conflict Rate (10m)</th><td id="idem-conflict" class="mono"></td></tr>
+                    <tr><th>Idem In-Progress Rate (5m)</th><td id="idem-in-progress" class="mono"></td></tr>
+                    <tr><th>Idem Avg Latency (ms, 5m)</th><td id="idem-latency" class="mono"></td></tr>
+                    <tr><th>Create Success Rate (5m)</th><td id="create-success" class="mono"></td></tr>
+                    <tr><th>Create Failure Rate (5m)</th><td id="create-failure" class="mono"></td></tr>
+                    <tr><th>Create Avg Tx Latency (ms, 5m)</th><td id="create-latency" class="mono"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>System</h2>
+                <table>
+                    <tbody>
+                    <tr><th>Uptime (s)</th><td id="system-uptime" class="mono"></td></tr>
+                    <tr><th>Threads</th><td id="system-threads" class="mono"></td></tr>
+                    <tr><th>Heap Used (MB)</th><td id="system-heap-used" class="mono"></td></tr>
+                    <tr><th>Heap Max (MB)</th><td id="system-heap-max" class="mono"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-outbox" class="tab-content">
+        <div class="card">
+            <h2>Outbox Drill-down</h2>
+            <div style="margin-bottom:8px;">
+                Status:
+                <button class="pill-btn" data-outbox-status="FAILED">FAILED</button>
+                <button class="pill-btn" data-outbox-status="READY">READY</button>
+                <button class="pill-btn" data-outbox-status="PROCESSING">PROCESSING</button>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>EventId</th>
+                    <th>EventType</th>
+                    <th>Status</th>
+                    <th>Retry</th>
+                    <th>NextRetryAt</th>
+                    <th>CreatedAt</th>
+                    <th>Error</th>
+                </tr>
+                </thead>
+                <tbody id="outbox-drill-body"></tbody>
+            </table>
+            <button id="outbox-load-more" class="pill-btn" style="margin-top:8px; display:none;">Load more</button>
+        </div>
+    </div>
+
+    <div id="tab-consume" class="tab-content">
+        <div class="card">
+            <h2>Consume Drill-down</h2>
+            <div style="margin-bottom:8px;">
+                Group:
+                <select id="consume-group-select"></select>
+                Status:
+                <button class="pill-btn" data-consume-status="FAILED">FAILED</button>
+                <button class="pill-btn" data-consume-status="PROCESSING">PROCESSING</button>
+                <button class="pill-btn" data-consume-status="RETRY">RETRY</button>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Group</th>
+                    <th>EventId</th>
+                    <th>EventType</th>
+                    <th>Status</th>
+                    <th>Retry</th>
+                    <th>NextRetryAt</th>
+                    <th>LockedUntil</th>
+                    <th>Error</th>
+                </tr>
+                </thead>
+                <tbody id="consume-drill-body"></tbody>
+            </table>
+            <button id="consume-load-more" class="pill-btn" style="margin-top:8px; display:none;">Load more</button>
+        </div>
+    </div>
+
+    <div id="tab-idem" class="tab-content">
+        <div class="card">
+            <h2>Idempotency Conflicts</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>TenantId</th>
+                    <th>BizType</th>
+                    <th>IdemKeyHash</th>
+                    <th>RequestHash</th>
+                    <th>Status</th>
+                    <th>Error</th>
+                    <th>CreatedAt</th>
+                </tr>
+                </thead>
+                <tbody id="idem-drill-body"></tbody>
+            </table>
+            <button id="idem-load-more" class="pill-btn" style="margin-top:8px; display:none;">Load more</button>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <h3>Item Detail</h3>
+            <div class="modal-body">
+                <div><strong>Type:</strong> <span id="detail-type" class="mono"></span></div>
+                <div><strong>ID:</strong> <span id="detail-id" class="mono"></span></div>
+                <div><strong>EventId:</strong> <span id="detail-event-id" class="mono"></span></div>
+                <div><strong>EventType:</strong> <span id="detail-event-type" class="mono"></span></div>
+                <div><strong>Status:</strong> <span id="detail-status" class="mono"></span></div>
+                <div><strong>RetryCount:</strong> <span id="detail-retry" class="mono"></span></div>
+                <div><strong>NextRetryAt:</strong> <span id="detail-next-retry" class="mono"></span></div>
+                <div><strong>LockedUntil:</strong> <span id="detail-locked-until" class="mono"></span></div>
+                <div><strong>LockedBy:</strong> <span id="detail-locked-by" class="mono"></span></div>
+                <div><strong>ErrorMsg:</strong> <span id="detail-error" class="mono"></span></div>
+            </div>
+            <div class="modal-actions">
+                <button id="detail-copy-event-id" class="pill-btn">Copy EventId</button>
+                <button id="detail-close" class="pill-btn">Close</button>
+            </div>
+        </div>
+    </div>
+</main>
+<script>
+    (function () {
+        const TOKEN_KEY = "bluecone_ops_token";
+
+        function getStoredToken() {
+            try {
+                return localStorage.getItem(TOKEN_KEY) || "";
+            } catch (e) {
+                return "";
+            }
+        }
+
+        function storeToken(token) {
+            try {
+                if (token) {
+                    localStorage.setItem(TOKEN_KEY, token);
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        // Initialize token from URL parameter if present.
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get("token");
+        if (urlToken) {
+            storeToken(urlToken);
+        }
+
+        const tokenInput = document.getElementById("token-input");
+        const tokenSaveBtn = document.getElementById("token-save");
+        const tokenStatus = document.getElementById("token-status");
+        const errorDiv = document.getElementById("error");
+
+        tokenInput.value = getStoredToken() ? "********" : "";
+        tokenStatus.textContent = getStoredToken() ? "token: set" : "token: not set";
+
+        tokenSaveBtn.addEventListener("click", function () {
+            const value = tokenInput.value.trim();
+            if (!value) {
+                errorDiv.textContent = "Token must not be empty.";
+                return;
+            }
+            storeToken(value);
+            tokenInput.value = "********";
+            tokenStatus.textContent = "token: set";
+            errorDiv.textContent = "";
+            fetchAndRenderSummary();
+        });
+
+        function formatMaybeNa(value) {
+            if (value === null || value === undefined) return "NA";
+            if (typeof value === "number" && value < 0) return "NA";
+            return String(value);
+        }
+
+        function formatRate(value) {
+            if (value === null || value === undefined || value < 0) return "NA";
+            return (value * 100).toFixed(1) + "%";
+        }
+
+        function updateMeta(summary) {
+            document.getElementById("meta-instance").textContent =
+                (summary.instanceId || "unknown") + " / " + (summary.appName || "");
+            document.getElementById("meta-version").textContent =
+                "version=" + (summary.version || "unknown");
+            document.getElementById("meta-started").textContent =
+                "started=" + (summary.startedAt || "NA");
+            document.getElementById("meta-now").textContent =
+                "now=" + new Date().toISOString();
+        }
+
+        function renderOutbox(outbox) {
+            document.getElementById("outbox-ready").textContent = formatMaybeNa(outbox.ready);
+            document.getElementById("outbox-processing").textContent = formatMaybeNa(outbox.processing);
+            document.getElementById("outbox-failed").textContent = formatMaybeNa(outbox.failed);
+            document.getElementById("outbox-oldest-age").textContent = formatMaybeNa(outbox.oldestAgeSeconds);
+            document.getElementById("outbox-success-rate").textContent = formatRate(outbox.sendSuccessRate5m);
+            document.getElementById("outbox-failure-rate").textContent = formatRate(outbox.sendFailureRate5m);
+
+            const ul = document.getElementById("outbox-errors");
+            ul.innerHTML = "";
+            if (outbox.recentErrors && outbox.recentErrors.length > 0) {
+                outbox.recentErrors.forEach(function (msg) {
+                    const li = document.createElement("li");
+                    li.textContent = msg;
+                    ul.appendChild(li);
+                });
+            } else {
+                const li = document.createElement("li");
+                li.textContent = "No recent errors";
+                ul.appendChild(li);
+            }
+        }
+
+        function renderConsume(consume) {
+            document.getElementById("consume-retry-ready").textContent = formatMaybeNa(consume.retryReady);
+            document.getElementById("consume-in-progress").textContent = formatMaybeNa(consume.inProgressLocks);
+
+            const tbody = document.getElementById("consume-groups");
+            tbody.innerHTML = "";
+            if (consume.groups && consume.groups.length > 0) {
+                consume.groups.forEach(function (g) {
+                    const tr = document.createElement("tr");
+                    const tdGroup = document.createElement("td");
+                    tdGroup.textContent = g.group;
+                    const tdSucc = document.createElement("td");
+                    tdSucc.textContent = formatRate(g.successRate5m);
+                    const tdFail = document.createElement("td");
+                    tdFail.textContent = formatRate(g.failureRate5m);
+                    const tdAvg = document.createElement("td");
+                    tdAvg.textContent = formatMaybeNa(g.avgLatencyMs5m && g.avgLatencyMs5m.toFixed
+                        ? g.avgLatencyMs5m.toFixed(1) : g.avgLatencyMs5m);
+                    const tdP95 = document.createElement("td");
+                    tdP95.textContent = formatMaybeNa(g.p95LatencyMs5m && g.p95LatencyMs5m.toFixed
+                        ? g.p95LatencyMs5m.toFixed(1) : g.p95LatencyMs5m);
+                    tr.appendChild(tdGroup);
+                    tr.appendChild(tdSucc);
+                    tr.appendChild(tdFail);
+                    tr.appendChild(tdAvg);
+                    tr.appendChild(tdP95);
+                    tbody.appendChild(tr);
+                });
+            } else {
+                const tr = document.createElement("tr");
+                const td = document.createElement("td");
+                td.textContent = "No recent consume records";
+                td.colSpan = 5;
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
+        }
+
+        function renderIdempotency(idem, create) {
+            document.getElementById("idem-conflict").textContent = formatRate(idem.conflictRate10m);
+            document.getElementById("idem-in-progress").textContent = formatRate(idem.inProgressRate5m);
+            document.getElementById("idem-latency").textContent =
+                formatMaybeNa(idem.avgLatencyMs5m && idem.avgLatencyMs5m.toFixed
+                    ? idem.avgLatencyMs5m.toFixed(1) : idem.avgLatencyMs5m);
+
+            document.getElementById("create-success").textContent = formatRate(create.successRate5m);
+            document.getElementById("create-failure").textContent = formatRate(create.failureRate5m);
+            document.getElementById("create-latency").textContent =
+                formatMaybeNa(create.avgTxLatencyMs5m && create.avgTxLatencyMs5m.toFixed
+                    ? create.avgTxLatencyMs5m.toFixed(1) : create.avgTxLatencyMs5m);
+        }
+
+        function renderSystem(system) {
+            document.getElementById("system-uptime").textContent = formatMaybeNa(system.uptimeSeconds);
+            document.getElementById("system-threads").textContent = formatMaybeNa(system.threads);
+            document.getElementById("system-heap-used").textContent =
+                system.heapUsedBytes && system.heapUsedBytes >= 0
+                    ? (system.heapUsedBytes / (1024 * 1024)).toFixed(1)
+                    : "NA";
+            document.getElementById("system-heap-max").textContent =
+                system.heapMaxBytes && system.heapMaxBytes >= 0
+                    ? (system.heapMaxBytes / (1024 * 1024)).toFixed(1)
+                    : "NA";
+        }
+
+        function fetchAndRenderSummary() {
+            const token = getStoredToken();
+            if (!token) {
+                errorDiv.textContent = "Token not set. Please input token above.";
+                return;
+            }
+
+            errorDiv.textContent = "";
+            fetch("/ops/api/summary", {
+                method: "GET",
+                headers: {
+                    "X-Ops-Token": token
+                },
+                cache: "no-cache"
+            }).then(function (resp) {
+                if (!resp.ok) {
+                    throw new Error("HTTP " + resp.status);
+                }
+                return resp.json();
+            }).then(function (summary) {
+                updateMeta(summary);
+                if (summary.outbox) {
+                    renderOutbox(summary.outbox);
+                }
+                if (summary.consume) {
+                    renderConsume(summary.consume);
+                }
+                if (summary.idempotency && summary.create) {
+                    renderIdempotency(summary.idempotency, summary.create);
+                }
+                if (summary.system) {
+                    renderSystem(summary.system);
+                }
+            }).catch(function (err) {
+                errorDiv.textContent = "Failed to load summary: " + err.message;
+            });
+        }
+
+        // Initial fetch
+        fetchAndRenderSummary();
+        // Auto refresh every 3 seconds
+        setInterval(fetchAndRenderSummary, 3000);
+
+        // Tabs
+        const tabButtons = {
+            summary: document.getElementById("tab-btn-summary"),
+            outbox: document.getElementById("tab-btn-outbox"),
+            consume: document.getElementById("tab-btn-consume"),
+            idem: document.getElementById("tab-btn-idem")
+        };
+        const tabContents = {
+            summary: document.getElementById("tab-summary"),
+            outbox: document.getElementById("tab-outbox"),
+            consume: document.getElementById("tab-consume"),
+            idem: document.getElementById("tab-idem")
+        };
+
+        function showTab(name) {
+            Object.keys(tabButtons).forEach(function (key) {
+                tabButtons[key].classList.toggle("active", key === name);
+                tabContents[key].classList.toggle("active", key === name);
+            });
+        }
+
+        tabButtons.summary.addEventListener("click", function () { showTab("summary"); });
+        tabButtons.outbox.addEventListener("click", function () { showTab("outbox"); loadOutbox(true); });
+        tabButtons.consume.addEventListener("click", function () { showTab("consume"); loadConsume(true); });
+        tabButtons.idem.addEventListener("click", function () { showTab("idem"); loadIdem(true); });
+
+        // Drill-down state
+        const outboxState = { status: "FAILED", cursor: null };
+        const consumeState = { status: "FAILED", cursor: null };
+        const idemState = { cursor: null };
+
+        const consumeGroupSelect = document.getElementById("consume-group-select");
+
+        document.querySelectorAll("[data-outbox-status]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                outboxState.status = btn.getAttribute("data-outbox-status");
+                outboxState.cursor = null;
+                clearTableBody(document.getElementById("outbox-drill-body"));
+                loadOutbox(true);
+            });
+        });
+        document.querySelectorAll("[data-consume-status]").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                consumeState.status = btn.getAttribute("data-consume-status");
+                consumeState.cursor = null;
+                clearTableBody(document.getElementById("consume-drill-body"));
+                loadConsume(true);
+            });
+        });
+
+        document.getElementById("outbox-load-more").addEventListener("click", function () {
+            loadOutbox(false);
+        });
+        document.getElementById("consume-load-more").addEventListener("click", function () {
+            loadConsume(false);
+        });
+        document.getElementById("idem-load-more").addEventListener("click", function () {
+            loadIdem(false);
+        });
+
+        function loadOutbox(reset) {
+            const token = getStoredToken();
+            if (!token) return;
+            let url = "/ops/api/outbox?status=" + encodeURIComponent(outboxState.status) + "&limit=50";
+            if (!reset && outboxState.cursor) {
+                url += "&cursor=" + encodeURIComponent(outboxState.cursor);
+            }
+            fetch(url, {
+                method: "GET",
+                headers: { "X-Ops-Token": token },
+                cache: "no-cache"
+            }).then(function (resp) {
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                return resp.json();
+            }).then(function (page) {
+                appendOutboxRows(page.items || []);
+                outboxState.cursor = page.nextCursor || null;
+                document.getElementById("outbox-load-more").style.display =
+                    outboxState.cursor ? "inline-block" : "none";
+            }).catch(function (err) {
+                errorDiv.textContent = "Failed to load outbox: " + err.message;
+            });
+        }
+
+        function appendOutboxRows(items) {
+            const tbody = document.getElementById("outbox-drill-body");
+            items.forEach(function (item) {
+                const tr = document.createElement("tr");
+                tr.innerHTML =
+                    "<td class='mono'>" + item.id + "</td>" +
+                    "<td class='mono'>" + (item.eventId || "") + "</td>" +
+                    "<td class='mono'>" + (item.eventType || "") + "</td>" +
+                    "<td class='mono'>" + (item.status || "") + "</td>" +
+                    "<td class='mono'>" + (item.retryCount || 0) + "</td>" +
+                    "<td class='mono'>" + (item.nextRetryAt || "") + "</td>" +
+                    "<td class='mono'>" + (item.createdAt || "") + "</td>" +
+                    "<td class='mono'>" + (item.errorMsg || "") + "</td>";
+                tr.addEventListener("click", function () {
+                    openDetailModal({
+                        type: "Outbox",
+                        id: item.id,
+                        eventId: item.eventId,
+                        eventType: item.eventType,
+                        status: item.status,
+                        retryCount: item.retryCount,
+                        nextRetryAt: item.nextRetryAt,
+                        lockedUntil: item.lockedUntil,
+                        lockedBy: item.lockedBy,
+                        errorMsg: item.errorMsg
+                    });
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function loadConsume(reset) {
+            const token = getStoredToken();
+            if (!token) return;
+            const group = consumeGroupSelect.value;
+            if (!group) return;
+            let url = "/ops/api/consume?group=" + encodeURIComponent(group) +
+                "&status=" + encodeURIComponent(consumeState.status) + "&limit=50";
+            if (!reset && consumeState.cursor) {
+                url += "&cursor=" + encodeURIComponent(consumeState.cursor);
+            }
+            fetch(url, {
+                method: "GET",
+                headers: { "X-Ops-Token": token },
+                cache: "no-cache"
+            }).then(function (resp) {
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                return resp.json();
+            }).then(function (page) {
+                appendConsumeRows(page.items || []);
+                consumeState.cursor = page.nextCursor || null;
+                document.getElementById("consume-load-more").style.display =
+                    consumeState.cursor ? "inline-block" : "none";
+            }).catch(function (err) {
+                errorDiv.textContent = "Failed to load consume: " + err.message;
+            });
+        }
+
+        function appendConsumeRows(items) {
+            const tbody = document.getElementById("consume-drill-body");
+            items.forEach(function (item) {
+                const tr = document.createElement("tr");
+                tr.innerHTML =
+                    "<td class='mono'>" + item.id + "</td>" +
+                    "<td class='mono'>" + (item.consumerGroup || "") + "</td>" +
+                    "<td class='mono'>" + (item.eventId || "") + "</td>" +
+                    "<td class='mono'>" + (item.eventType || "") + "</td>" +
+                    "<td class='mono'>" + (item.status || "") + "</td>" +
+                    "<td class='mono'>" + (item.retryCount || 0) + "</td>" +
+                    "<td class='mono'>" + (item.nextRetryAt || "") + "</td>" +
+                    "<td class='mono'>" + (item.lockedUntil || "") + "</td>" +
+                    "<td class='mono'>" + (item.errorMsg || "") + "</td>";
+                tr.addEventListener("click", function () {
+                    openDetailModal({
+                        type: "Consume",
+                        id: item.id,
+                        eventId: item.eventId,
+                        eventType: item.eventType,
+                        status: item.status,
+                        retryCount: item.retryCount,
+                        nextRetryAt: item.nextRetryAt,
+                        lockedUntil: item.lockedUntil,
+                        lockedBy: item.lockedBy,
+                        errorMsg: item.errorMsg
+                    });
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function loadIdem(reset) {
+            const token = getStoredToken();
+            if (!token) return;
+            let url = "/ops/api/idempotency/conflicts?limit=50";
+            if (!reset && idemState.cursor) {
+                url += "&cursor=" + encodeURIComponent(idemState.cursor);
+            }
+            fetch(url, {
+                method: "GET",
+                headers: { "X-Ops-Token": token },
+                cache: "no-cache"
+            }).then(function (resp) {
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                return resp.json();
+            }).then(function (page) {
+                appendIdemRows(page.items || []);
+                idemState.cursor = page.nextCursor || null;
+                document.getElementById("idem-load-more").style.display =
+                    idemState.cursor ? "inline-block" : "none";
+            }).catch(function (err) {
+                errorDiv.textContent = "Failed to load idempotency conflicts: " + err.message;
+            });
+        }
+
+        function appendIdemRows(items) {
+            const tbody = document.getElementById("idem-drill-body");
+            items.forEach(function (item) {
+                const tr = document.createElement("tr");
+                tr.innerHTML =
+                    "<td class='mono'>" + item.id + "</td>" +
+                    "<td class='mono'>" + (item.tenantId || "") + "</td>" +
+                    "<td class='mono'>" + (item.bizType || "") + "</td>" +
+                    "<td class='mono'>" + (item.idemKeyHashPrefix || "") + "</td>" +
+                    "<td class='mono'>" + (item.requestHashPrefix || "") + "</td>" +
+                    "<td class='mono'>" + (item.status || "") + "</td>" +
+                    "<td class='mono'>" + (item.errorMsg || "") + "</td>" +
+                    "<td class='mono'>" + (item.createdAt || "") + "</td>";
+                tr.addEventListener("click", function () {
+                    openDetailModal({
+                        type: "Idempotency",
+                        id: item.id,
+                        eventId: null,
+                        eventType: item.bizType,
+                        status: item.status,
+                        retryCount: null,
+                        nextRetryAt: null,
+                        lockedUntil: null,
+                        lockedBy: null,
+                        errorMsg: item.errorMsg
+                    });
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Detail modal
+        const modal = document.getElementById("detail-modal");
+        const detailFields = {
+            type: document.getElementById("detail-type"),
+            id: document.getElementById("detail-id"),
+            eventId: document.getElementById("detail-event-id"),
+            eventType: document.getElementById("detail-event-type"),
+            status: document.getElementById("detail-status"),
+            retry: document.getElementById("detail-retry"),
+            nextRetryAt: document.getElementById("detail-next-retry"),
+            lockedUntil: document.getElementById("detail-locked-until"),
+            lockedBy: document.getElementById("detail-locked-by"),
+            error: document.getElementById("detail-error")
+        };
+        let currentDetail = null;
+
+        function openDetailModal(item) {
+            currentDetail = item;
+            detailFields.type.textContent = item.type || "";
+            detailFields.id.textContent = item.id != null ? String(item.id) : "";
+            detailFields.eventId.textContent = item.eventId || "";
+            detailFields.eventType.textContent = item.eventType || "";
+            detailFields.status.textContent = item.status || "";
+            detailFields.retry.textContent = item.retryCount != null ? String(item.retryCount) : "";
+            detailFields.nextRetryAt.textContent = item.nextRetryAt || "";
+            detailFields.lockedUntil.textContent = item.lockedUntil || "";
+            detailFields.lockedBy.textContent = item.lockedBy || "";
+            detailFields.error.textContent = item.errorMsg || "";
+            modal.classList.remove("hidden");
+        }
+
+        function closeDetailModal() {
+            modal.classList.add("hidden");
+            currentDetail = null;
+        }
+
+        document.getElementById("detail-close").addEventListener("click", closeDetailModal);
+        modal.querySelector(".modal-backdrop").addEventListener("click", closeDetailModal);
+
+        document.getElementById("detail-copy-event-id").addEventListener("click", function () {
+            if (!currentDetail || !currentDetail.eventId) return;
+            try {
+                navigator.clipboard.writeText(currentDetail.eventId);
+            } catch (e) {
+                // ignore
+            }
+        });
+
+        function clearTableBody(tbody) {
+            while (tbody.firstChild) {
+                tbody.removeChild(tbody.firstChild);
+            }
+        }
+
+        // Extend summary fetch to populate consume group options
+        const originalRenderConsume = renderConsume;
+        renderConsume = function (consume) {
+            originalRenderConsume(consume);
+            if (consume.groups && consume.groups.length > 0) {
+                const groups = consume.groups.map(function (g) { return g.group; });
+                const uniqueGroups = Array.from(new Set(groups));
+                consumeGroupSelect.innerHTML = "";
+                uniqueGroups.forEach(function (name) {
+                    if (!name) return;
+                    const option = document.createElement("option");
+                    option.value = name;
+                    option.textContent = name;
+                    consumeGroupSelect.appendChild(option);
+                });
+            }
+        };
+    })();
+</script>
+</body>
+</html>

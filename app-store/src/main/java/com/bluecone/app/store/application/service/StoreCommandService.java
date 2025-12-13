@@ -18,6 +18,9 @@ import com.bluecone.app.store.dao.service.IBcStoreOpeningHoursService;
 import com.bluecone.app.store.dao.service.IBcStoreService;
 import com.bluecone.app.store.dao.service.IBcStoreSpecialDayService;
 import com.bluecone.app.store.domain.error.StoreErrorCode;
+import com.bluecone.app.id.api.IdService;
+import com.bluecone.app.id.core.Ulid128;
+import com.bluecone.app.id.publicid.api.PublicIdCodec;
 import com.bluecone.app.store.domain.model.StoreCapabilityModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +75,14 @@ public class StoreCommandService {
      * 门店配置变更通知服务，在配置修改成功后触发缓存失效或下游事件。
      */
     private final StoreConfigChangeService storeConfigChangeService;
+    /**
+     * ID 生成服务，用于生成门店相关 ULID。
+     */
+    private final IdService idService;
+    /**
+     * PublicId 编解码器，用于生成对外可见的门店编码。
+     */
+    private final PublicIdCodec publicIdCodec;
 
     /**
      * 构造器注入门店相关持久化服务及配置变更服务。
@@ -86,7 +97,9 @@ public class StoreCommandService {
                                IBcStoreCapabilityService bcStoreCapabilityService,
                                IBcStoreOpeningHoursService bcStoreOpeningHoursService,
                                IBcStoreSpecialDayService bcStoreSpecialDayService,
-                               StoreConfigChangeService storeConfigChangeService) {
+                               StoreConfigChangeService storeConfigChangeService,
+                               IdService idService,
+                               PublicIdCodec publicIdCodec) {
         // 保存门店主表服务引用，后续用于新增/更新门店基础数据
         this.bcStoreService = bcStoreService;
         // 保存门店能力配置表服务引用
@@ -97,6 +110,8 @@ public class StoreCommandService {
         this.bcStoreSpecialDayService = bcStoreSpecialDayService;
         // 保存配置变更通知服务引用
         this.storeConfigChangeService = storeConfigChangeService;
+        this.idService = idService;
+        this.publicIdCodec = publicIdCodec;
     }
 
     /**
@@ -127,8 +142,9 @@ public class StoreCommandService {
         // 2）若传入编码，则在当前租户下做唯一性校验。
         String storeCode = command.getStoreCode();
         if (storeCode == null || storeCode.isBlank()) {
-            // 当前实现为简单的 “S+时间戳”，后续可根据业务需求改为更规范的编码规则
-            storeCode = "S" + System.currentTimeMillis();
+            // 使用统一 ID 组件生成门店 public_id 作为 storeCode
+            Ulid128 internalId = idService.nextUlid();
+            storeCode = publicIdCodec.encode("sto", internalId).asString();
         } else {
             long cnt = bcStoreService.lambdaQuery()
                     .eq(BcStore::getTenantId, tenantId)
@@ -143,7 +159,6 @@ public class StoreCommandService {
 
         // 构造门店主实体并填充基础属性
         BcStore entity = new BcStore();
-//        entity.setId(UlidIdGenerator);
         // 归属租户
         entity.setTenantId(tenantId);
         // 门店编码（系统生成或前端传入）

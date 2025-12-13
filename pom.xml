@@ -40,6 +40,9 @@
     <modules>
         <module>app-core</module>
         <module>app-infra</module>
+        <module>app-platform-bom</module>
+        <module>app-platform-starter</module>
+        <module>app-ops</module>
         <module>app-id</module>
         <module>app-resource-api</module>
         <module>app-resource</module>
