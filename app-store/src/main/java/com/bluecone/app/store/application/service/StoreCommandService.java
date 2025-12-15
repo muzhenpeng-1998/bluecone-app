@@ -148,7 +148,7 @@ public class StoreCommandService {
         String publicId = publicIdCodec.encode("sto", internalId).asString();
         Long storeNo;
         try {
-            storeNo = idService.nextLongId();
+            storeNo = idService.nextLong(com.bluecone.app.id.api.IdScope.STORE);
         } catch (UnsupportedOperationException ex) {
             storeNo = null;
         }

@@ -1,5 +1,6 @@
 package com.bluecone.app.id.core;
 
+import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.id.api.ResourceType;
 
@@ -75,11 +76,29 @@ public class UlidIdService implements IdService {
      * 基于 Snowflake 算法生成下一个 long 型 ID。
      *
      * @return long 型 ID
+     * @deprecated 使用 nextLong(IdScope) 替代
      */
-    @Override
+    @Deprecated
     public long nextLongId() {
         if (longIdGenerator == null) {
-            return IdService.super.nextLongId();
+            throw new UnsupportedOperationException("Long ID generation is not supported by this IdService");
+        }
+        return longIdGenerator.nextId();
+    }
+    
+    /**
+     * 基于号段模式生成下一个 long 型 ID。
+     * 
+     * <p>注意：此实现使用 Snowflake，不支持 scope 参数。
+     * 如需号段模式，请使用 EnhancedIdService。
+     *
+     * @param scope ID 作用域（此实现忽略该参数）
+     * @return long 型 ID
+     */
+    @Override
+    public long nextLong(IdScope scope) {
+        if (longIdGenerator == null) {
+            throw new UnsupportedOperationException("Long ID generation is not supported by this IdService");
         }
         return longIdGenerator.nextId();
     }
@@ -93,9 +112,24 @@ public class UlidIdService implements IdService {
     @Override
     public String nextPublicId(ResourceType type) {
         if (publicIdFactory == null) {
-            return IdService.super.nextPublicId(type);
+            throw new UnsupportedOperationException("PublicId generation is not supported by this IdService");
         }
         Ulid128 ulid = nextUlid();
         return publicIdFactory.create(type, ulid);
+    }
+    
+    /**
+     * 校验 Public ID 的格式和类型是否合法。
+     *
+     * @param expectedType 预期的资源类型
+     * @param publicId 待校验的 Public ID
+     * @throws IllegalArgumentException 如果格式非法、类型不匹配或 ULID 非法
+     */
+    @Override
+    public void validatePublicId(ResourceType expectedType, String publicId) {
+        if (publicIdFactory == null) {
+            throw new UnsupportedOperationException("PublicId validation is not supported by this IdService");
+        }
+        publicIdFactory.validate(expectedType, publicId);
     }
 }

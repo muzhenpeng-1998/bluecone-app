@@ -24,6 +24,11 @@ public class BlueconeIdProperties {
      * Snowflake long ID 相关配置。
      */
     private LongId longId = new LongId();
+    
+    /**
+     * 号段模式 long ID 相关配置。
+     */
+    private Segment segment = new Segment();
 
     /**
      * 对外公开 ID（PublicId）配置。
@@ -61,6 +66,14 @@ public class BlueconeIdProperties {
 
     public void setLong(LongId longId) {
         this.longId = (longId != null ? longId : new LongId());
+    }
+    
+    public Segment getSegment() {
+        return segment;
+    }
+    
+    public void setSegment(Segment segment) {
+        this.segment = (segment != null ? segment : new Segment());
     }
 
     public PublicId getPublicId() {
@@ -402,6 +415,45 @@ public class BlueconeIdProperties {
 
         public void setEpochMillis(long epochMillis) {
             this.epochMillis = epochMillis;
+        }
+    }
+    
+    /**
+     * 号段模式 long ID 配置。
+     */
+    public static class Segment {
+        
+        /**
+         * 是否启用号段模式 long ID 生成。
+         */
+        private boolean enabled = true;
+        
+        /**
+         * 号段步长，即每次从数据库分配的 ID 数量。
+         * 
+         * <p>建议值：
+         * <ul>
+         *   <li>低并发场景：1000</li>
+         *   <li>中等并发场景：5000</li>
+         *   <li>高并发场景：10000</li>
+         * </ul>
+         */
+        private int step = 1000;
+        
+        public boolean isEnabled() {
+            return enabled;
+        }
+        
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+        
+        public int getStep() {
+            return step;
+        }
+        
+        public void setStep(int step) {
+            this.step = step;
         }
     }
 }

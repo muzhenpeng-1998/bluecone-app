@@ -10,7 +10,8 @@ public enum ResourceType {
     ORDER("ord"),
     USER("usr"),
     PRODUCT("prd"),
-    SKU("sku");
+    SKU("sku"),
+    PAYMENT("pay");
 
     private final String prefix;
 
