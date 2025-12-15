@@ -14,59 +14,83 @@
     <packaging>jar</packaging>
 
     <name>app-platform-starter</name>
-    <description>BlueCone Platform Starter - aggregate baseline platform capabilities</description>
+    <description>BlueCone Platform Starter - Core capabilities aggregation (ID, Resolver, ContextKit, Cache Invalidation)</description>
 
     <dependencies>
-        <!-- Core platform capabilities -->
+        <!-- Core platform modules -->
         <dependency>
             <groupId>com.bluecone</groupId>
             <artifactId>app-id</artifactId>
-            <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.bluecone</groupId>
             <artifactId>app-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.bluecone</groupId>
             <artifactId>app-infra</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bluecone</groupId>
-            <artifactId>app-security</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bluecone</groupId>
-            <artifactId>app-ops</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
-        <!-- Spring Boot autoconfiguration + configuration processor (optional) -->
+        <!-- Spring Boot autoconfigure -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+
+        <!-- Optional dependencies - let business services decide -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Test support for smoke tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-core</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
-</project>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 
+</project>

@@ -38,25 +38,32 @@
     </properties>
 
     <modules>
+        <!-- Platform modules (must be built first) -->
+        <module>app-platform-bom</module>
+        <module>app-id</module>
         <module>app-core</module>
         <module>app-infra</module>
-        <module>app-platform-bom</module>
-        <module>app-platform-starter</module>
         <module>app-ops</module>
-        <module>app-id</module>
+        
+        <!-- Platform starters -->
+        <module>app-platform-starter</module>
+        <module>app-platform-starter-ops</module>
+        <module>app-platform-archkit</module>
+        
+        <!-- Resource modules -->
         <module>app-resource-api</module>
         <module>app-resource</module>
         <module>app-security</module>
 
+        <!-- Business modules -->
         <module>app-tenant</module>
         <module>app-store</module>
         <module>app-product</module>
         <module>app-order</module>
-
-        <!-- 新增支付模块 -->
         <module>app-payment</module>
-
         <module>app-inventory</module>
+        
+        <!-- Application module (must be last) -->
         <module>app-application</module>
     </modules>
 
@@ -155,6 +162,56 @@
                 <artifactId>junit-jupiter</artifactId>
                 <version>${testcontainers.version}</version>
                 <scope>test</scope>
+            </dependency>
+
+            <!-- ArchUnit -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit-junit5</artifactId>
+                <version>${archunit.version}</version>
+            </dependency>
+
+            <!-- Platform modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-id</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-infra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-ops</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-platform-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-platform-starter-ops</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-platform-archkit</artifactId>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

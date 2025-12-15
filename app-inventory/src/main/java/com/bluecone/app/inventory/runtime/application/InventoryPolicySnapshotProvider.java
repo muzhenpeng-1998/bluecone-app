@@ -1,5 +1,7 @@
 package com.bluecone.app.inventory.runtime.application;
 
+import com.bluecone.app.core.cacheepoch.api.CacheEpochProvider;
+import com.bluecone.app.core.contextkit.CacheNamespaces;
 import com.bluecone.app.core.contextkit.ContextCache;
 import com.bluecone.app.core.contextkit.ContextKitProperties;
 import com.bluecone.app.core.contextkit.SnapshotLoadKey;
@@ -28,18 +30,29 @@ public class InventoryPolicySnapshotProvider {
     private final ContextKitProperties kitProperties;
     private final SnapshotProvider<InventoryPolicySnapshot> delegate;
     private final SnapshotSerde<InventoryPolicySnapshot> serde;
+    private final CacheEpochProvider epochProvider;
 
     public InventoryPolicySnapshotProvider(InventoryPolicyRepository repository,
                                            ContextCache cache,
                                            VersionChecker versionChecker,
                                            ContextKitProperties kitProperties,
                                            ObjectMapper objectMapper) {
+        this(repository, cache, versionChecker, kitProperties, objectMapper, null);
+    }
+
+    public InventoryPolicySnapshotProvider(InventoryPolicyRepository repository,
+                                           ContextCache cache,
+                                           VersionChecker versionChecker,
+                                           ContextKitProperties kitProperties,
+                                           ObjectMapper objectMapper,
+                                           CacheEpochProvider epochProvider) {
         this.repository = repository;
         this.cache = cache;
         this.versionChecker = versionChecker;
         this.kitProperties = kitProperties;
         this.delegate = new SnapshotProvider<>();
         this.serde = new InventoryPolicySnapshotSerde(objectMapper);
+        this.epochProvider = epochProvider;
     }
 
     /**
@@ -50,14 +63,15 @@ public class InventoryPolicySnapshotProvider {
                                                        String storePublicId,
                                                        Long storeNumericId) {
         InventoryScope scope = new InventoryScope(storeInternalId, storePublicId, storeNumericId);
-        SnapshotLoadKey loadKey = new SnapshotLoadKey(tenantId, "inventory:policy", scope);
+        SnapshotLoadKey loadKey = new SnapshotLoadKey(tenantId, CacheNamespaces.INVENTORY_POLICY, scope);
         InventoryPolicySnapshot snapshot = delegate.getOrLoad(
                 loadKey,
                 repository,
                 cache,
                 versionChecker,
                 serde,
-                kitProperties
+                kitProperties,
+                epochProvider
         );
         return Optional.ofNullable(snapshot);
     }

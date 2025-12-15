@@ -14,42 +14,38 @@
     <packaging>pom</packaging>
 
     <name>app-platform-bom</name>
-    <description>BlueCone Platform BOM - version alignment for platform components</description>
+    <description>BlueCone Platform BOM - Unified version management for platform dependencies</description>
+
+    <properties>
+        <!-- 平台强控版本 - 只管理平台特有依赖，不覆盖 Spring Boot BOM -->
+        <archunit.version>1.2.1</archunit.version>
+        <caffeine.version>3.1.8</caffeine.version>
+        <ulid.version>8.3.0</ulid.version>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
-            <!-- ArchUnit for architectural governance -->
+            <!-- ArchUnit for architecture governance -->
             <dependency>
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>
                 <version>${archunit.version}</version>
-                <scope>test</scope>
             </dependency>
 
-            <!-- Micrometer core (observability) -->
-            <dependency>
-                <groupId>io.micrometer</groupId>
-                <artifactId>micrometer-core</artifactId>
-            </dependency>
-            <dependency>
-                <groupId>io.micrometer</groupId>
-                <artifactId>micrometer-observation</artifactId>
-            </dependency>
-
-            <!-- Caffeine (used by cache/ops) -->
+            <!-- Caffeine cache (if not managed by Spring Boot or need to enforce version) -->
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
 
-            <!-- MyBatis Spring Boot starter (optional in platform) -->
+            <!-- ULID library -->
             <dependency>
-                <groupId>org.mybatis.spring.boot</groupId>
-                <artifactId>mybatis-spring-boot-starter</artifactId>
-                <version>3.0.3</version>
+                <groupId>de.huxhorn.sulky</groupId>
+                <artifactId>de.huxhorn.sulky.ulid</artifactId>
+                <version>${ulid.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
 </project>
-

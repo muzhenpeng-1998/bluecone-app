@@ -1,11 +1,16 @@
 package com.bluecone.app.gateway.middleware;
 
+import com.bluecone.app.apicontract.ContextMiddleware;
 import com.bluecone.app.application.middleware.UserContextResolver;
 import com.bluecone.app.config.UserContextProperties;
+import com.bluecone.app.core.apicontract.ApiSide;
+import com.bluecone.app.core.apicontract.ContextType;
 import com.bluecone.app.gateway.ApiContext;
 import com.bluecone.app.gateway.ApiMiddleware;
 import com.bluecone.app.gateway.ApiMiddlewareChain;
+import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.AntPathMatcher;
 
@@ -13,7 +18,7 @@ import org.springframework.util.AntPathMatcher;
  * 用户上下文中间件：基于 UserPrincipalResolver + UserSnapshot 缓存。
  */
 @Slf4j
-public class UserMiddleware implements ApiMiddleware {
+public class UserMiddleware implements ApiMiddleware, ContextMiddleware {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
@@ -50,6 +55,33 @@ public class UserMiddleware implements ApiMiddleware {
             }
         }
         return false;
+    }
+
+    @Override
+    public ContextType type() {
+        return ContextType.USER;
+    }
+
+    @Override
+    public int order() {
+        return 200;
+    }
+
+    @Override
+    public boolean supports(ApiSide side) {
+        // User context typically applies to USER and MERCHANT sides.
+        return side == null || side == ApiSide.USER || side == ApiSide.MERCHANT;
+    }
+
+    @Override
+    public void apply(HttpServletRequest request,
+                      HttpServletResponse response,
+                      FilterChain chain,
+                      ApiContext ctx) throws Exception {
+        if (!props.isEnabled() || request == null) {
+            return;
+        }
+        userContextResolver.resolve(ctx);
     }
 }
 

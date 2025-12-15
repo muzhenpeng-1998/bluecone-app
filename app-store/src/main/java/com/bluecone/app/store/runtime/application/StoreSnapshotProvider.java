@@ -1,6 +1,14 @@
 package com.bluecone.app.store.runtime.application;
 
-import com.bluecone.app.core.contextkit.*;
+import com.bluecone.app.core.cacheepoch.api.CacheEpochProvider;
+import com.bluecone.app.core.contextkit.CacheNamespaces;
+import com.bluecone.app.core.contextkit.ContextCache;
+import com.bluecone.app.core.contextkit.ContextKitProperties;
+import com.bluecone.app.core.contextkit.SnapshotLoadKey;
+import com.bluecone.app.core.contextkit.SnapshotProvider;
+import com.bluecone.app.core.contextkit.SnapshotRepository;
+import com.bluecone.app.core.contextkit.SnapshotSerde;
+import com.bluecone.app.core.contextkit.VersionChecker;
 import com.bluecone.app.id.core.Ulid128;
 import com.bluecone.app.store.runtime.api.StoreSnapshot;
 import com.bluecone.app.store.runtime.spi.StoreSnapshotRepository;
@@ -22,32 +30,44 @@ public class StoreSnapshotProvider {
     private final ContextKitProperties kitProperties;
     private final SnapshotProvider<StoreSnapshot> delegate;
     private final SnapshotSerde<StoreSnapshot> serde;
+    private final CacheEpochProvider epochProvider;
 
     public StoreSnapshotProvider(StoreSnapshotRepository repository,
                                  ContextCache cache,
                                  VersionChecker versionChecker,
                                  ContextKitProperties kitProperties,
                                  ObjectMapper objectMapper) {
+        this(repository, cache, versionChecker, kitProperties, objectMapper, null);
+    }
+
+    public StoreSnapshotProvider(StoreSnapshotRepository repository,
+                                 ContextCache cache,
+                                 VersionChecker versionChecker,
+                                 ContextKitProperties kitProperties,
+                                 ObjectMapper objectMapper,
+                                 CacheEpochProvider epochProvider) {
         this.repository = repository;
         this.cache = cache;
         this.versionChecker = versionChecker;
         this.kitProperties = kitProperties;
         this.delegate = new SnapshotProvider<>();
         this.serde = new StoreSnapshotSerde(objectMapper);
+        this.epochProvider = epochProvider;
     }
 
     /**
      * 获取或加载门店快照，内部通过 ContextMiddlewareKit 完成缓存与版本校验。
      */
     public Optional<StoreSnapshot> getOrLoad(long tenantId, Ulid128 storeInternalId, String storePublicId) {
-        SnapshotLoadKey loadKey = new SnapshotLoadKey(tenantId, "store:snap", storeInternalId);
+        SnapshotLoadKey loadKey = new SnapshotLoadKey(tenantId, CacheNamespaces.STORE_SNAPSHOT, storeInternalId);
         StoreSnapshot snapshot = delegate.getOrLoad(
                 loadKey,
                 new StoreSnapshotRepoAdapter(repository),
                 cache,
                 versionChecker,
                 serde,
-                kitProperties
+                kitProperties,
+                epochProvider
         );
         return Optional.ofNullable(snapshot);
     }
@@ -102,4 +122,3 @@ public class StoreSnapshotProvider {
         }
     }
 }
-

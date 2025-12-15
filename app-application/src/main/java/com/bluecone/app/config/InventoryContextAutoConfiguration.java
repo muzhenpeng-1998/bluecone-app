@@ -27,13 +27,15 @@ public class InventoryContextAutoConfiguration {
                                                                            @Qualifier("contextKitCache") ContextCache contextCache,
                                                                            VersionChecker versionChecker,
                                                                            ContextKitProperties kitProperties,
-                                                                           ObjectMapper objectMapper) {
+                                                                           ObjectMapper objectMapper,
+                                                                           com.bluecone.app.core.cacheepoch.api.CacheEpochProvider cacheEpochProvider) {
         return new InventoryPolicySnapshotProvider(
                 repository,
                 contextCache,
                 versionChecker,
                 kitProperties,
-                objectMapper
+                objectMapper,
+                cacheEpochProvider
         );
     }
 
@@ -51,4 +53,3 @@ public class InventoryContextAutoConfiguration {
         return new InventoryMiddleware(resolver, props);
     }
 }
-

@@ -5,8 +5,11 @@ import com.bluecone.app.ops.api.dto.drill.ConsumeItem;
 import com.bluecone.app.ops.api.dto.drill.IdemConflictItem;
 import com.bluecone.app.ops.api.dto.drill.OutboxItem;
 import com.bluecone.app.ops.api.dto.drill.PageResult;
+import com.bluecone.app.ops.api.dto.cacheinval.CacheInvalItem;
+import com.bluecone.app.ops.api.dto.cacheinval.CacheInvalSummary;
 import com.bluecone.app.ops.service.OpsDrillService;
 import com.bluecone.app.ops.service.OpsSummaryService;
+import com.bluecone.app.ops.service.CacheInvalidationOpsService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -27,16 +30,35 @@ import java.nio.charset.StandardCharsets;
 
     private final OpsSummaryService opsSummaryService;
     private final OpsDrillService opsDrillService;
+    private final CacheInvalidationOpsService cacheInvalidationOpsService;
 
     public OpsConsoleController(final OpsSummaryService opsSummaryService,
-                                final OpsDrillService opsDrillService) {
+                                final OpsDrillService opsDrillService,
+                                final CacheInvalidationOpsService cacheInvalidationOpsService) {
         this.opsSummaryService = opsSummaryService;
         this.opsDrillService = opsDrillService;
+        this.cacheInvalidationOpsService = cacheInvalidationOpsService;
     }
 
     @GetMapping("/api/summary")
     public OpsSummary summary() {
         return opsSummaryService.getSummary();
+    }
+
+    @GetMapping("/api/cache-inval/summary")
+    public CacheInvalSummary cacheInvalSummary(@RequestParam(value = "window", required = false) String window) {
+        return cacheInvalidationOpsService.getSummary(window);
+    }
+
+    @GetMapping("/api/cache-inval/recent")
+    public PageResult<CacheInvalItem> cacheInvalRecent(@RequestParam(value = "window", required = false) String window,
+                                                       @RequestParam(value = "cursor", required = false) String cursor,
+                                                       @RequestParam(value = "limit", required = false) Integer limit,
+                                                       @RequestParam(value = "tenantId", required = false) Long tenantId,
+                                                       @RequestParam(value = "scope", required = false) String scope,
+                                                       @RequestParam(value = "namespace", required = false) String namespace) {
+        int resolvedLimit = limit == null ? 50 : limit;
+        return cacheInvalidationOpsService.listRecent(window, cursor, resolvedLimit, tenantId, scope, namespace);
     }
 
     @GetMapping("/api/outbox")

@@ -1,5 +1,6 @@
 package com.bluecone.app.core.contextkit;
 
+import com.bluecone.app.core.cacheepoch.api.CacheEpochProvider;
 import java.util.Optional;
 
 /**
@@ -13,9 +14,33 @@ public class SnapshotProvider<T> {
                        VersionChecker versionChecker,
                        SnapshotSerde<T> serde,
                        ContextKitProperties props) {
+        return getOrLoad(loadKey, repository, cache, versionChecker, serde, props, null);
+    }
+
+    /**
+     * 带 namespace epoch 的版本，允许根据租户+namespace 生成带 epoch 的缓存键。
+     *
+     * <p>当 {@code epochProvider} 为 null 时，退化为旧行为：
+     * key = {@code tenantId:scopeId}。</p>
+     */
+    public T getOrLoad(SnapshotLoadKey loadKey,
+                       SnapshotRepository<T> repository,
+                       ContextCache cache,
+                       VersionChecker versionChecker,
+                       SnapshotSerde<T> serde,
+                       ContextKitProperties props,
+                       CacheEpochProvider epochProvider) {
+        String namespace = loadKey.scopeType();
+        String keySuffix;
+        if (epochProvider != null) {
+            long epoch = epochProvider.currentEpoch(loadKey.tenantId(), namespace);
+            keySuffix = loadKey.tenantId() + ":" + epoch + ":" + String.valueOf(loadKey.scopeId());
+        } else {
+            keySuffix = loadKey.tenantId() + ":" + String.valueOf(loadKey.scopeId());
+        }
         CacheKey cacheKey = new CacheKey(
-                loadKey.scopeType(),
-                loadKey.tenantId() + ":" + String.valueOf(loadKey.scopeId())
+                namespace,
+                keySuffix
         );
 
         // 1) 读缓存
@@ -62,4 +87,3 @@ public class SnapshotProvider<T> {
         return value;
     }
 }
-

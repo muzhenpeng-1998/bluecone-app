@@ -1,0 +1,4 @@
+# BlueCone Platform Ops AutoConfigurations
+# Ops Console (disabled by default, enable with bluecone.ops.enabled=true)
+com.bluecone.app.platform.ops.autoconfigure.OpsAutoConfiguration
+

@@ -1,19 +1,28 @@
 package com.bluecone.app.store.application.service;
 
+import com.bluecone.app.core.cacheinval.api.CacheInvalidationEvent;
+import com.bluecone.app.core.cacheinval.api.CacheInvalidationPublisher;
+import com.bluecone.app.core.cacheinval.api.InvalidationScope;
 import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.event.EventMetadata;
+import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.infra.cache.core.CacheKey;
 import com.bluecone.app.infra.cache.facade.CacheClient;
 import com.bluecone.app.infra.cache.profile.CacheProfileName;
 import com.bluecone.app.infra.cache.profile.CacheProfileRegistry;
-import com.bluecone.app.store.application.service.StoreConfigService;
+import com.bluecone.app.store.dao.entity.BcStore;
+import com.bluecone.app.store.dao.service.IBcStoreService;
 import com.bluecone.app.store.event.StoreConfigChangedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,14 +40,26 @@ public class StoreConfigChangeServiceImpl implements StoreConfigChangeService {
     private final StoreConfigService storeConfigService;
     private final DomainEventPublisher eventPublisher;
 
+    private final IBcStoreService bcStoreService;
+    private final IdService idService;
+
+    @Nullable
+    private final CacheInvalidationPublisher cacheInvalidationPublisher;
+
     public StoreConfigChangeServiceImpl(CacheClient cacheClient,
                                         CacheProfileRegistry cacheProfileRegistry,
                                         StoreConfigService storeConfigService,
-                                        DomainEventPublisher eventPublisher) {
+                                        DomainEventPublisher eventPublisher,
+                                        IBcStoreService bcStoreService,
+                                        IdService idService,
+                                        @Autowired(required = false) @Nullable CacheInvalidationPublisher cacheInvalidationPublisher) {
         this.cacheClient = cacheClient;
         this.cacheProfileRegistry = cacheProfileRegistry;
         this.storeConfigService = storeConfigService;
         this.eventPublisher = eventPublisher;
+        this.bcStoreService = bcStoreService;
+        this.idService = idService;
+        this.cacheInvalidationPublisher = cacheInvalidationPublisher;
     }
 
     @Override
@@ -63,6 +84,9 @@ public class StoreConfigChangeServiceImpl implements StoreConfigChangeService {
         // 发布领域事件，供下游同步/缓存刷新/多级缓存等
         EventMetadata metadata = buildMetadata(tenantId);
         eventPublisher.publish(new StoreConfigChangedEvent(tenantId, storeId, newConfigVersion, metadata));
+
+        // 触发 ContextMiddlewareKit 的门店快照失效事件（store:snap）。
+        publishStoreSnapshotInvalidation(tenantId, storeId, newConfigVersion);
     }
 
     private void evict(CacheProfileName profileName, String tenantKey, String bizId) {
@@ -94,6 +118,32 @@ public class StoreConfigChangeServiceImpl implements StoreConfigChangeService {
         } catch (Exception ex) {
             log.warn("resolve channel types failed for tenantId={} storeId={}, skip snapshot eviction", tenantId, storeId, ex);
             return java.util.List.of();
+        }
+    }
+
+    private void publishStoreSnapshotInvalidation(Long tenantId, Long storeId, Long newConfigVersion) {
+        if (cacheInvalidationPublisher == null || tenantId == null || storeId == null) {
+            return;
+        }
+        try {
+            BcStore store = bcStoreService.getById(storeId);
+            if (store == null || store.getInternalId() == null) {
+                return;
+            }
+            String key = tenantId + ":" + store.getInternalId().toString();
+            CacheInvalidationEvent event = new CacheInvalidationEvent(
+                    idService.nextUlidString(),
+                    tenantId,
+                    InvalidationScope.STORE,
+                    "store:snap",
+                    List.of(key),
+                    newConfigVersion != null ? newConfigVersion : 0L,
+                    Instant.now()
+            );
+            cacheInvalidationPublisher.publishAfterCommit(event);
+        } catch (Exception ex) {
+            log.warn("[StoreConfigChanged] failed to publish store snapshot invalidation event for tenantId={} storeId={}",
+                    tenantId, storeId, ex);
         }
     }
 }

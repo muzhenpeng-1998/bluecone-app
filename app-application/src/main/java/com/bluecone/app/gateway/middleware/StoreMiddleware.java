@@ -1,11 +1,16 @@
 package com.bluecone.app.gateway.middleware;
 
+import com.bluecone.app.apicontract.ContextMiddleware;
 import com.bluecone.app.application.middleware.StoreContextResolver;
 import com.bluecone.app.config.StoreContextProperties;
+import com.bluecone.app.core.apicontract.ApiSide;
+import com.bluecone.app.core.apicontract.ContextType;
 import com.bluecone.app.gateway.ApiContext;
 import com.bluecone.app.gateway.ApiMiddleware;
 import com.bluecone.app.gateway.ApiMiddlewareChain;
+import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
@@ -16,7 +21,7 @@ import org.springframework.util.AntPathMatcher;
  */
 @Slf4j
 @Component
-public class StoreMiddleware implements ApiMiddleware {
+public class StoreMiddleware implements ApiMiddleware, ContextMiddleware {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
@@ -40,6 +45,35 @@ public class StoreMiddleware implements ApiMiddleware {
 
         resolver.resolve(request);
         chain.next(ctx);
+    }
+
+    @Override
+    public ContextType type() {
+        return ContextType.STORE;
+    }
+
+    @Override
+    public int order() {
+        // Run before user/product/inventory by default.
+        return 100;
+    }
+
+    @Override
+    public boolean supports(ApiSide side) {
+        // Store context is meaningful for USER and MERCHANT sides.
+        return side == null || side == ApiSide.USER || side == ApiSide.MERCHANT;
+    }
+
+    @Override
+    public void apply(HttpServletRequest request,
+                      HttpServletResponse response,
+                      FilterChain chain,
+                      ApiContext ctx) throws Exception {
+        StoreContextResolver resolver = storeContextResolverProvider.getIfAvailable();
+        if (!props.isEnabled() || resolver == null || request == null) {
+            return;
+        }
+        resolver.resolve(request);
     }
 
     private boolean matchesPath(String path) {

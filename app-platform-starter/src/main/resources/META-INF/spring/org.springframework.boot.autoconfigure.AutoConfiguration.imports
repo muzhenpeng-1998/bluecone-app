@@ -1,4 +1,24 @@
+# BlueCone Platform Core AutoConfigurations
+# ID Generation
 com.bluecone.app.id.autoconfigure.IdAutoConfiguration
-com.bluecone.app.id.autoconfigure.IdJacksonAutoConfiguration
 com.bluecone.app.id.autoconfigure.IdMybatisAutoConfiguration
+com.bluecone.app.id.autoconfigure.IdJacksonAutoConfiguration
+
+# Public ID Resolution
+com.bluecone.app.config.IdResolveConfiguration
+
+# ContextKit (TwoLevelCache, SnapshotProvider, VersionChecker)
+com.bluecone.app.config.ContextKitAutoConfiguration
+
+# Cache Invalidation
+com.bluecone.app.config.CacheInvalidationAutoConfiguration
+com.bluecone.app.config.CacheInvalidationProtectionAutoConfiguration
+
+# Cache Epoch Provider
+com.bluecone.app.config.CacheEpochAutoConfiguration
+
+# Event Consume Idempotency
 com.bluecone.app.core.event.consume.autoconfigure.EventConsumeAutoConfiguration
+
+# Idempotency
+com.bluecone.app.config.IdempotencyConfiguration

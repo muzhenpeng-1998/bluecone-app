@@ -25,10 +25,10 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @ConditionalOnClass(PublicIdCodec.class)
+@ConditionalOnProperty(prefix = "bluecone.idresolve", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class IdResolveConfiguration {
 
     @Bean
-    @ConditionalOnProperty(prefix = "bluecone.idresolve", name = "enabled", havingValue = "true", matchIfMissing = true)
     public PublicIdResolver publicIdResolver(PublicIdMapRepository repository,
                                              ObjectProvider<PublicIdL2Cache> l2CacheProvider,
                                              PublicIdCodec publicIdCodec,

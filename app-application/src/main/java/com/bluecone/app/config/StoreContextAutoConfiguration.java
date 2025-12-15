@@ -1,6 +1,7 @@
 package com.bluecone.app.config;
 
 import com.bluecone.app.application.middleware.StoreContextResolver;
+import com.bluecone.app.core.cacheepoch.api.CacheEpochProvider;
 import com.bluecone.app.core.contextkit.ContextCache;
 import com.bluecone.app.core.contextkit.ContextKitProperties;
 import com.bluecone.app.core.contextkit.VersionChecker;
@@ -27,13 +28,15 @@ public class StoreContextAutoConfiguration {
                                                        @Qualifier("contextKitCache") ContextCache contextCache,
                                                        VersionChecker versionChecker,
                                                        ContextKitProperties kitProperties,
-                                                       ObjectMapper objectMapper) {
+                                                       ObjectMapper objectMapper,
+                                                       CacheEpochProvider cacheEpochProvider) {
         return new StoreSnapshotProvider(
                 repository,
                 contextCache,
                 versionChecker,
                 kitProperties,
-                objectMapper
+                objectMapper,
+                cacheEpochProvider
         );
     }
 

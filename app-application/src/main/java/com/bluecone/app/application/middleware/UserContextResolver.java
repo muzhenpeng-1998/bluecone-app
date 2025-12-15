@@ -1,12 +1,14 @@
 package com.bluecone.app.application.middleware;
 
 import com.bluecone.app.config.UserContextProperties;
+import com.bluecone.app.core.cacheepoch.api.CacheEpochProvider;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.error.UserErrorCode;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.core.user.runtime.api.UserSnapshot;
 import com.bluecone.app.core.user.runtime.spi.UserPrincipalResolver;
 import com.bluecone.app.core.user.runtime.spi.UserSnapshotRepository;
+import com.bluecone.app.core.contextkit.CacheNamespaces;
 import com.bluecone.app.core.contextkit.ContextCache;
 import com.bluecone.app.core.contextkit.ContextKitProperties;
 import com.bluecone.app.core.contextkit.SnapshotLoadKey;
@@ -37,6 +39,7 @@ public class UserContextResolver {
     private final VersionChecker versionChecker;
     private final ContextKitProperties kitProperties;
     private final UserContextProperties props;
+    private final CacheEpochProvider epochProvider;
 
     public UserContextResolver(UserPrincipalResolver principalResolver,
                                UserSnapshotRepository snapshotRepository,
@@ -45,6 +48,17 @@ public class UserContextResolver {
                                ContextKitProperties kitProperties,
                                UserContextProperties props,
                                ObjectMapper objectMapper) {
+        this(principalResolver, snapshotRepository, cache, versionChecker, kitProperties, props, objectMapper, null);
+    }
+
+    public UserContextResolver(UserPrincipalResolver principalResolver,
+                               UserSnapshotRepository snapshotRepository,
+                               ContextCache cache,
+                               VersionChecker versionChecker,
+                               ContextKitProperties kitProperties,
+                               UserContextProperties props,
+                               ObjectMapper objectMapper,
+                               CacheEpochProvider epochProvider) {
         this.principalResolver = principalResolver;
         this.snapshotRepository = snapshotRepository;
         this.cache = cache;
@@ -53,6 +67,7 @@ public class UserContextResolver {
         this.props = props;
         this.snapshotProvider = new SnapshotProvider<>();
         this.serde = new UserSnapshotSerde(objectMapper);
+        this.epochProvider = epochProvider;
     }
 
     public UserSnapshot resolve(ApiContext ctx) {
@@ -79,14 +94,15 @@ public class UserContextResolver {
         UserPrincipalResolver.UserPrincipal principal = principalOpt.get();
         long tenantId = principal.tenantId();
 
-        SnapshotLoadKey loadKey = new SnapshotLoadKey(tenantId, "user:snap", principal.userId());
+        SnapshotLoadKey loadKey = new SnapshotLoadKey(tenantId, CacheNamespaces.USER_SNAPSHOT, principal.userId());
         UserSnapshot snapshot = snapshotProvider.getOrLoad(
                 loadKey,
                 snapshotRepository,
                 cache,
                 versionChecker,
                 serde,
-                kitProperties
+                kitProperties,
+                epochProvider
         );
         if (snapshot == null) {
             throw new BizException(UserErrorCode.USER_NOT_FOUND, "用户不存在或已删除");

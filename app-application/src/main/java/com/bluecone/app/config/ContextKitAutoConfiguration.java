@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,6 +19,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  * ContextMiddlewareKit 自动配置：提供通用缓存与版本校验组件。
  */
 @Configuration
+@ConditionalOnProperty(prefix = "bluecone.contextkit", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ContextKitAutoConfiguration {
 
     @Bean(name = "contextKitL1Cache")

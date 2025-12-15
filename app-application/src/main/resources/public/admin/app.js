@@ -296,6 +296,67 @@
                 },
             };
         },
+
+        /**
+         * Cache Invalidation 面板：展示失效事件统计与最近记录。
+         */
+        cacheInvalPanel() {
+            return {
+                window: '5m',
+                tenantId: '',
+                scope: '',
+                namespace: '',
+                summary: null,
+                recent: [],
+                cursor: null,
+                loadingSummary: false,
+                loadingRecent: false,
+                errorSummary: '',
+                errorRecent: '',
+                formatDate,
+                async loadSummary() {
+                    this.errorSummary = '';
+                    this.loadingSummary = true;
+                    try {
+                        const params = new URLSearchParams();
+                        if (this.window) params.append('window', this.window);
+                        this.summary = await apiClient.get(`/ops/api/cache-inval/summary?${params.toString()}`);
+                    } catch (err) {
+                        this.errorSummary = err.message || '加载统计失败';
+                    } finally {
+                        this.loadingSummary = false;
+                    }
+                },
+                async loadRecent(reset = false) {
+                    if (reset) {
+                        this.cursor = null;
+                        this.recent = [];
+                    }
+                    this.errorRecent = '';
+                    this.loadingRecent = true;
+                    try {
+                        const params = new URLSearchParams();
+                        if (this.window) params.append('window', this.window);
+                        if (this.cursor) params.append('cursor', this.cursor);
+                        params.append('limit', '50');
+                        if (this.tenantId) params.append('tenantId', this.tenantId);
+                        if (this.scope) params.append('scope', this.scope);
+                        if (this.namespace) params.append('namespace', this.namespace);
+                        const page = await apiClient.get(`/ops/api/cache-inval/recent?${params.toString()}`);
+                        const items = normalizeListPayload(page);
+                        this.recent = reset ? items : this.recent.concat(items);
+                        this.cursor = page.nextCursor || null;
+                    } catch (err) {
+                        this.errorRecent = err.message || '加载事件列表失败';
+                    } finally {
+                        this.loadingRecent = false;
+                    }
+                },
+                stormBadge(item) {
+                    return item && item.countPerMinute >= item.thresholdPerMinute;
+                },
+            };
+        },
     };
 
     // 暴露给 Alpine 的函数，方便在 HTML 中直接通过 x-data="xxx()" 调用。
@@ -304,4 +365,5 @@
     window.schedulerPanel = () => window.AdminApp.schedulerPanel();
     window.configPanel = () => window.AdminApp.configPanel();
     window.notificationPanel = () => window.AdminApp.notificationPanel();
+    window.cacheInvalPanel = () => window.AdminApp.cacheInvalPanel();
 })();

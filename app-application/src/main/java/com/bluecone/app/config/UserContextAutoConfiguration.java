@@ -1,6 +1,7 @@
 package com.bluecone.app.config;
 
 import com.bluecone.app.application.middleware.UserContextResolver;
+import com.bluecone.app.core.cacheepoch.api.CacheEpochProvider;
 import com.bluecone.app.core.contextkit.ContextCache;
 import com.bluecone.app.core.contextkit.ContextKitProperties;
 import com.bluecone.app.core.contextkit.VersionChecker;
@@ -29,7 +30,8 @@ public class UserContextAutoConfiguration {
                                                    VersionChecker versionChecker,
                                                    ContextKitProperties kitProperties,
                                                    UserContextProperties props,
-                                                   ObjectMapper objectMapper) {
+                                                   ObjectMapper objectMapper,
+                                                   CacheEpochProvider cacheEpochProvider) {
         return new UserContextResolver(
                 principalResolver,
                 snapshotRepository,
@@ -37,7 +39,8 @@ public class UserContextAutoConfiguration {
                 versionChecker,
                 kitProperties,
                 props,
-                objectMapper
+                objectMapper,
+                cacheEpochProvider
         );
     }
 
@@ -48,4 +51,3 @@ public class UserContextAutoConfiguration {
         return new UserMiddleware(resolver, props);
     }
 }
-
