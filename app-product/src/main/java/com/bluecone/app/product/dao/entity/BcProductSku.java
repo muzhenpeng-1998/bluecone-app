@@ -36,6 +36,13 @@ public class BcProductSku implements Serializable {
     private Long tenantId;
 
     /**
+     * 对外公开ID，用于API接口暴露，隐藏内部ID。
+     * 对应表字段：public_id。
+     */
+    @TableField("public_id")
+    private String publicId;
+
+    /**
      * 所属商品ID（SPU）。
      * 对应表字段：product_id。
      */

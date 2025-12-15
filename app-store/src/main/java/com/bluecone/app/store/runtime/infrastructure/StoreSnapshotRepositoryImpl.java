@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecone.app.id.core.Ulid128;
 import com.bluecone.app.store.dao.entity.BcStore;
 import com.bluecone.app.store.dao.mapper.BcStoreMapper;
-import com.bluecone.app.store.runtime.api.StoreSnapshot;
+import com.bluecone.app.core.store.StoreSnapshot;
 import com.bluecone.app.store.runtime.spi.StoreSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

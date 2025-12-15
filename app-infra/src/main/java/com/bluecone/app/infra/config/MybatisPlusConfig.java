@@ -40,6 +40,7 @@ import org.springframework.context.annotation.Configuration;
         "com.bluecone.app.infra.event.consume",
         "com.bluecone.app.infra.idresolve",
         "com.bluecone.app.infra.cacheinval",
+        "com.bluecone.app.infra.wechat.openplatform.mapper",
         // 支付模块 Mapper（位于 infrastructure.persistence 包下）
         "com.bluecone.app.payment.infrastructure.persistence"
 })

@@ -6,7 +6,7 @@ import com.bluecone.app.infra.cache.core.CacheKey;
 import com.bluecone.app.infra.cache.facade.CacheClient;
 import com.bluecone.app.infra.cache.profile.CacheProfile;
 import com.bluecone.app.infra.cache.profile.CacheProfileRegistry;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Around;

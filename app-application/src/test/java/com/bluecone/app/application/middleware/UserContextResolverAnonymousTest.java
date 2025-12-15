@@ -11,7 +11,7 @@ import com.bluecone.app.core.user.runtime.api.UserSnapshot;
 import com.bluecone.app.core.user.runtime.spi.UserPrincipalResolver;
 import com.bluecone.app.core.user.runtime.spi.UserSnapshotRepository;
 import com.bluecone.app.gateway.ApiContext;
-import com.bluecone.app.gateway.context.ApiContextHolder;
+import com.bluecone.app.gateway.ApiContextHolder;
 import com.bluecone.app.id.core.Ulid128;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

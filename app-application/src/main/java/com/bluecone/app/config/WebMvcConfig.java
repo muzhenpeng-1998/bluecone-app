@@ -1,5 +1,6 @@
 package com.bluecone.app.config;
 
+import com.bluecone.app.core.publicid.web.PublicIdGovernanceArgumentResolver;
 import com.bluecone.app.infra.tenant.TenantWebInterceptor;
 import com.bluecone.app.web.idresolve.PublicIdArgumentResolver;
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final TenantWebInterceptor tenantWebInterceptor;
     private final PublicIdArgumentResolver publicIdArgumentResolver;
+    private final PublicIdGovernanceArgumentResolver publicIdGovernanceArgumentResolver;
 
     /**
      * 构造函数注入
@@ -40,9 +42,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
      * @param tenantWebInterceptor 租户 Web 拦截器
      */
     public WebMvcConfig(TenantWebInterceptor tenantWebInterceptor,
-                        PublicIdArgumentResolver publicIdArgumentResolver) {
+                        PublicIdArgumentResolver publicIdArgumentResolver,
+                        PublicIdGovernanceArgumentResolver publicIdGovernanceArgumentResolver) {
         this.tenantWebInterceptor = tenantWebInterceptor;
         this.publicIdArgumentResolver = publicIdArgumentResolver;
+        this.publicIdGovernanceArgumentResolver = publicIdGovernanceArgumentResolver;
     }
 
     /**
@@ -72,5 +76,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addArgumentResolvers(java.util.List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(publicIdArgumentResolver);
+        resolvers.add(publicIdGovernanceArgumentResolver);
     }
 }

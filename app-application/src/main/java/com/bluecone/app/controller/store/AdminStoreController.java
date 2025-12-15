@@ -10,7 +10,7 @@ import com.bluecone.app.core.create.api.TxMode;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.core.event.EventMetadata;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.id.api.ResourceType;
 import com.bluecone.app.store.api.StoreFacade;

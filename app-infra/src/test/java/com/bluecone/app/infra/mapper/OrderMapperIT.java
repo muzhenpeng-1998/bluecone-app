@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bluecone.app.infra.entity.OrderEntity;
 import com.bluecone.app.infra.test.AbstractIntegrationTest;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

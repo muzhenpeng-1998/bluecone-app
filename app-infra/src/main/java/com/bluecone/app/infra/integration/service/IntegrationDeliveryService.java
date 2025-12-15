@@ -10,7 +10,7 @@ import com.bluecone.app.infra.integration.entity.IntegrationDeliveryEntity;
 import com.bluecone.app.infra.integration.entity.IntegrationSubscriptionEntity;
 import com.bluecone.app.infra.integration.mapper.IntegrationDeliveryMapper;
 import com.bluecone.app.infra.integration.model.IntegrationDeliveryResult;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

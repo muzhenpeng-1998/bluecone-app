@@ -4,6 +4,9 @@ import com.bluecone.app.gateway.ApiContext;
 
 /**
  * ThreadLocal holder for ApiContext within gateway lifecycle.
+ * 
+ * <p>This delegates to the core version and also updates the core context holder
+ * for use by modules that depend only on app-core.</p>
  */
 public final class ApiContextHolder {
 
@@ -14,6 +17,12 @@ public final class ApiContextHolder {
 
     public static void set(ApiContext context) {
         CTX.set(context);
+        // Also set the core context for modules that only depend on app-core
+        if (context != null) {
+            com.bluecone.app.core.gateway.ApiContextHolder.set(context.toCoreContext());
+        } else {
+            com.bluecone.app.core.gateway.ApiContextHolder.clear();
+        }
     }
 
     public static ApiContext get() {
@@ -22,6 +31,7 @@ public final class ApiContextHolder {
 
     public static void clear() {
         CTX.remove();
+        com.bluecone.app.core.gateway.ApiContextHolder.clear();
     }
 }
 

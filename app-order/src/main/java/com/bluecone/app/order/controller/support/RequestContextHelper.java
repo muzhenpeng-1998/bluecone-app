@@ -1,6 +1,6 @@
 package com.bluecone.app.order.controller.support;
 
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;

@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bluecone.app.infra.entity.TestEntity;
 import com.bluecone.app.infra.mapper.TestMapper;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.test.AbstractWebIntegrationTest;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;

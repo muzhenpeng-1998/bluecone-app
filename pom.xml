@@ -49,6 +49,7 @@
         <module>app-platform-starter</module>
         <module>app-platform-starter-ops</module>
         <module>app-platform-archkit</module>
+        <module>app-platform-codegen</module>
         
         <!-- Resource modules -->
         <module>app-resource-api</module>

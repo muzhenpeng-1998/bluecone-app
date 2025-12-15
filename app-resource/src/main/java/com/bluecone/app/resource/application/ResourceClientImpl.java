@@ -8,7 +8,7 @@ import com.bluecone.app.infra.storage.GenerateDownloadUrlRequest;
 import com.bluecone.app.infra.storage.GenerateUploadPolicyRequest;
 import com.bluecone.app.infra.storage.config.StorageProperties;
 import com.bluecone.app.infra.storage.StorageUploadPolicy;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.resource.api.ResourceClient;
 import com.bluecone.app.resource.api.dto.BindResourceCommand;
 import com.bluecone.app.resource.api.dto.ResourceHandle;

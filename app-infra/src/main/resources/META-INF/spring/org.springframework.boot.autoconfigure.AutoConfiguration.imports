@@ -1,2 +1,3 @@
 com.bluecone.app.infra.id.IdSegmentAutoConfiguration
+com.bluecone.app.infra.publicid.verify.PublicIdSchemaVerifyConfiguration
 

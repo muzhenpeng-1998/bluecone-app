@@ -5,7 +5,7 @@ import com.bluecone.app.infra.integration.config.IntegrationProperties;
 import com.bluecone.app.infra.integration.entity.IntegrationSubscriptionEntity;
 import com.bluecone.app.infra.integration.mapper.IntegrationSubscriptionMapper;
 import com.bluecone.app.infra.integration.support.IntegrationKeyBuilder;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.Logger;

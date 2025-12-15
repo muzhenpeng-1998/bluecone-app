@@ -8,7 +8,7 @@ import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.gateway.ApiContext;
 import com.bluecone.app.gateway.ApiMiddleware;
 import com.bluecone.app.gateway.ApiMiddlewareChain;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 
 /**
  * Binds tenant context for downstream persistence layers.

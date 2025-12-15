@@ -3,7 +3,7 @@ package com.bluecone.app.infra.redis.support;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 
 /**
  * 提供 Redis key 前缀用的租户标识。

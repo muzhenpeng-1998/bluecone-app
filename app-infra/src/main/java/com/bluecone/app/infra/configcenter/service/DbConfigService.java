@@ -7,7 +7,7 @@ import com.bluecone.app.infra.configcenter.snapshot.ConfigSnapshot;
 import com.bluecone.app.infra.configcenter.snapshot.ConfigSnapshotLoader;
 import com.bluecone.app.infra.configcenter.snapshot.ConfigSnapshotManager;
 import com.bluecone.app.infra.redis.support.RedisEnvProvider;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;

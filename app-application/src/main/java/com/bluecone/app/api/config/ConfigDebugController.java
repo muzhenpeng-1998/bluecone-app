@@ -7,7 +7,7 @@ import com.bluecone.app.infra.configcenter.layer.SystemConfigLayer;
 import com.bluecone.app.infra.configcenter.layer.TenantEnvConfigLayer;
 import com.bluecone.app.infra.configcenter.layer.TenantGlobalConfigLayer;
 import com.bluecone.app.infra.redis.support.RedisEnvProvider;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;

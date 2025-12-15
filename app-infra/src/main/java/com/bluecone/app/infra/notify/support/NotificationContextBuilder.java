@@ -4,7 +4,7 @@ import com.bluecone.app.core.notify.NotificationPriority;
 import com.bluecone.app.core.notify.NotificationRequest;
 import com.bluecone.app.core.notify.NotificationScenario;
 import com.bluecone.app.infra.notify.model.NotificationIntent;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import org.slf4j.MDC;
 import org.springframework.util.StringUtils;
 

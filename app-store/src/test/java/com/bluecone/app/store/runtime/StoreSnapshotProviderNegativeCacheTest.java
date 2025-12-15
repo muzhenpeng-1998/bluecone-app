@@ -2,7 +2,7 @@ package com.bluecone.app.store.runtime;
 
 import com.bluecone.app.core.contextkit.*;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.store.runtime.api.StoreSnapshot;
+import com.bluecone.app.core.store.StoreSnapshot;
 import com.bluecone.app.store.runtime.application.StoreSnapshotProvider;
 import com.bluecone.app.store.runtime.spi.StoreSnapshotRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -10,6 +10,8 @@ import com.bluecone.app.core.log.error.ExceptionEventFactory;
 import com.bluecone.app.core.log.error.ExceptionEventPipeline;
 import com.bluecone.app.core.idresolve.api.PublicIdInvalidException;
 import com.bluecone.app.core.idresolve.api.PublicIdNotFoundException;
+import com.bluecone.app.core.publicid.exception.PublicIdForbiddenException;
+import com.bluecone.app.core.publicid.exception.PublicIdLookupMissingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -84,5 +86,66 @@ public class GlobalExceptionHandler {
         ExceptionEvent event = exceptionEventFactory.fromException(ex, request, HttpStatus.NOT_FOUND.value());
         exceptionEventPipeline.process(event);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
+     * 处理 Public ID Governance 相关异常（新增）
+     */
+    @ExceptionHandler(com.bluecone.app.core.publicid.exception.PublicIdInvalidException.class)
+    public ResponseEntity<ApiErrorResponse> handleGovernancePublicIdInvalid(
+            com.bluecone.app.core.publicid.exception.PublicIdInvalidException ex,
+            HttpServletRequest request) {
+        String path = request.getRequestURI();
+        ApiErrorResponse response = ApiErrorResponse.of(
+                "PUBLIC_ID_INVALID",
+                ex.getMessage(),
+                path
+        );
+        ExceptionEvent event = exceptionEventFactory.fromException(ex, request, HttpStatus.BAD_REQUEST.value());
+        exceptionEventPipeline.process(event);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(com.bluecone.app.core.publicid.exception.PublicIdNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleGovernancePublicIdNotFound(
+            com.bluecone.app.core.publicid.exception.PublicIdNotFoundException ex,
+            HttpServletRequest request) {
+        String path = request.getRequestURI();
+        ApiErrorResponse response = ApiErrorResponse.of(
+                "PUBLIC_ID_NOT_FOUND",
+                ex.getMessage(),
+                path
+        );
+        ExceptionEvent event = exceptionEventFactory.fromException(ex, request, HttpStatus.NOT_FOUND.value());
+        exceptionEventPipeline.process(event);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(PublicIdForbiddenException.class)
+    public ResponseEntity<ApiErrorResponse> handlePublicIdForbidden(PublicIdForbiddenException ex,
+                                                                    HttpServletRequest request) {
+        String path = request.getRequestURI();
+        ApiErrorResponse response = ApiErrorResponse.of(
+                "PUBLIC_ID_FORBIDDEN",
+                ex.getMessage(),
+                path
+        );
+        ExceptionEvent event = exceptionEventFactory.fromException(ex, request, HttpStatus.FORBIDDEN.value());
+        exceptionEventPipeline.process(event);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(PublicIdLookupMissingException.class)
+    public ResponseEntity<ApiErrorResponse> handlePublicIdLookupMissing(PublicIdLookupMissingException ex,
+                                                                        HttpServletRequest request) {
+        String path = request.getRequestURI();
+        ApiErrorResponse response = ApiErrorResponse.of(
+                "PUBLIC_ID_LOOKUP_MISSING",
+                ex.getMessage(),
+                path
+        );
+        ExceptionEvent event = exceptionEventFactory.fromException(ex, request, HttpStatus.INTERNAL_SERVER_ERROR.value());
+        exceptionEventPipeline.process(event);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

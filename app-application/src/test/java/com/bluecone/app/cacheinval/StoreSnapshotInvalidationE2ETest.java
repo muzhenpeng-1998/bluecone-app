@@ -18,7 +18,7 @@ import com.bluecone.app.core.contextkit.SnapshotRepository;
 import com.bluecone.app.core.contextkit.SnapshotSerde;
 import com.bluecone.app.core.contextkit.VersionChecker;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.store.runtime.api.StoreSnapshot;
+import com.bluecone.app.core.store.StoreSnapshot;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;

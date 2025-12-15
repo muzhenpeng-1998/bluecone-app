@@ -1,15 +1,15 @@
 package com.bluecone.app.store.runtime.api;
 
-import com.bluecone.app.id.core.Ulid128;
-
 /**
- * 门店上下文：聚合租户、门店标识以及快照信息。
+ * @deprecated Moved to com.bluecone.app.core.store.StoreContext to avoid circular dependencies.
+ * This type alias is kept for backward compatibility.
  */
+@Deprecated
 public record StoreContext(
         long tenantId,
-        Ulid128 storeInternalId,
+        com.bluecone.app.id.core.Ulid128 storeInternalId,
         String storePublicId,
-        StoreSnapshot snapshot
+        com.bluecone.app.core.store.StoreSnapshot snapshot
 ) {
 }
 

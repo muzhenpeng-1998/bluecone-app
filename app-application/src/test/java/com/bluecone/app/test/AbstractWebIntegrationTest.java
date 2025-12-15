@@ -5,7 +5,7 @@ import com.bluecone.app.infra.security.session.AuthSessionService;
 import com.bluecone.app.infra.security.token.TokenProperties;
 import com.bluecone.app.infra.security.token.TokenProvider;
 import com.bluecone.app.infra.security.token.TokenUserContext;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;

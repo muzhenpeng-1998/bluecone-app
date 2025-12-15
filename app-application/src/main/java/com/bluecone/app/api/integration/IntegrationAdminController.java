@@ -12,7 +12,7 @@ import com.bluecone.app.infra.integration.mapper.IntegrationSubscriptionMapper;
 import com.bluecone.app.infra.integration.service.IntegrationDeliveryService;
 import com.bluecone.app.infra.integration.service.IntegrationDispatchService;
 import com.bluecone.app.infra.integration.service.IntegrationSubscriptionService;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;

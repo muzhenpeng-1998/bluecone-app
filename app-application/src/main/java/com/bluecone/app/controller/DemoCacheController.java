@@ -3,7 +3,7 @@ package com.bluecone.app.controller;
 import com.bluecone.app.infra.cache.core.CacheKey;
 import com.bluecone.app.infra.cache.facade.CacheClient;
 import com.bluecone.app.infra.cache.profile.CacheProfileName;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.service.DemoCacheService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

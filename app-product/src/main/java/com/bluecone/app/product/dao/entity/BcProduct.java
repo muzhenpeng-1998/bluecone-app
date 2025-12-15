@@ -37,6 +37,13 @@ public class BcProduct implements Serializable {
     private Long tenantId;
 
     /**
+     * 对外公开ID，用于API接口暴露，隐藏内部ID。
+     * 对应表字段：public_id。
+     */
+    @TableField("public_id")
+    private String publicId;
+
+    /**
      * 商品编码，租户内唯一，可用于外部对接、打印及内部管理。
      * 对应表字段：product_code。
      */

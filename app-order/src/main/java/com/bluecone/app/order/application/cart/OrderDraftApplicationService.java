@@ -19,7 +19,7 @@ import com.bluecone.app.order.domain.repository.OrderDraftRepository;
 import com.bluecone.app.order.domain.service.CartDomainService;
 import com.bluecone.app.infra.redis.lock.DistributedLock;
 import com.bluecone.app.infra.redis.lock.LockProperties;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;

@@ -1,7 +1,7 @@
 package com.bluecone.app.controller;
 
 import com.bluecone.app.infra.service.TestService;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

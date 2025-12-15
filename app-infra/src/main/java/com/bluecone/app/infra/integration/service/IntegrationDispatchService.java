@@ -7,7 +7,7 @@ import com.bluecone.app.infra.integration.domain.IntegrationChannelType;
 import com.bluecone.app.infra.integration.entity.IntegrationDeliveryEntity;
 import com.bluecone.app.infra.integration.entity.IntegrationSubscriptionEntity;
 import com.bluecone.app.infra.integration.model.IntegrationDeliveryResult;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -21,7 +21,7 @@ import com.bluecone.app.infra.security.session.cache.SessionCacheService;
 import com.bluecone.app.infra.security.token.TokenProvider;
 import com.bluecone.app.infra.security.token.TokenUserContext;
 import com.bluecone.app.infra.security.token.blacklist.TokenBlacklistService;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.security.core.SecurityConstants;
 import com.bluecone.app.security.core.SecurityUserPrincipal;
 import com.bluecone.app.security.handler.RestAuthenticationEntryPoint;

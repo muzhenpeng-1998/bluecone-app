@@ -3,7 +3,7 @@ package com.bluecone.app.controller;
 
 import com.bluecone.app.core.event.EventMetadata;
 import com.bluecone.app.core.event.DomainEventPublisher;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.order.event.OrderPaidEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

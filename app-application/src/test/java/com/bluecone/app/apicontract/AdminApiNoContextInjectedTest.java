@@ -6,7 +6,7 @@ import com.bluecone.app.application.middleware.InventoryContextResolver;
 import com.bluecone.app.application.middleware.StoreContextResolver;
 import com.bluecone.app.application.middleware.UserContextResolver;
 import com.bluecone.app.gateway.ApiContext;
-import com.bluecone.app.gateway.context.ApiContextHolder;
+import com.bluecone.app.gateway.ApiContextHolder;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

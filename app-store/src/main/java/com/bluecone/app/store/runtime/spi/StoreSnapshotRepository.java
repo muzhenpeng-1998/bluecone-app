@@ -1,7 +1,7 @@
 package com.bluecone.app.store.runtime.spi;
 
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.store.runtime.api.StoreSnapshot;
+import com.bluecone.app.core.store.StoreSnapshot;
 
 import java.util.Optional;
 

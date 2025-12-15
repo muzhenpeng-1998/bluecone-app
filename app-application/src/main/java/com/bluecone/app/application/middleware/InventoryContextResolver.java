@@ -8,7 +8,7 @@ import com.bluecone.app.gateway.context.ApiContextHolder;
 import com.bluecone.app.inventory.domain.error.InventoryErrorCode;
 import com.bluecone.app.inventory.runtime.api.InventoryPolicySnapshot;
 import com.bluecone.app.inventory.runtime.application.InventoryPolicySnapshotProvider;
-import com.bluecone.app.store.runtime.api.StoreContext;
+import com.bluecone.app.core.store.StoreContext;
 import org.slf4j.MDC;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;

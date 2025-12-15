@@ -13,7 +13,7 @@ import com.bluecone.app.infra.outbox.entity.OutboxMessageStatus;
 import com.bluecone.app.infra.outbox.mapper.OutboxMessageMapper;
 import com.bluecone.app.infra.outbox.service.OutboxDispatchService;
 import com.bluecone.app.infra.outbox.service.OutboxStoreService;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.infra.test.AbstractIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;

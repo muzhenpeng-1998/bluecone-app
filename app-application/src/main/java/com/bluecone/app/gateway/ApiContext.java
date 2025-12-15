@@ -17,6 +17,9 @@ import lombok.Setter;
 
 /**
  * Per-request gateway context carrying resolved metadata and response placeholder.
+ * 
+ * <p>This is the full version in app-application with additional fields.
+ * The minimal version in app-core is used to avoid circular dependencies.</p>
  */
 @Getter
 @Builder
@@ -87,5 +90,25 @@ public class ApiContext {
 
     public void putAttribute(String key, Object value) {
         attributes.put(key, value);
+    }
+    
+    /**
+     * Converts this full ApiContext to the minimal core version.
+     */
+    public com.bluecone.app.core.gateway.ApiContext toCoreContext() {
+        return com.bluecone.app.core.gateway.ApiContext.builder()
+                .traceId(traceId)
+                .requestTime(requestTime)
+                .apiSide(apiSide)
+                .requiredContexts(requiredContexts)
+                .optionalContexts(optionalContexts)
+                .tenantId(tenantId)
+                .userId(userId)
+                .storeId(storeId)
+                .clientType(clientType)
+                .response(response)
+                .error(error)
+                .attributes(new HashMap<>(attributes))
+                .build();
     }
 }

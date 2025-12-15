@@ -7,7 +7,7 @@ import com.bluecone.app.infra.redis.idempotent.annotation.Idempotent;
 import com.bluecone.app.order.api.order.OrderSubmitFacade;
 import com.bluecone.app.order.api.order.dto.OrderSubmitResponse;
 import com.bluecone.app.order.api.order.dto.SubmitOrderFromDraftDTO;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.user.application.CurrentUserContext;
 import jakarta.validation.Valid;
 import java.util.function.Supplier;

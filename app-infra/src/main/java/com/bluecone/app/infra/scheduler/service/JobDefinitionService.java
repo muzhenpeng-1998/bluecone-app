@@ -14,7 +14,7 @@ import com.bluecone.app.infra.scheduler.queue.SchedulerQueuePayload;
 import com.bluecone.app.infra.scheduler.queue.SchedulerQueuePublisher;
 import com.bluecone.app.infra.scheduler.repository.JobDefinitionRepository;
 import com.bluecone.app.infra.scheduler.config.SchedulerProperties;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 
 /**
  * Job 定义服务：注册、启停、触发。

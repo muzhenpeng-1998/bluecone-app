@@ -3,7 +3,7 @@ package com.bluecone.app.controller.store;
 import com.bluecone.app.api.ApiResponse;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.store.api.StoreFacade;
 import com.bluecone.app.store.api.dto.StoreBaseView;
 import com.bluecone.app.store.api.dto.StoreOrderAcceptResult;

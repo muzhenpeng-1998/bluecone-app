@@ -5,7 +5,7 @@ import com.bluecone.app.core.event.DomainEvent;
 import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.infra.outbox.entity.OutboxMessageEntity;
 import com.bluecone.app.infra.outbox.service.OutboxStoreService;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.infra.outbox.core.DefaultEventSerializer;
 import com.bluecone.app.infra.outbox.core.EventSerializer;
 import org.slf4j.Logger;

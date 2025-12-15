@@ -6,7 +6,7 @@ import com.bluecone.app.core.idresolve.api.ResolvePublicId;
 import com.bluecone.app.core.idresolve.api.ResolveResult;
 import com.bluecone.app.id.api.ResourceType;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.infra.tenant.TenantContext;
+import com.bluecone.app.core.tenant.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
