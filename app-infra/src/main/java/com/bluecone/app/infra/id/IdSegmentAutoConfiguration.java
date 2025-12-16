@@ -2,12 +2,12 @@ package com.bluecone.app.infra.id;
 
 import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
-import com.bluecone.app.id.config.BlueconeIdProperties;
-import com.bluecone.app.id.core.EnhancedIdService;
-import com.bluecone.app.id.core.PublicIdFactory;
-import com.bluecone.app.id.core.UlidIdGenerator;
+import com.bluecone.app.id.internal.config.BlueconeIdProperties;
+import com.bluecone.app.id.internal.core.EnhancedIdService;
+import com.bluecone.app.id.internal.core.PublicIdFactory;
+import com.bluecone.app.id.internal.core.UlidIdGenerator;
 import com.bluecone.app.id.segment.IdSegmentRepository;
-import com.bluecone.app.id.segment.SegmentLongIdGenerator;
+import com.bluecone.app.id.internal.segment.SegmentLongIdGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -25,13 +25,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 
  * <p>启用条件：
  * <ul>
- *   <li>bluecone.id.segment.enabled=true（默认 true）</li>
+ *   <li>bluecone.id.long.strategy=SEGMENT（默认值）</li>
  *   <li>存在 JdbcTemplate Bean（Spring Boot JDBC 自动装配）</li>
  * </ul>
  */
 @AutoConfiguration
 @EnableConfigurationProperties(BlueconeIdProperties.class)
-@ConditionalOnProperty(prefix = "bluecone.id.segment", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "bluecone.id.long", name = "strategy", havingValue = "SEGMENT", matchIfMissing = true)
 @ConditionalOnBean(JdbcTemplate.class)
 public class IdSegmentAutoConfiguration {
     
@@ -85,6 +85,9 @@ public class IdSegmentAutoConfiguration {
      * 
      * <p>优先级高于 app-id 模块的默认 IdService，提供完整的三层 ID 能力。
      * 
+     * <p>当 strategy=SEGMENT 时，此 Bean 会装配 EnhancedIdService，使用 Segment 生成器。
+     * 若 IdSegmentRepository Bean 不存在，Spring Boot 启动会失败（通过 @ConditionalOnBean 保证）。
+     * 
      * @param ulidIdGenerator ULID 生成器
      * @param segmentLongIdGenerator 号段 Long ID 生成器
      * @param publicIdFactory Public ID 工厂
@@ -97,7 +100,39 @@ public class IdSegmentAutoConfiguration {
                                SegmentLongIdGenerator segmentLongIdGenerator,
                                PublicIdFactory publicIdFactory) {
         log.info("装配 EnhancedIdService（支持 ULID + Segment Long ID + Public ID）");
+        log.info("Long ID 策略：SEGMENT（号段模式）");
         return new EnhancedIdService(ulidIdGenerator, segmentLongIdGenerator, publicIdFactory);
+    }
+    
+    /**
+     * 号段模式启动检查器，确保必要的数据库表存在。
+     * 
+     * <p>当 strategy=SEGMENT 但 IdSegmentRepository Bean 不存在时，给出清晰的错误信息。
+     */
+    @Bean
+    public IdSegmentStartupValidator idSegmentStartupValidator(IdSegmentRepository repository) {
+        return new IdSegmentStartupValidator(repository);
+    }
+    
+    /**
+     * 启动检查器，验证号段模式的必要条件。
+     */
+    public static class IdSegmentStartupValidator {
+        
+        private static final Logger validatorLog = LoggerFactory.getLogger(IdSegmentStartupValidator.class);
+        
+        public IdSegmentStartupValidator(IdSegmentRepository repository) {
+            if (repository == null) {
+                String errorMsg = "Long ID 策略配置为 SEGMENT（号段模式），但未找到 IdSegmentRepository Bean。\n"
+                        + "请确保：\n"
+                        + "1. 数据库中存在 bc_id_segment 表（参考 docs/sql/bc_id_segment.sql）\n"
+                        + "2. app-infra 模块已正确配置 JdbcTemplate\n"
+                        + "3. 或者切换到 SNOWFLAKE 策略：bluecone.id.long.strategy=SNOWFLAKE";
+                validatorLog.error(errorMsg);
+                throw new IllegalStateException(errorMsg);
+            }
+            validatorLog.info("号段模式启动检查通过：IdSegmentRepository Bean 已就绪");
+        }
     }
 }
 

@@ -40,6 +40,7 @@
     <modules>
         <!-- Platform modules (must be built first) -->
         <module>app-platform-bom</module>
+        <module>app-id-api</module>
         <module>app-id</module>
         <module>app-core</module>
         <module>app-infra</module>
@@ -173,6 +174,12 @@
             </dependency>
 
             <!-- Platform modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-id-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.bluecone</groupId>
                 <artifactId>app-id</artifactId>

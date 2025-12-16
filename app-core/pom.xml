@@ -19,7 +19,7 @@
     <dependencies>
         <dependency>
             <groupId>com.bluecone</groupId>
-            <artifactId>app-id</artifactId>
+            <artifactId>app-id-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

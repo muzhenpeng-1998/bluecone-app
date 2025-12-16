@@ -5,7 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.id.mybatis.Ulid128BinaryTypeHandler;
+import com.bluecone.app.id.internal.governance.AllowIdInfraAccess;
+import com.bluecone.app.id.internal.mybatis.Ulid128BinaryTypeHandler;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
  * 事件消费去重记录 DO，对应表 bc_event_consume_record。
  */
 @TableName("bc_event_consume_record")
+@AllowIdInfraAccess
 public class EventConsumeRecordDO {
 
     @TableId(type = IdType.AUTO)

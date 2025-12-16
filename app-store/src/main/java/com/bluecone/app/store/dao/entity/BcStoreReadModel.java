@@ -5,7 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.id.mybatis.Ulid128BinaryTypeHandler;
+import com.bluecone.app.id.internal.governance.AllowIdInfraAccess;
+import com.bluecone.app.id.internal.mybatis.Ulid128BinaryTypeHandler;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -15,6 +16,7 @@ import lombok.Data;
  */
 @Data
 @TableName("bc_store_read_model")
+@AllowIdInfraAccess
 public class BcStoreReadModel implements Serializable {
     private static final long serialVersionUID = 1L;
 

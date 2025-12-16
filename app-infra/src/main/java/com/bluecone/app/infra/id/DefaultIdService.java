@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 import com.bluecone.app.core.id.IdService;
 import com.bluecone.app.core.id.IdType;
 import com.bluecone.app.core.id.TypedId;
-import com.bluecone.app.id.core.UlidIdGenerator;
-import com.bluecone.app.id.governance.AllowIdInfraAccess;
+import com.bluecone.app.id.internal.core.UlidIdGenerator;
+import com.bluecone.app.id.internal.governance.AllowIdInfraAccess;
 
 @Service
 @AllowIdInfraAccess

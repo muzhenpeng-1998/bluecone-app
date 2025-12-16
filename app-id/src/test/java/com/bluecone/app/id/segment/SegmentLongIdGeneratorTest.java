@@ -1,6 +1,9 @@
 package com.bluecone.app.id.segment;
 
 import com.bluecone.app.id.api.IdScope;
+import com.bluecone.app.id.internal.segment.SegmentLongIdGenerator;
+import com.bluecone.app.id.segment.IdSegmentRepository;
+import com.bluecone.app.id.segment.SegmentRange;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +15,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -23,6 +27,7 @@ import static org.assertj.core.api.Assertions.*;
  *   <li>唯一性：100 线程 * 10000 次生成，所有 ID 不重复</li>
  *   <li>单调性：同一 scope 内 ID 单调递增（允许不连续）</li>
  *   <li>并发安全：多线程并发生成无异常</li>
+ *   <li>边界正确性：号段切换时无跳号/漏号</li>
  * </ul>
  */
 @DisplayName("SegmentLongIdGenerator 并发测试")
@@ -140,7 +145,7 @@ class SegmentLongIdGeneratorTest {
     }
     
     @Test
-    @DisplayName("号段耗尽后自动申请新号段")
+    @DisplayName("号段耗尽后自动申请新号段 - 无跳号")
     void testSegmentRefill() {
         // 小步长，快速触发号段耗尽
         IdSegmentRepository smallStepRepo = new InMemoryIdSegmentRepository();
@@ -154,7 +159,75 @@ class SegmentLongIdGeneratorTest {
             ids.add(id);
         }
         
+        // 唯一性
         assertThat(ids).hasSize(100);
+        
+        // 连续性：应该是 [1, 100]，无跳号
+        var sortedIds = ids.stream().sorted().collect(Collectors.toList());
+        for (int i = 0; i < sortedIds.size(); i++) {
+            assertThat(sortedIds.get(i)).isEqualTo(i + 1L);
+        }
+    }
+    
+    @Test
+    @DisplayName("号段切换边界测试 - 验证无重复无跳号")
+    void testSegmentBoundary() {
+        // 步长为 5，测试号段切换边界
+        IdSegmentRepository repo = new InMemoryIdSegmentRepository();
+        SegmentLongIdGenerator gen = new SegmentLongIdGenerator(repo, 5);
+        
+        Set<Long> ids = new HashSet<>();
+        
+        // 生成 15 个 ID，会触发 3 次号段申请：[1-5], [6-10], [11-15]
+        for (int i = 0; i < 15; i++) {
+            long id = gen.nextId(IdScope.PRODUCT);
+            assertThat(ids).doesNotContain(id); // 确保无重复
+            ids.add(id);
+        }
+        
+        // 验证连续性
+        assertThat(ids).containsExactlyInAnyOrder(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L, 12L, 13L, 14L, 15L);
+    }
+    
+    @Test
+    @DisplayName("并发号段切换 - 无重复")
+    void testConcurrentSegmentSwitch() throws InterruptedException {
+        // 小步长 + 高并发，频繁触发号段切换
+        IdSegmentRepository repo = new InMemoryIdSegmentRepository();
+        SegmentLongIdGenerator gen = new SegmentLongIdGenerator(repo, 50);
+        
+        int threadCount = 20;
+        int idsPerThread = 100;
+        
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        
+        Set<Long> allIds = ConcurrentHashMap.newKeySet();
+        
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    for (int j = 0; j < idsPerThread; j++) {
+                        long id = gen.nextId(IdScope.SKU);
+                        allIds.add(id);
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        
+        latch.await();
+        executor.shutdown();
+        
+        // 唯一性：20 * 100 = 2000 个 ID 全部唯一
+        assertThat(allIds).hasSize(threadCount * idsPerThread);
+        
+        // 连续性：应该是 [1, 2000]
+        var sortedIds = allIds.stream().sorted().collect(Collectors.toList());
+        for (int i = 0; i < sortedIds.size(); i++) {
+            assertThat(sortedIds.get(i)).isEqualTo(i + 1L);
+        }
     }
     
     /**
