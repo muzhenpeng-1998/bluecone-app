@@ -98,11 +98,6 @@
         </dependency>
         <dependency>
             <groupId>com.bluecone</groupId>
-            <artifactId>app-id</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bluecone</groupId>
             <artifactId>app-core</artifactId>
             <version>${project.version}</version>
         </dependency>

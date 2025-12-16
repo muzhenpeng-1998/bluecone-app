@@ -1,3 +1,4 @@
 com.bluecone.app.id.internal.autoconfigure.IdAutoConfiguration
+com.bluecone.app.id.internal.autoconfigure.IdSegmentAutoConfiguration
 com.bluecone.app.id.internal.autoconfigure.IdMybatisAutoConfiguration
 com.bluecone.app.id.internal.autoconfigure.IdJacksonAutoConfiguration

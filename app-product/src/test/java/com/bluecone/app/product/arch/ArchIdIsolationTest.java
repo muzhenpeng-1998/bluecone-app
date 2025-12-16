@@ -2,7 +2,6 @@ package com.bluecone.app.product.arch;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
-import com.bluecone.app.id.internal.governance.AllowIdInfraAccess;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -11,7 +10,9 @@ import com.tngtech.archunit.lang.ArchRule;
 /**
  * app-product 模块的 ID 隔离架构测试。
  *
- * <p>确保 app-product 模块只依赖 app-id-api，不访问 internal 包。</p>
+ * <p>确保 app-product 模块只依赖 app-id-api，不访问 internal 包。
+ * 
+ * <p>例外：MyBatis TypeHandler（如 Ulid128BinaryTypeHandler）允许在数据访问层使用。
  */
 @AnalyzeClasses(
         packages = "com.bluecone.app.product",
@@ -26,7 +27,6 @@ public class ArchIdIsolationTest {
     static final ArchRule NO_INTERNAL_PACKAGE_ACCESS =
             noClasses()
                     .that().resideInPackage("com.bluecone.app.product..")
-                    .and().areNotAnnotatedWith(AllowIdInfraAccess.class)
                     .should().dependOnClassesThat().resideInAnyPackage("com.bluecone.app.id.internal..")
-                    .because("app-product 模块不能访问 app-id 的 internal 包，只能使用 app-id-api 中的接口。");
+                    .because("app-product 模块不能访问 app-id 的 internal 包，只能使用 app-id-api 中的接口（包括 com.bluecone.app.id.mybatis 等公开的 SPI）。");
 }

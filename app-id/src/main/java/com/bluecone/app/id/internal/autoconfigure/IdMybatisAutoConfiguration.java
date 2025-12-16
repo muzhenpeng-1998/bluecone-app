@@ -11,8 +11,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.id.internal.mybatis.Ulid128BinaryTypeHandler;
-import com.bluecone.app.id.internal.mybatis.Ulid128Char26TypeHandler;
+import com.bluecone.app.id.mybatis.Ulid128BinaryTypeHandler;
+import com.bluecone.app.id.mybatis.Ulid128Char26TypeHandler;
 
 /**
  * MyBatis 相关自动配置：为 Ulid128 注册 TypeHandler。

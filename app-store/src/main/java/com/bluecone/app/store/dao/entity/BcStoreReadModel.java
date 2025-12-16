@@ -5,18 +5,19 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.id.internal.governance.AllowIdInfraAccess;
-import com.bluecone.app.id.internal.mybatis.Ulid128BinaryTypeHandler;
+import com.bluecone.app.id.mybatis.Ulid128BinaryTypeHandler;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import lombok.Data;
 
 /**
  * 门店只读快照表 DO，对应表 bc_store_read_model。
+ * 
+ * <p>注：此类依赖 app-id 的 Ulid128BinaryTypeHandler（MyBatis TypeHandler）。
+ * TypeHandler 作为基础设施 SPI 实现，允许在数据访问层使用。
  */
 @Data
 @TableName("bc_store_read_model")
-@AllowIdInfraAccess
 public class BcStoreReadModel implements Serializable {
     private static final long serialVersionUID = 1L;
 
