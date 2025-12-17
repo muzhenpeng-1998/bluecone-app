@@ -9,6 +9,8 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # Flyway 迁移校验：测试环境也开启校验，确保迁移脚本可重复、可校验
+    validate-on-migrate: true
 
 bluecone:
   security:

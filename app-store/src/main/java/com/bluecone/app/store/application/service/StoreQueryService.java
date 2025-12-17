@@ -44,6 +44,11 @@ public class StoreQueryService {
 
     /**
      * 列表查询门店基础信息。
+     * <p>支持按租户、城市、行业类型、状态、关键字等条件筛选。</p>
+     * <p>说明：当前实现未分页，后续可扩展分页功能。</p>
+     *
+     * @param query 查询条件（包含 tenantId、cityCode、industryType、status、keyword 等）
+     * @return 门店基础信息视图列表
      */
     public List<StoreBaseView> listStores(StoreListQuery query) {
         LambdaQueryWrapper<BcStore> wrapper = new LambdaQueryWrapper<>();
@@ -70,7 +75,13 @@ public class StoreQueryService {
     }
 
     /**
-     * 单个门店详情。
+     * 单个门店详情查询。
+     * <p>支持通过 storePublicId、storeId 或 storeCode 查询门店详情。</p>
+     * <p>说明：查询优先级为 storePublicId > storeId > storeCode，至少需要提供其中一个标识。</p>
+     *
+     * @param query 查询条件（必须包含 tenantId 和至少一个门店标识：storePublicId/storeId/storeCode）
+     * @return 门店基础信息视图
+     * @throws BizException 当门店不存在或查询条件不满足时抛出
      */
     public StoreBaseView getStoreDetail(StoreDetailQuery query) {
         LambdaQueryWrapper<BcStore> wrapper = new LambdaQueryWrapper<>();
@@ -101,7 +112,14 @@ public class StoreQueryService {
 
     /**
      * 供 Facade/订单模块使用的聚合加载入口。
+     * <p>加载完整的门店配置聚合（包含能力、营业时间、渠道等），供订单模块判断是否可接单。</p>
      * <p>高并发：后续可在此包装多级缓存；当前直连仓储。</p>
+     * <p>说明：此方法会先查询门店的 configVersion，再加载对应版本的完整配置，确保版本一致性。</p>
+     *
+     * @param tenantId 租户 ID（不能为空）
+     * @param storeId  门店 ID（不能为空）
+     * @return 门店完整配置聚合（StoreConfig）
+     * @throws BizException 当门店不存在时抛出 STORE_NOT_FOUND
      */
     public StoreConfig loadStoreConfig(Long tenantId, Long storeId) {
         Objects.requireNonNull(tenantId, "tenantId 不能为空");

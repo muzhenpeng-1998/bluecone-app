@@ -22,6 +22,7 @@ public enum StoreErrorCode implements ErrorCode {
     // ========= 渠道相关 =========
     CHANNEL_NOT_FOUND("ST-404-010", "门店渠道不存在"),
     CHANNEL_ALREADY_BOUND("ST-409-010", "该渠道已绑定，请勿重复绑定"),
+    STORE_CHANNEL_NOT_BOUND("ST-400-010", "门店未绑定该渠道或渠道未启用"),
 
     // ========= 资源相关 =========
     RESOURCE_NOT_FOUND("ST-404-020", "门店资源不存在"),

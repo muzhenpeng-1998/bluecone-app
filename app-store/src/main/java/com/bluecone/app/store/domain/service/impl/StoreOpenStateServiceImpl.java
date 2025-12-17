@@ -65,6 +65,7 @@ public class StoreOpenStateServiceImpl implements StoreOpenStateService {
         }
 
         // 5）营业时间 / 特殊日判定
+        // 说明：优先检查特殊日（如节假日停业），再检查常规营业时间，确保特殊日配置优先级最高
         if (config.getOpeningSchedule() == null) {
             return StoreOrderAcceptResult.builder()
                     .acceptable(false)
@@ -72,6 +73,7 @@ public class StoreOpenStateServiceImpl implements StoreOpenStateService {
                     .reasonMessage(StoreErrorCode.STORE_NO_OPENING_CONFIG.getMessage())
                     .build();
         }
+        // 调用 StoreOpeningSchedule.isOpenAt() 方法，内部已实现特殊日优先、常规营业时间次之的判断逻辑
         boolean open = config.getOpeningSchedule().isOpenAt(now);
         if (!open) {
             return StoreOrderAcceptResult.builder()
@@ -81,9 +83,21 @@ public class StoreOpenStateServiceImpl implements StoreOpenStateService {
                     .build();
         }
 
-        // 6）渠道校验（骨架：默认可用，后续结合 bc_store_channel 补充）
+        // 6）渠道校验
+        // 说明：检查订单来源渠道是否已绑定且状态为启用，避免从未绑定渠道下单
         if (channelType != null && !channelType.isBlank()) {
-            log.debug("channelType={} 暂不做额外校验，后续可结合 bc_store_channel 增强", channelType);
+            boolean channelValid = config.getChannels() != null && config.getChannels().stream()
+                    .filter(channel -> channel != null && channel.getChannelType() != null)
+                    .anyMatch(channel -> channelType.equalsIgnoreCase(channel.getChannelType())
+                            && "ACTIVE".equalsIgnoreCase(channel.getStatus()));
+            if (!channelValid) {
+                log.debug("门店 {} 未绑定渠道 {} 或渠道状态非 ACTIVE", config.getStoreId(), channelType);
+                return StoreOrderAcceptResult.builder()
+                        .acceptable(false)
+                        .reasonCode(StoreErrorCode.STORE_CHANNEL_NOT_BOUND.getCode())
+                        .reasonMessage(StoreErrorCode.STORE_CHANNEL_NOT_BOUND.getMessage())
+                        .build();
+            }
         }
 
         // 7）全部通过，允许接单

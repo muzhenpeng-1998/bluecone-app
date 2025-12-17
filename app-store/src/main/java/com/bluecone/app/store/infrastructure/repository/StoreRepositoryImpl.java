@@ -143,16 +143,100 @@ public class StoreRepositoryImpl implements StoreRepository {
         return expectedOldVersion + 1;
     }
 
+    /**
+     * 更新门店营业时间配置（常规营业时间 + 特殊日）。
+     * <p>实现策略：采用"先删后插"的幂等策略，先软删该门店所有常规营业时间和特殊日记录，再批量插入新配置。</p>
+     * <p>说明：configVersion 的校验和递增由上层应用服务（StoreCommandService）负责，此方法仅负责数据持久化。</p>
+     *
+     * @param tenantId 租户 ID
+     * @param storeId  门店 ID
+     * @param schedule 营业时间配置聚合（包含常规营业时间和特殊日）
+     */
     @Override
     public void updateOpeningSchedule(Long tenantId, Long storeId, StoreOpeningSchedule schedule) {
-        // TODO: 补充具体更新逻辑（删除旧配置 + 批量插入），并结合 configVersion 保护并发；完成后需要刷新缓存
-        throw new UnsupportedOperationException("TODO implement updateOpeningSchedule");
+        // 1. 软删该门店现有的所有常规营业时间记录
+        bcStoreOpeningHoursMapper.update(null, new LambdaUpdateWrapper<BcStoreOpeningHours>()
+                .eq(BcStoreOpeningHours::getTenantId, tenantId)
+                .eq(BcStoreOpeningHours::getStoreId, storeId)
+                .set(BcStoreOpeningHours::getIsDeleted, true));
+
+        // 2. 软删该门店现有的所有特殊日记录
+        bcStoreSpecialDayMapper.update(null, new LambdaUpdateWrapper<BcStoreSpecialDay>()
+                .eq(BcStoreSpecialDay::getTenantId, tenantId)
+                .eq(BcStoreSpecialDay::getStoreId, storeId)
+                .set(BcStoreSpecialDay::getIsDeleted, true));
+
+        // 3. 批量插入新的常规营业时间配置
+        if (schedule != null && schedule.getRegularHours() != null) {
+            for (StoreOpeningSchedule.OpeningHoursItem item : schedule.getRegularHours()) {
+                if (item == null) {
+                    continue;
+                }
+                BcStoreOpeningHours entity = new BcStoreOpeningHours();
+                entity.setTenantId(tenantId);
+                entity.setStoreId(storeId);
+                entity.setWeekday((byte) item.getWeekday());
+                entity.setStartTime(item.getStartTime());
+                entity.setEndTime(item.getEndTime());
+                entity.setPeriodType(item.getPeriodType());
+                entity.setIsDeleted(false);
+                bcStoreOpeningHoursMapper.insert(entity);
+            }
+        }
+
+        // 4. 批量插入新的特殊日配置
+        if (schedule != null && schedule.getSpecialDays() != null) {
+            for (StoreOpeningSchedule.SpecialDayItem item : schedule.getSpecialDays()) {
+                if (item == null || item.getDate() == null) {
+                    continue;
+                }
+                BcStoreSpecialDay entity = new BcStoreSpecialDay();
+                entity.setTenantId(tenantId);
+                entity.setStoreId(storeId);
+                entity.setDate(item.getDate());
+                entity.setSpecialType(item.getSpecialType());
+                entity.setStartTime(item.getStartTime());
+                entity.setEndTime(item.getEndTime());
+                entity.setRemark(item.getRemark());
+                entity.setIsDeleted(false);
+                bcStoreSpecialDayMapper.insert(entity);
+            }
+        }
     }
 
+    /**
+     * 更新门店能力配置列表。
+     * <p>实现策略：采用"先删后插"的幂等策略，先软删该门店所有能力记录，再批量插入新配置。</p>
+     * <p>说明：configVersion 的校验和递增由上层应用服务（StoreCommandService）负责，此方法仅负责数据持久化。</p>
+     *
+     * @param tenantId    租户 ID
+     * @param storeId     门店 ID
+     * @param capabilities 能力配置列表（如 DINE_IN、TAKE_OUT、PICKUP 等）
+     */
     @Override
     public void updateCapabilities(Long tenantId, Long storeId, Iterable<StoreCapabilityModel> capabilities) {
-        // TODO: 补充具体更新逻辑（批量 upsert），并结合 configVersion 保护并发；完成后需要刷新缓存
-        throw new UnsupportedOperationException("TODO implement updateCapabilities");
+        // 1. 软删该门店现有的所有能力记录
+        bcStoreCapabilityMapper.update(null, new LambdaUpdateWrapper<BcStoreCapability>()
+                .eq(BcStoreCapability::getTenantId, tenantId)
+                .eq(BcStoreCapability::getStoreId, storeId)
+                .set(BcStoreCapability::getIsDeleted, true));
+
+        // 2. 批量插入新的能力配置
+        if (capabilities != null) {
+            for (StoreCapabilityModel item : capabilities) {
+                if (item == null || item.getCapability() == null || item.getCapability().isBlank()) {
+                    continue;
+                }
+                BcStoreCapability entity = new BcStoreCapability();
+                entity.setTenantId(tenantId);
+                entity.setStoreId(storeId);
+                entity.setCapability(item.getCapability());
+                entity.setEnabled(Boolean.TRUE.equals(item.getEnabled()));
+                entity.setConfigJson(item.getConfigJson());
+                entity.setIsDeleted(false);
+                bcStoreCapabilityMapper.insert(entity);
+            }
+        }
     }
 
     @Override

@@ -24,7 +24,23 @@ public class StoreDeviceAssembler {
                 .sn(entity.getSn())
                 .status(entity.getStatus())
                 .configJson(entity.getConfigJson())
-                .configSummary(null) // TODO: 解析配置摘要
+                .configSummary(parseConfigSummary(entity.getConfigJson())) // 解析配置摘要：提取 JSON 关键信息或前 50 字符
                 .build();
+    }
+
+    /**
+     * 解析配置 JSON 摘要。
+     * <p>最小实现：返回 JSON 前 50 字符，便于前端快速展示配置概览。</p>
+     *
+     * @param configJson 配置 JSON 字符串
+     * @return 配置摘要（如为 null 或空则返回 null）
+     */
+    private String parseConfigSummary(String configJson) {
+        if (configJson == null || configJson.isBlank()) {
+            return null;
+        }
+        // 最小实现：返回 JSON 前 50 字符作为摘要
+        // 后续可扩展为解析 JSON 并提取关键字段（如设备型号、IP 地址等）
+        return configJson.length() > 50 ? configJson.substring(0, 50) + "..." : configJson;
     }
 }
