@@ -12,18 +12,20 @@ import org.junit.jupiter.api.Test;
 class OrderStatusTest {
 
     @Test
-    void markPaidMovesToPendingAcceptUnlessAlreadyFinal() {
-        Order pendingPayment = Order.builder()
-                .status(OrderStatus.PENDING_PAYMENT)
+    void markPaidMovesToWaitAcceptUnlessAlreadyFinal() {
+        // 使用 Canonical 状态 WAIT_PAY 测试
+        Order waitPay = Order.builder()
+                .status(OrderStatus.WAIT_PAY)
                 .items(Collections.emptyList())
                 .build();
 
-        pendingPayment.markPaid();
+        waitPay.markPaid();
 
-        // fix: actual state transition is WAIT_ACCEPT after payment
-        assertThat(pendingPayment.getStatus()).isEqualTo(OrderStatus.WAIT_ACCEPT);
-        assertThat(pendingPayment.getPayStatus()).isEqualTo(PayStatus.PAID);
+        // 应流转到 WAIT_ACCEPT
+        assertThat(waitPay.getStatus()).isEqualTo(OrderStatus.WAIT_ACCEPT);
+        assertThat(waitPay.getPayStatus()).isEqualTo(PayStatus.PAID);
 
+        // 测试终态不变更
         Order completed = Order.builder()
                 .status(OrderStatus.COMPLETED)
                 .items(Collections.emptyList())
@@ -33,6 +35,21 @@ class OrderStatusTest {
 
         assertThat(completed.getStatus()).isEqualTo(OrderStatus.COMPLETED);
         assertThat(completed.getPayStatus()).isEqualTo(PayStatus.PAID);
+    }
+    
+    @Test
+    void markPaidCompatibleWithLegacyPendingPaymentStatus() {
+        // 测试兼容旧状态：PENDING_PAYMENT 也能正确流转
+        Order pendingPayment = Order.builder()
+                .status(OrderStatus.PENDING_PAYMENT)
+                .items(Collections.emptyList())
+                .build();
+
+        pendingPayment.markPaid();
+
+        // 应流转到 WAIT_ACCEPT
+        assertThat(pendingPayment.getStatus()).isEqualTo(OrderStatus.WAIT_ACCEPT);
+        assertThat(pendingPayment.getPayStatus()).isEqualTo(PayStatus.PAID);
     }
 
     @Test
@@ -44,7 +61,8 @@ class OrderStatusTest {
 
         assertThat(draft.canCancelByUser()).isTrue();
         draft.cancelByUser();
-        assertThat(draft.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        // 使用 Canonical 状态 CANCELED
+        assertThat(draft.getStatus()).isEqualTo(OrderStatus.CANCELED);
 
         Order inProgress = Order.builder()
                 .status(OrderStatus.IN_PROGRESS)
@@ -54,6 +72,39 @@ class OrderStatusTest {
         assertThat(inProgress.canCancelByUser()).isFalse();
         assertThatThrownBy(inProgress::cancelByUser)
                 .isInstanceOf(IllegalStateException.class);
+    }
+    
+    @Test
+    void cancelByUserUsesCanonicalCanceledStatus() {
+        // 测试待支付可取消
+        Order waitPay = Order.builder()
+                .status(OrderStatus.WAIT_PAY)
+                .items(Collections.emptyList())
+                .build();
+
+        assertThat(waitPay.canCancelByUser()).isTrue();
+        waitPay.cancelByUser();
+        assertThat(waitPay.getStatus()).isEqualTo(OrderStatus.CANCELED);
+        
+        // 测试待接单可取消
+        Order waitAccept = Order.builder()
+                .status(OrderStatus.WAIT_ACCEPT)
+                .items(Collections.emptyList())
+                .build();
+
+        assertThat(waitAccept.canCancelByUser()).isTrue();
+        waitAccept.cancelByUser();
+        assertThat(waitAccept.getStatus()).isEqualTo(OrderStatus.CANCELED);
+        
+        // 测试已接单可取消
+        Order accepted = Order.builder()
+                .status(OrderStatus.ACCEPTED)
+                .items(Collections.emptyList())
+                .build();
+
+        assertThat(accepted.canCancelByUser()).isTrue();
+        accepted.cancelByUser();
+        assertThat(accepted.getStatus()).isEqualTo(OrderStatus.CANCELED);
     }
 
     @Test
@@ -65,12 +116,23 @@ class OrderStatusTest {
 
         draft.assertEditable(); // should not throw
 
-        Order locked = Order.builder()
+        // 测试 Canonical 状态 WAIT_PAY 不可编辑
+        Order waitPay = Order.builder()
+                .status(OrderStatus.WAIT_PAY)
+                .items(Collections.emptyList())
+                .build();
+
+        assertThatThrownBy(waitPay::assertEditable)
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("不可编辑");
+                
+        // 测试旧状态 PENDING_PAYMENT 也不可编辑
+        Order pendingPayment = Order.builder()
                 .status(OrderStatus.PENDING_PAYMENT)
                 .items(Collections.emptyList())
                 .build();
 
-        assertThatThrownBy(locked::assertEditable)
+        assertThatThrownBy(pendingPayment::assertEditable)
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("不可编辑");
     }

@@ -3,7 +3,6 @@ package com.bluecone.app.order.domain.model;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.order.application.command.ConfirmOrderCommand;
-import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
 import com.bluecone.app.order.domain.command.SubmitOrderFromDraftCommand;
 import com.bluecone.app.order.domain.enums.BizType;
 import com.bluecone.app.order.domain.enums.OrderSource;
@@ -23,8 +22,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Data
 @Builder
 @NoArgsConstructor
@@ -112,6 +113,16 @@ public class Order implements Serializable {
     private LocalDateTime acceptedAt;
 
     /**
+     * 关单原因：PAY_TIMEOUT（支付超时）、USER_CANCEL（用户取消）、MERCHANT_CANCEL（商户取消）等。
+     */
+    private String closeReason;
+
+    /**
+     * 关单时间。
+     */
+    private LocalDateTime closedAt;
+
+    /**
      * 根据 items 重算 totalAmount、discountAmount、payableAmount 等金额字段。
      */
     public void recalculateAmounts() {
@@ -153,24 +164,72 @@ public class Order implements Serializable {
 
     /**
      * 将订单标记为待支付。
+     * <p>使用 Canonical 状态 WAIT_PAY，避免重复语义。</p>
      */
     public void markPendingPayment() {
-        this.status = OrderStatus.PENDING_PAYMENT;
+        this.status = OrderStatus.WAIT_PAY;
         this.payStatus = PayStatus.UNPAID;
     }
 
     /**
      * 标记为已支付。
+     * <p>使用 Canonical 状态判断，自动兼容 CANCELLED 的重复语义。</p>
      */
     public void markPaid() {
         this.payStatus = PayStatus.PAID;
-        if (status != OrderStatus.CANCELLED && status != OrderStatus.COMPLETED && status != OrderStatus.REFUNDED) {
+        // 使用 normalize 统一判断，自动兼容 CANCELLED 等重复语义状态
+        OrderStatus canonical = this.status != null ? this.status.normalize() : null;
+        if (canonical != OrderStatus.CANCELED 
+                && canonical != OrderStatus.COMPLETED 
+                && canonical != OrderStatus.REFUNDED) {
             this.status = OrderStatus.WAIT_ACCEPT;
         }
     }
 
     /**
      * 由支付链路调用，记录支付单信息并流转状态。
+     * <p>状态机约束：只允许从 WAIT_PAY 状态流转到 PAID 状态。</p>
+     * <p>幂等性：如果订单已经是 PAID 状态，则直接返回，不抛异常（允许重复回调）。</p>
+     * 
+     * @param payOrderId 支付单ID
+     * @param payChannel 支付渠道（如：WECHAT_JSAPI、ALIPAY_WAP）
+     * @param payNo 渠道支付单号（如：微信transaction_id）
+     * @param paidAt 支付完成时间
+     * @throws BizException 如果订单状态不允许支付（非 WAIT_PAY 且非 PAID）
+     */
+    public void markPaid(Long payOrderId, String payChannel, String payNo, LocalDateTime paidAt) {
+        // 幂等性：如果订单已经是 PAID 状态，直接返回（允许重复回调）
+        if (OrderStatus.PAID.equals(this.status)) {
+            log.debug("订单已支付，幂等返回：orderId={}, status={}", this.id, this.status);
+            return;
+        }
+        
+        // 状态机约束：只允许从 WAIT_PAY 状态流转到 PAID 状态
+        if (!OrderStatus.WAIT_PAY.equals(this.status)) {
+            String msg = String.format("订单状态不允许支付：当前状态=%s，只允许 WAIT_PAY 状态支付", 
+                    this.status != null ? this.status.getCode() : "NULL");
+            log.warn("订单状态不允许支付：orderId={}, currentStatus={}", this.id, this.status);
+            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+        }
+        
+        // 流转状态：WAIT_PAY -> PAID
+        this.status = OrderStatus.PAID;
+        this.payStatus = PayStatus.PAID;
+        
+        // 记录支付信息到扩展字段
+        updateExt("payOrderId", payOrderId);
+        updateExt("payChannel", payChannel);
+        updateExt("payNo", payNo);
+        updateExt("paidAt", paidAt != null ? paidAt.toString() : null);
+        
+        this.updatedAt = LocalDateTime.now();
+        
+        log.info("订单支付成功：orderId={}, payOrderId={}, payChannel={}, payNo={}", 
+                this.id, payOrderId, payChannel, payNo);
+    }
+    
+    /**
+     * 由支付链路调用，记录支付单信息并流转状态（兼容旧版本）。
      */
     public void markPaid(Long payOrderId, Long paidAmountCents) {
         markPaid();
@@ -198,12 +257,55 @@ public class Order implements Serializable {
 
     /**
      * 标记为已取消。
+     * <p>使用 Canonical 状态 CANCELED，避免重复语义。</p>
      */
     public void markCancelled() {
-        this.status = OrderStatus.CANCELLED;
+        this.status = OrderStatus.CANCELED;
         if (this.payStatus == null) {
             this.payStatus = PayStatus.UNPAID;
         }
+    }
+    
+    /**
+     * 标记为已取消（带关单原因）。
+     * <p>用于超时关单、用户取消、商户取消等场景。</p>
+     * <p>幂等性：如果订单已经是 CANCELED 状态，则直接返回。</p>
+     * <p>使用 Canonical 状态和 normalize() 统一判断，自动兼容 CANCELLED 等重复语义。</p>
+     * 
+     * @param closeReason 关单原因（PAY_TIMEOUT、USER_CANCEL、MERCHANT_CANCEL等）
+     * @throws BizException 如果订单状态不允许取消（已支付、已完成等）
+     */
+    public void markCancelledWithReason(String closeReason) {
+        // 使用 normalize 统一判断，自动兼容 CANCELLED 等重复语义
+        OrderStatus canonical = this.status != null ? this.status.normalize() : null;
+        
+        // 幂等性：如果订单已经是 CANCELED 状态，直接返回
+        if (OrderStatus.CANCELED.equals(canonical)) {
+            log.debug("订单已取消，幂等返回：orderId={}, closeReason={}", this.id, this.closeReason);
+            return;
+        }
+        
+        // 状态约束：只允许可取消状态进行取消操作
+        if (this.status != null && !this.status.canCancel()) {
+            String msg = String.format("订单状态不允许取消：当前状态=%s", 
+                    this.status.getCode());
+            log.warn("订单状态不允许取消：orderId={}, currentStatus={}", this.id, this.status);
+            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+        }
+        
+        // 流转状态（使用 Canonical 状态）
+        this.status = OrderStatus.CANCELED;
+        if (this.payStatus == null) {
+            this.payStatus = PayStatus.UNPAID;
+        }
+        
+        // 记录关单原因和时间
+        this.closeReason = closeReason;
+        this.closedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        
+        log.info("订单已取消：orderId={}, closeReason={}, closedAt={}", 
+                this.id, closeReason, this.closedAt);
     }
 
     /**
@@ -218,25 +320,26 @@ public class Order implements Serializable {
 
     /**
      * 用户侧是否可取消。
+     * <p>使用 canCancel() 统一判断，自动兼容重复语义状态。</p>
+     * <p>草稿态（DRAFT/LOCKED_FOR_CHECKOUT/PENDING_CONFIRM）在 normalize 后会映射为 WAIT_PAY，允许取消。</p>
      */
     public boolean canCancelByUser() {
         if (status == null) {
             return false;
         }
-        return switch (status) {
-            case PENDING_PAYMENT, PENDING_ACCEPT, DRAFT, PENDING_CONFIRM -> true;
-            default -> false;
-        };
+        // 使用 canCancel 统一判断，自动兼容 PENDING_PAYMENT/PENDING_ACCEPT/DRAFT 等
+        return status.canCancel();
     }
 
     /**
      * 用户侧取消订单。
+     * <p>使用 Canonical 状态 CANCELED，避免重复语义。</p>
      */
     public void cancelByUser() {
         if (!canCancelByUser()) {
             throw new IllegalStateException("当前状态不允许用户取消订单");
         }
-        this.status = OrderStatus.CANCELLED;
+        this.status = OrderStatus.CANCELED;
         if (this.payStatus == null) {
             this.payStatus = PayStatus.UNPAID;
         }
@@ -337,6 +440,7 @@ public class Order implements Serializable {
 
     /**
      * 将草稿订单确认为正式订单。
+     * <p>使用 Canonical 状态 WAIT_PAY，避免重复语义。</p>
      */
     public void confirmFromDraft(SubmitOrderFromDraftCommand command) {
         if (command == null) {
@@ -355,7 +459,8 @@ public class Order implements Serializable {
             throw new BizException(CommonErrorCode.BAD_REQUEST, "订单金额有变化，请刷新后重试");
         }
         this.payStatus = PayStatus.UNPAID;
-        this.status = OrderStatus.PENDING_PAYMENT;
+        // 使用 Canonical 状态 WAIT_PAY 替代 PENDING_PAYMENT
+        this.status = OrderStatus.WAIT_PAY;
         this.updatedAt = LocalDateTime.now();
         if (command.getUserRemark() != null && !command.getUserRemark().isBlank()) {
             this.remark = command.getUserRemark();

@@ -73,4 +73,14 @@ public class OrderPO implements Serializable {
     private Boolean userDeleted;
 
     private LocalDateTime userDeletedAt;
+
+    /**
+     * 关单原因：PAY_TIMEOUT（支付超时）、USER_CANCEL（用户取消）、MERCHANT_CANCEL（商户取消）等。
+     */
+    private String closeReason;
+
+    /**
+     * 关单时间。
+     */
+    private LocalDateTime closedAt;
 }

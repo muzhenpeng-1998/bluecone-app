@@ -22,6 +22,11 @@ public enum OrderEvent {
     MERCHANT_CANCEL,
 
     /**
+     * 商户接单。
+     */
+    MERCHANT_ACCEPT,
+
+    /**
      * 支付成功（微信/支付宝等异步回调）。
      */
     PAY_SUCCESS,

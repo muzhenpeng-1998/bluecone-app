@@ -24,10 +24,16 @@ import com.bluecone.app.order.api.dto.UserOrderSummaryView;
 import com.bluecone.app.order.application.MerchantOrderCommandAppService;
 import com.bluecone.app.order.application.MerchantOrderQueryAppService;
 import com.bluecone.app.order.application.OrderConfirmAppService;
+import com.bluecone.app.order.application.OrderConfirmApplicationService;
+import com.bluecone.app.order.application.OrderSubmitApplicationService;
 import com.bluecone.app.order.application.UserOrderCommandAppService;
 import com.bluecone.app.order.application.UserOrderPreviewAppService;
 import com.bluecone.app.order.application.UserOrderQueryAppService;
 import com.bluecone.app.order.application.UserOrderRefundAppService;
+import com.bluecone.app.order.api.dto.OrderConfirmRequest;
+import com.bluecone.app.order.api.dto.OrderConfirmResponse;
+import com.bluecone.app.order.api.dto.OrderSubmitRequest;
+import com.bluecone.app.order.api.dto.OrderSubmitResponse;
 import com.bluecone.app.order.application.command.ConfirmOrderCommand;
 import com.bluecone.app.order.application.command.MerchantAcceptOrderCommand;
 import com.bluecone.app.order.service.ConfigDrivenOrderService;
@@ -55,6 +61,8 @@ public class OrderController {
     private final OrderService orderService;
     private final ConfigDrivenOrderService configDrivenOrderService;
     private final OrderConfirmAppService orderConfirmAppService;
+    private final OrderConfirmApplicationService orderConfirmApplicationService;
+    private final OrderSubmitApplicationService orderSubmitApplicationService;
     private final UserOrderPreviewAppService userOrderPreviewAppService;
     private final UserOrderCommandAppService userOrderCommandAppService;
     private final UserOrderQueryAppService userOrderQueryAppService;
@@ -74,6 +82,9 @@ public class OrderController {
         ConfirmOrderCommand command = ConfirmOrderCommand.fromRequest(request, request.getTenantId(), request.getStoreId(), null);
         return configDrivenOrderService.confirmOrder(command);
     }
+
+    // 注意：/m0/confirm 和 /m0/submit 路由已迁移到 OrderMainFlowController
+    // 这里保留注释作为历史记录，实际接口请使用 app-application 模块的 OrderMainFlowController
 
     /**
      * 小程序用户提交订单。

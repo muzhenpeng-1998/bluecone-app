@@ -1,0 +1,25 @@
+# Repair Profile Configuration
+# This profile is used by the FlywayRepairTool to fix failed migrations
+# Usage: mvn spring-boot:run -Dspring-boot.run.profiles=local,repair
+
+spring:
+  # Disable Flyway auto-migration during repair
+  flyway:
+    enabled: false
+  
+  # Disable web server (we only need database access)
+  main:
+    web-application-type: none
+  
+  # Minimal logging
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration
+      - org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration
+
+logging:
+  level:
+    root: WARN
+    com.bluecone.app.migration: INFO
+    org.springframework.boot: WARN
+    org.springframework.jdbc: INFO
