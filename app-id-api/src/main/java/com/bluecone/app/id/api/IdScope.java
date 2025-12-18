@@ -25,6 +25,11 @@ public enum IdScope {
     ORDER,
     
     /**
+     * 订单明细作用域，对应 bc_order_item 表
+     */
+    ORDER_ITEM,
+    
+    /**
      * 商品作用域，对应 bc_product 表
      */
     PRODUCT,
