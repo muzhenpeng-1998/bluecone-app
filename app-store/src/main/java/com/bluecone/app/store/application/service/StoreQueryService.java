@@ -69,8 +69,20 @@ public class StoreQueryService {
         }
         // 这里先不分页，后续可扩展
         List<BcStore> entities = bcStoreService.list(wrapper);
+        // 映射为 StoreBaseView，过滤掉 null 值（确保不返回 null）
+        // 字段说明：
+        // - tenantId: 租户 ID，用于多租户隔离
+        // - storeId: 门店内部 ID（自增主键）
+        // - storeCode: 门店编码，通常对外展示使用
+        // - name/shortName: 门店名称/简称
+        // - industryType: 行业类型（餐饮、零售等）
+        // - cityCode: 城市编码，用于区域相关业务
+        // - status: 业务状态（OPEN/PAUSED/CLOSED）
+        // - openForOrders: 是否可接单（配置维度开关）
+        // - logoUrl/coverUrl: 门店 Logo 和封面图 URL
         return entities.stream()
                 .map(storeViewAssembler::toStoreBaseView)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
@@ -101,12 +113,25 @@ public class StoreQueryService {
             throw new BizException(StoreErrorCode.STORE_NOT_FOUND);
         }
         StoreBaseView view = storeViewAssembler.toStoreBaseView(entity);
-        if (view != null) {
-            String logoUrl = storeResourceService.resolveStoreLogoUrl(entity.getId());
-            if (logoUrl != null) {
-                view.setLogoUrl(logoUrl);
-            }
+        // 确保不返回 null：如果装配器返回 null，抛出异常
+        if (view == null) {
+            throw new BizException(StoreErrorCode.STORE_NOT_FOUND, "门店数据装配失败");
         }
+        // 补充 Logo URL（如果存在）
+        String logoUrl = storeResourceService.resolveStoreLogoUrl(entity.getId());
+        if (logoUrl != null) {
+            view.setLogoUrl(logoUrl);
+        }
+        // 字段说明：
+        // - tenantId: 租户 ID，用于多租户隔离
+        // - storeId: 门店内部 ID（自增主键）
+        // - storeCode: 门店编码，通常对外展示使用
+        // - name/shortName: 门店名称/简称
+        // - industryType: 行业类型（餐饮、零售等）
+        // - cityCode: 城市编码，用于区域相关业务
+        // - status: 业务状态（OPEN/PAUSED/CLOSED）
+        // - openForOrders: 是否可接单（配置维度开关）
+        // - logoUrl/coverUrl: 门店 Logo 和封面图 URL
         return view;
     }
 

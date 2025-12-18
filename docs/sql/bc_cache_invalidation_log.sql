@@ -1,0 +1,26 @@
+-- Cache invalidation event log table for ops observability.
+CREATE TABLE IF NOT EXISTS bc_cache_invalidation_log (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  occurred_at DATETIME NOT NULL COMMENT '事件发生时间（来自事件或接收时刻）',
+  received_at DATETIME NOT NULL COMMENT '本实例接收时间',
+  tenant_id BIGINT NOT NULL,
+  scope VARCHAR(32) NOT NULL COMMENT 'STORE/PRODUCT/SKU/INVENTORY_POLICY/USER',
+  namespace VARCHAR(64) NOT NULL COMMENT 'store:snap/product:snap 等',
+  event_id VARCHAR(32) NOT NULL COMMENT 'ULID',
+  keys_count INT NOT NULL DEFAULT 0,
+  key_samples VARCHAR(512) NULL COMMENT '脱敏样例（hashPrefix 列表）',
+  config_version BIGINT NULL,
+  transport VARCHAR(32) NOT NULL COMMENT 'OUTBOX/REDIS_PUBSUB/INPROCESS',
+  instance_id VARCHAR(64) NULL COMMENT '实例标识（可选）',
+  result VARCHAR(16) NOT NULL COMMENT 'OK/ERROR',
+  note VARCHAR(256) NULL COMMENT '错误简述（截断）',
+  decision VARCHAR(16) NULL COMMENT 'DIRECT/COALESCE/EPOCH_BUMP',
+  storm_mode TINYINT NOT NULL DEFAULT 0 COMMENT '1 storm',
+  epoch BIGINT NULL COMMENT 'new/current epoch',
+  PRIMARY KEY (id),
+  KEY idx_time (occurred_at),
+  KEY idx_tenant_time (tenant_id, occurred_at),
+  KEY idx_scope_time (scope, occurred_at),
+  KEY idx_namespace_time (namespace, occurred_at),
+  UNIQUE KEY uk_event_instance (event_id, instance_id)
+) COMMENT='缓存失效事件日志（用于 Ops 观测）';

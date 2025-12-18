@@ -23,12 +23,17 @@ import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.id.core.Ulid128;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
 import com.bluecone.app.store.domain.model.StoreCapabilityModel;
+import com.bluecone.app.store.domain.model.StoreOpeningSchedule;
+import com.bluecone.app.store.domain.repository.StoreRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -77,6 +82,14 @@ public class StoreCommandService {
      */
     private final StoreConfigChangeService storeConfigChangeService;
     /**
+     * 门店仓储，提供领域层的持久化能力。
+     */
+    private final StoreRepository storeRepository;
+    /**
+     * 门店缓存失效器，统一管理门店相关的缓存失效逻辑。
+     */
+    private final StoreCacheInvalidator storeCacheInvalidator;
+    /**
      * ID 生成服务，用于生成门店相关 ULID。
      */
     private final IdService idService;
@@ -97,12 +110,19 @@ public class StoreCommandService {
      * @param bcStoreOpeningHoursService 门店常规营业时间表服务
      * @param bcStoreSpecialDayService   门店特殊日配置表服务
      * @param storeConfigChangeService   门店配置变更通知服务
+     * @param storeRepository            门店仓储
+     * @param storeCacheInvalidator      门店缓存失效器
+     * @param idService                  ID 生成服务
+     * @param publicIdCodec              PublicId 编解码器
+     * @param publicIdRegistrar          公共 ID 映射注册器
      */
     public StoreCommandService(IBcStoreService bcStoreService,
                                IBcStoreCapabilityService bcStoreCapabilityService,
                                IBcStoreOpeningHoursService bcStoreOpeningHoursService,
                                IBcStoreSpecialDayService bcStoreSpecialDayService,
                                StoreConfigChangeService storeConfigChangeService,
+                               StoreRepository storeRepository,
+                               StoreCacheInvalidator storeCacheInvalidator,
                                IdService idService,
                                PublicIdCodec publicIdCodec,
                                PublicIdRegistrar publicIdRegistrar) {
@@ -116,33 +136,45 @@ public class StoreCommandService {
         this.bcStoreSpecialDayService = bcStoreSpecialDayService;
         // 保存配置变更通知服务引用
         this.storeConfigChangeService = storeConfigChangeService;
+        // 保存门店仓储引用
+        this.storeRepository = storeRepository;
+        // 保存门店缓存失效器引用
+        this.storeCacheInvalidator = storeCacheInvalidator;
         this.idService = idService;
         this.publicIdCodec = publicIdCodec;
         this.publicIdRegistrar = publicIdRegistrar;
     }
 
     /**
-     * 创建门店及默认配置（当前默认配置仅指主表字段，能力/营业时间等通过后续接口维护）。
+     * 创建门店及默认配置。
      *
      * <p>流程概述：</p>
      * <ol>
-     *     <li>校验必填参数（租户、门店名称、行业类型）；</li>
+     *     <li>校验必填参数（租户、门店名称、行业类型、门店编码）；</li>
+     *     <li>校验 tenantId + storeCode 唯一性；</li>
      *     <li>生成 internal_id/public_id/store_no 并保证门店编码在租户内唯一；</li>
-     *     <li>写入门店主表，初始化 {@code configVersion = 1}；</li>
+     *     <li>写入门店主表，初始化 {@code configVersion = 1}，openForOrders 取命令值；</li>
+     *     <li>初始化默认能力配置（堂食、自取）；</li>
+     *     <li>初始化默认营业时间配置（08:00-20:00，周一至周日）；</li>
      *     <li>触发配置变更通知，便于缓存或下游系统感知新门店。</li>
      * </ol>
      *
      * <p>该方法主要用于非幂等场景；在接入 {@code IdempotentCreateTemplate} 时，推荐调用
      * {@link #createStoreWithPreallocatedIds(CreateStoreCommand, Ulid128, String, Long)}，由模板统一生成 ID。</p>
      *
+     * <p>并发语义：创建操作本身不涉及版本冲突，但后续更新操作需要使用 configVersion 做乐观锁控制。</p>
+     * <p>失败策略：如果 tenantId + storeCode 已存在，抛出 STORE_CONFIG_CONFLICT 异常；其他校验失败抛出相应异常。</p>
+     *
      * @param command 创建门店命令对象
-     * @return 新建门店的对外 public_id
+     * @return 新建门店的对外 public_id（若 Facade 返回 String，则返回 String.valueOf(storeId)，并在注释说明后续可统一为 Long）
      */
     @Transactional(rollbackFor = Exception.class)
     public String createStore(CreateStoreCommand command) {
+        // 校验必填字段
         Objects.requireNonNull(command.getTenantId(), "tenantId 不能为空");
         Objects.requireNonNull(command.getName(), "门店名称不能为空");
         Objects.requireNonNull(command.getIndustryType(), "行业类型不能为空");
+        // storeCode 可以为空，为空时使用 publicId 作为 storeCode
 
         Ulid128 internalId = idService.nextUlid();
         String publicId = publicIdCodec.encode("sto", internalId).asString();
@@ -150,10 +182,13 @@ public class StoreCommandService {
         try {
             storeNo = idService.nextLong(com.bluecone.app.id.api.IdScope.STORE);
         } catch (UnsupportedOperationException ex) {
+            // ID 生成服务不支持 STORE scope 时，storeNo 为 null（不影响主流程）
             storeNo = null;
         }
 
         createStoreWithPreallocatedIds(command, internalId, publicId, storeNo);
+        // 返回 publicId（String 类型）
+        // 注意：若 Facade 需要返回 storeId（Long），可返回 String.valueOf(storeId)，后续可统一为 Long 类型
         return publicId;
     }
 
@@ -226,7 +261,7 @@ public class StoreCommandService {
         entity.setCreatedAt(LocalDateTime.now());
         // 逻辑删除标记，默认未删除
         entity.setIsDeleted(false);
-        // TODO 审计字段补充（createdAt/createdBy 等），可根据整体审计方案统一处理
+        // 审计字段：createdAt 已设置，createdBy 可根据整体审计方案统一处理（如从上下文获取当前用户ID）
 
         // 写入门店主表
         bcStoreService.save(entity);
@@ -236,10 +271,50 @@ public class StoreCommandService {
 
         // 自增主键作为门店 ID
         Long storeId = entity.getId();
-        // 默认能力/营业时间等配置当前暂不初始化，留给后续更新接口处理
+        
+        // 初始化默认能力配置
+        // 原因：新创建的门店需要具备基本业务能力，默认开启堂食和自取能力，便于快速上线
+        // 堂食（DINE_IN）：适用于咖啡店等业态，允许顾客在店内用餐
+        // 自取（PICKUP）：允许顾客到店自取，是咖啡店常见的服务方式
+        // 外卖（TAKE_OUT）默认不开启，需要门店主动配置，因为涉及配送等额外成本
+        List<StoreCapabilityModel> defaultCapabilities = new ArrayList<>();
+        defaultCapabilities.add(StoreCapabilityModel.builder()
+                .capability("DINE_IN")
+                .enabled(true)
+                .configJson(null)
+                .build());
+        defaultCapabilities.add(StoreCapabilityModel.builder()
+                .capability("PICKUP")
+                .enabled(true)
+                .configJson(null)
+                .build());
+        // 使用仓储方法写入默认能力配置
+        storeRepository.updateCapabilities(tenantId, storeId, defaultCapabilities);
+        
+        // 初始化默认营业时间配置
+        // 原因：新创建的门店需要具备基本营业时间，默认设置为 08:00-20:00，覆盖咖啡店常见的营业时段
+        // 周一至周日统一设置为 08:00-20:00，后续可通过更新接口调整
+        List<StoreOpeningSchedule.OpeningHoursItem> defaultRegularHours = new ArrayList<>();
+        for (int weekday = 1; weekday <= 7; weekday++) {
+            defaultRegularHours.add(StoreOpeningSchedule.OpeningHoursItem.builder()
+                    .weekday(weekday)
+                    .startTime(LocalTime.of(8, 0))
+                    .endTime(LocalTime.of(20, 0))
+                    .periodType("REGULAR")
+                    .build());
+        }
+        StoreOpeningSchedule defaultSchedule = StoreOpeningSchedule.builder()
+                .regularHours(defaultRegularHours)
+                .specialDays(null)
+                .build();
+        // 使用仓储方法写入默认营业时间配置
+        storeRepository.updateOpeningSchedule(tenantId, storeId, defaultSchedule);
 
         // 首次创建即认为配置有变更，触发一次配置变更通知（版本号为 1）
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, entity.getConfigVersion());
+        // 统一调用缓存失效器，失效门店相关缓存
+        storeCacheInvalidator.invalidateStoreBase(tenantId, storeId);
+        storeCacheInvalidator.invalidateStoreConfig(tenantId, storeId, entity.getConfigVersion());
         // 打印关键日志，方便排查问题或做审计（仅打印 public_id 前缀）
         String publicIdPrefix = publicId != null ? publicId.substring(0, Math.min(8, publicId.length())) : null;
         log.info("[createStore] tenantId={}, storeId={}, publicIdPrefix={}, storeCode={}, storeNo={}",
@@ -304,6 +379,9 @@ public class StoreCommandService {
         }
         // 更新成功后触发配置变更通知，便于缓存或下游系统刷新最新配置
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, expectedVersion + 1);
+        // 统一调用缓存失效器，失效门店相关缓存
+        storeCacheInvalidator.invalidateStoreBase(tenantId, storeId);
+        storeCacheInvalidator.invalidateStoreConfig(tenantId, storeId, expectedVersion + 1);
     }
 
     /**
@@ -361,9 +439,11 @@ public class StoreCommandService {
     /**
      * 更新常规营业时间（先删后插），并递增版本。
      *
-     * <p>实现方式：先软删该门店现有的常规营业时间记录，再重建命令中提供的 regularHours。</p>
+     * <p>实现方式：使用仓储的 updateOpeningSchedule 方法（先软删后插入），再通过乐观锁递增配置版本。</p>
+     * <p>并发控制：使用 configVersion 乐观锁，若版本不匹配则抛出 StoreConfigVersionConflictException。</p>
      *
      * @param command 更新常规营业时间命令对象，包含日程及期望配置版本
+     * @throws com.bluecone.app.store.domain.exception.StoreConfigVersionConflictException 当版本不匹配时抛出
      */
     @Transactional(rollbackFor = Exception.class)
     public void updateOpeningHours(UpdateStoreOpeningHoursCommand command) {
@@ -379,37 +459,26 @@ public class StoreCommandService {
         // 调用方认为当前门店配置版本
         Long expectedVersion = command.getExpectedConfigVersion();
 
-        // 将该门店现有的常规营业时间记录全部软删
-        bcStoreOpeningHoursService.lambdaUpdate()
-                .eq(BcStoreOpeningHours::getTenantId, tenantId)
-                .eq(BcStoreOpeningHours::getStoreId, storeId)
-                .set(BcStoreOpeningHours::getIsDeleted, true)
-                .update();
-
-        // 若命令中携带新的常规营业时间配置，则逐条插入
-        if (command.getSchedule() != null && command.getSchedule().getRegularHours() != null) {
-            command.getSchedule().getRegularHours().forEach(item -> {
-                // 构造常规营业时间持久化实体
-                BcStoreOpeningHours entity = new BcStoreOpeningHours();
-                entity.setTenantId(tenantId);
-                entity.setStoreId(storeId);
-                // 星期几（1-7），这里转成 byte 存储
-                entity.setWeekday((byte) item.getWeekday());
-                // 当日开始营业时间
-                entity.setStartTime(item.getStartTime());
-                // 当日结束营业时间
-                entity.setEndTime(item.getEndTime());
-                // 时间段类型（如全天、多时段等），具体语义由领域约定
-                entity.setPeriodType(item.getPeriodType());
-                // 新插入记录标记为未删除
-                entity.setIsDeleted(false);
-                // 保存该条营业时间记录
-                bcStoreOpeningHoursService.save(entity);
-            });
+        // 先校验版本：如果当前版本与期望版本不一致，说明有并发修改，应提前失败
+        long currentVersion = storeRepository.getConfigVersion(tenantId, storeId);
+        if (currentVersion != expectedVersion) {
+            throw new com.bluecone.app.store.domain.exception.StoreConfigVersionConflictException(
+                    String.format("更新门店营业时间失败，配置版本不匹配。期望版本：%d，当前版本：%d，可能存在并发修改，请刷新后重试", 
+                            expectedVersion, currentVersion));
         }
 
-        // 主表配置版本号 +1，并触发配置变更通知
-        bumpStoreConfigVersion(tenantId, storeId, expectedVersion);
+        // 使用仓储方法更新营业时间配置（先软删后插入的幂等策略）
+        storeRepository.updateOpeningSchedule(tenantId, storeId, command.getSchedule());
+
+        // 主表配置版本号 +1，使用乐观锁确保原子性
+        // 若 bump 失败（版本已被其他事务修改），会抛出 StoreConfigVersionConflictException，整个事务回滚
+        long newVersion = storeRepository.bumpConfigVersion(tenantId, storeId, expectedVersion);
+        
+        // 触发配置变更通知，便于缓存或下游系统刷新最新配置
+        storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, newVersion);
+        // 统一调用缓存失效器，失效门店相关缓存
+        storeCacheInvalidator.invalidateStoreBase(tenantId, storeId);
+        storeCacheInvalidator.invalidateStoreConfig(tenantId, storeId, newVersion);
     }
 
     /**
@@ -472,6 +541,13 @@ public class StoreCommandService {
      * 切换门店状态（OPEN/PAUSED/CLOSED），乐观锁控制。
      *
      * <p>仅更新门店主表中的 {@code status} 字段，并使 {@code configVersion} + 1。</p>
+     * <p>状态对订单链路的影响：</p>
+     * <ul>
+     *     <li>OPEN：门店正常营业，可以接单（需同时满足 openForOrders=true 和营业时间等条件）</li>
+     *     <li>PAUSED：门店暂停营业，不能接单（即使 openForOrders=true 也不能接单）</li>
+     *     <li>CLOSED：门店关闭/停业，不能接单（即使 openForOrders=true 也不能接单）</li>
+     * </ul>
+     * <p>说明：status 是门店的业务状态，优先级高于 openForOrders 开关，用于运营层面的门店管理。</p>
      *
      * @param command 切换门店状态命令对象，包含目标状态及期望配置版本
      */
@@ -517,6 +593,13 @@ public class StoreCommandService {
      * 切换接单开关，乐观锁控制。
      *
      * <p>仅更新门店主表中的 {@code openForOrders} 字段，并使 {@code configVersion} + 1。</p>
+     * <p>接单开关对订单链路的影响：</p>
+     * <ul>
+     *     <li>openForOrders=true：门店允许接单（需同时满足 status=OPEN 和营业时间等条件）</li>
+     *     <li>openForOrders=false：门店不允许接单（即使 status=OPEN 也不能接单）</li>
+     * </ul>
+     * <p>说明：openForOrders 是配置维度的接单开关，优先级低于 status，用于临时关闭接单（如库存不足、系统维护等）。</p>
+     * <p>与 status 的关系：只有当 status=OPEN 且 openForOrders=true 时，门店才能接单。</p>
      *
      * @param command 切换接单开关命令对象，包含目标开关值及期望配置版本
      */
@@ -553,6 +636,9 @@ public class StoreCommandService {
         }
         // 更新成功后触发配置变更通知
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, expectedVersion + 1);
+        // 统一调用缓存失效器，失效门店相关缓存
+        storeCacheInvalidator.invalidateStoreBase(tenantId, storeId);
+        storeCacheInvalidator.invalidateStoreConfig(tenantId, storeId, expectedVersion + 1);
     }
 
     /**
@@ -580,5 +666,8 @@ public class StoreCommandService {
         }
         // 更新成功后触发配置变更通知
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, expectedVersion + 1);
+        // 统一调用缓存失效器，失效门店相关缓存
+        storeCacheInvalidator.invalidateStoreBase(tenantId, storeId);
+        storeCacheInvalidator.invalidateStoreConfig(tenantId, storeId, expectedVersion + 1);
     }
 }

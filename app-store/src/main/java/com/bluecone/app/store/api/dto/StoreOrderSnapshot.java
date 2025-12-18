@@ -71,4 +71,11 @@ public class StoreOrderSnapshot {
      * 配置版本号，用于缓存一致性校验。
      */
     private Long configVersion;
+
+    /**
+     * 当天营业时间区间（格式：HH:mm-HH:mm，如 "09:00-22:00"）。
+     * 如果当天有多个营业时段，则合并显示（如 "09:00-14:00,17:00-22:00"）。
+     * 如果当天不营业或未配置，则为 null。
+     */
+    private String todayOpeningHoursRange;
 }

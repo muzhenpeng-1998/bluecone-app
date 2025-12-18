@@ -1,0 +1,5 @@
+ALTER TABLE bc_cache_invalidation_log
+    ADD COLUMN decision VARCHAR(16) NULL COMMENT 'DIRECT/COALESCE/EPOCH_BUMP',
+    ADD COLUMN storm_mode TINYINT NOT NULL DEFAULT 0 COMMENT '1 storm',
+    ADD COLUMN epoch BIGINT NULL COMMENT 'new/current epoch';
+

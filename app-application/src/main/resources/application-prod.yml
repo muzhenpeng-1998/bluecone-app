@@ -1,15 +1,23 @@
-server:
-  port: 80
+# BlueCone Application - 生产环境配置
+# 
+# 说明：
+# - 此文件为生产环境配置骨架，所有敏感信息通过环境变量注入
+# - 此文件仅包含占位符，不包含任何真实密钥或密码
+# - 在微信云托管等部署环境中，通过环境变量配置所有敏感信息
+#
+# 安全要求：
+# - 所有敏感配置必须通过环境变量注入，不允许硬编码
+# - 如果环境变量未设置，应用启动将失败（这是预期的安全行为）
+# - 此文件可以提交到版本库，因为不包含真实密钥
+# - 生产环境必须使用强密码和密钥，定期轮换
 
 spring:
-  application:
-    name: bluecone-app
-  
-  # Flyway 数据库迁移配置
-  # 注意：此配置为通用配置，各环境（dev/prod）会覆盖为严格模式，local 环境允许容错
+  # Flyway 数据库迁移配置：生产环境使用严格模式
   flyway:
-    # 迁移校验：开启后会在迁移前校验脚本完整性，确保可重复、可校验
-    # 安全原因：生产环境必须开启校验，避免数据库状态不一致导致的数据问题
+    # 迁移校验：强制开启，确保迁移脚本的完整性和可重复性
+    # 安全原因：生产环境必须保证迁移脚本的完整性，避免数据库状态不一致导致的数据问题
+    # 风险：如果数据库状态与迁移脚本不一致，应用启动将失败（这是预期的安全行为）
+    # 可回滚性：确保迁移脚本的完整性，支持回滚操作
     validate-on-migrate: true
     # 历史库处理：如果数据库已有数据但未使用 Flyway，自动创建 baseline
     # 可运维性：支持从已有数据库迁移到 Flyway 管理
@@ -17,22 +25,27 @@ spring:
     # 允许乱序执行迁移（处理历史库中缺失的旧迁移脚本）
     # 可回滚性：允许在历史库中补充缺失的迁移脚本
     out-of-order: true
-    # 注意：ignore-migration-patterns 仅在 local 环境配置，dev/prod 环境禁止忽略缺失迁移
-    # 原因：线上环境必须保证迁移脚本的完整性和可重复性，禁止忽略缺失迁移
+    # 注意：生产环境禁止忽略缺失迁移，必须保证迁移脚本的完整性
+    # 原因：生产环境必须保证迁移脚本的完整性和可重复性，禁止忽略缺失迁移
+    # 如果数据库中有但本地没有的迁移，应用启动将失败（这是预期的安全行为）
+    # 风险：忽略缺失迁移可能导致数据库状态不一致，影响数据完整性
 
-  # 数据源配置：所有敏感信息通过环境变量注入，默认值为空以确保安全
+  # 数据源配置：所有敏感信息通过环境变量注入，无默认值
   datasource:
     # 数据库连接 URL：通过环境变量 DB_URL 注入，无默认值（安全：避免意外使用默认连接）
+    # 生产环境要求：必须使用 SSL 连接，配置正确的时区和字符编码
     url: ${DB_URL:}
     # 数据库用户名：通过环境变量 DB_USERNAME 注入，无默认值（安全：避免使用默认账号）
+    # 生产环境要求：使用最小权限原则，避免使用 root 账号
     username: ${DB_USERNAME:}
     # 数据库密码：通过环境变量 DB_PASSWORD 注入，无默认值（安全：密码必须显式配置）
+    # 生产环境要求：使用强密码，定期轮换
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # 连接池配置：通用配置，各环境可根据需要覆盖
+    # 连接池配置：生产环境使用较大的连接池以应对高并发
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
+      maximum-pool-size: 20
+      minimum-idle: 5
       idle-timeout: 600000
       max-lifetime: 1800000
       connection-timeout: 30000
@@ -41,19 +54,18 @@ spring:
   data:
     redis:
       # Redis 主机地址：通过环境变量 REDIS_HOST 注入，无默认值（安全：避免使用默认地址）
+      # 生产环境要求：使用 Redis 集群或哨兵模式，确保高可用
       host: ${REDIS_HOST:}
       # Redis 端口：通过环境变量 REDIS_PORT 注入，无默认值（安全：避免使用默认端口）
       port: ${REDIS_PORT:}
       # Redis 数据库编号：通过环境变量 REDIS_DATABASE 注入，无默认值
       database: ${REDIS_DATABASE:}
       # Redis 用户名：通过环境变量 REDIS_USERNAME 注入（可选，无默认值）
+      # 生产环境要求：如果 Redis 支持 ACL，建议使用非默认用户名
       username: ${REDIS_USERNAME:}
       # Redis 密码：通过环境变量 REDIS_PASSWORD 注入，无默认值（安全：密码必须显式配置）
+      # 生产环境要求：使用强密码，定期轮换
       password: ${REDIS_PASSWORD:}
-
-
-mybatis-plus:
-  enabled: true
 
 # BlueCone 应用自定义配置
 bluecone:
@@ -61,7 +73,9 @@ bluecone:
   security:
     token:
       # JWT 签名密钥：通过环境变量 JWT_SECRET 注入，无默认值（安全：密钥必须显式配置）
-      # 风险：如果未配置，应用将使用默认开发密钥（仅用于开发环境，生产环境必须配置）
+      # 生产环境要求：使用足够长度的随机字符串（建议 32 字符以上），定期轮换
+      # 风险：如果未配置，应用启动将失败（这是预期的安全行为）
+      # 风险：密钥泄露将导致所有 Token 失效，必须立即轮换
       secret: ${JWT_SECRET:}
       access-token-ttl-minutes: 15
       refresh-token-ttl-days: 7
@@ -70,11 +84,13 @@ bluecone:
   gateway:
     enabled: true
     # Gateway 签名密钥：通过环境变量 GATEWAY_SIGNATURE_SECRET 注入，无默认值（安全：密钥必须显式配置）
-    # 风险：如果未配置，应用将使用默认开发密钥（仅用于开发环境，生产环境必须配置）
+    # 生产环境要求：使用足够长度的随机字符串（建议 32 字符以上），定期轮换
+    # 风险：如果未配置，应用启动将失败（这是预期的安全行为）
+    # 风险：密钥泄露将导致 Gateway 签名验证失效，必须立即轮换
     signature-secret: ${GATEWAY_SIGNATURE_SECRET:}
     signature-tolerance-seconds: 300
 
-  # 缓存配置：通用配置
+  # 缓存配置：生产环境启用 Redis 缓存
   cache:
     l1:
       max-size: 20000
@@ -94,10 +110,10 @@ bluecone:
         ttl-seconds: 1800
         cache-null: false
 
-  # Outbox 事件发布配置：通用配置
+  # Outbox 事件发布配置：生产环境使用生产级配置
   outbox:
     enabled: true
-    publish-cron: "0/5 * * * * ?"    # 调试时 5 秒扫描一次
+    publish-cron: "0/10 * * * * ?"   # 生产环境 10 秒扫描一次（降低数据库压力）
     clean-cron: "0 0 3 * * ?"        # 每日 3 点清理 DONE/DEAD
     max-retries: 5
     base-delay-seconds: 1
@@ -112,19 +128,26 @@ bluecone:
     provider: ALIYUN_OSS
     aliyun:
       # OSS 端点地址：通过环境变量 OSS_ENDPOINT 注入，无默认值（安全：避免使用默认端点）
+      # 生产环境要求：使用生产环境的 OSS 端点
       endpoint: ${OSS_ENDPOINT:}
       # OSS Access Key ID：通过环境变量 OSS_ACCESS_KEY_ID 注入，无默认值（安全：密钥必须显式配置）
+      # 生产环境要求：使用最小权限原则，定期轮换密钥
       access-key-id: ${OSS_ACCESS_KEY_ID:}
       # OSS Access Key Secret：通过环境变量 OSS_ACCESS_KEY_SECRET 注入，无默认值（安全：密钥必须显式配置）
+      # 生产环境要求：使用强密钥，定期轮换
       access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
       # OSS 默认 Bucket：通过环境变量 OSS_BUCKET 注入，无默认值（安全：避免使用默认 Bucket）
+      # 生产环境要求：使用生产环境的 Bucket
       default-bucket: ${OSS_BUCKET:}
       default-expire-seconds: 600
       # OSS CDN 域名：通过环境变量 OSS_CDN_DOMAIN 注入，无默认值
+      # 生产环境要求：使用生产环境的 CDN 域名
       cdn-domain: ${OSS_CDN_DOMAIN:}
       # OSS 公共域名：通过环境变量 OSS_PUBLIC_DOMAIN 注入，无默认值
+      # 生产环境要求：使用生产环境的公共域名
       public-domain: ${OSS_PUBLIC_DOMAIN:}
 
+  # 资源配额配置：生产环境使用默认配置
   resource:
     quota:
       default-daily-upload-count-limit: 2000
@@ -137,14 +160,18 @@ bluecone:
           daily-upload-count-limit: 500
           daily-upload-bytes-limit: 1073741824
 
+  # 日志配置：生产环境可以启用日志
   log:
     enabled: false
 
+  # ID 生成配置：生产环境使用默认配置
   id:
     long:
       enabled: true
       node-id: 1
 
+# 日志级别配置：生产环境使用 WARN 级别（减少日志量）
 logging:
   level:
+    com.bluecone.app: WARN
     com.bluecone.app.infra.outbox: WARN

@@ -1,0 +1,26 @@
+bluecone:
+  api:
+    contract:
+      enabled: true
+      routes:
+        # 小程序用户侧（必须门店+用户；商品/库存可选）
+        - side: USER
+          includePatterns: ["/api/mini/**"]
+          excludePatterns: ["/api/mini/public/**"]
+          requiredContexts: ["STORE", "USER"]
+          optionalContexts: ["PRODUCT", "INVENTORY"]
+
+        # 商户侧（必须用户；门店可选）
+        - side: MERCHANT
+          includePatterns: ["/api/merchant/**"]
+          excludePatterns: []
+          requiredContexts: ["USER"]
+          optionalContexts: ["STORE"]
+
+        # 平台侧（不注入任何上下文，硬排除）
+        - side: PLATFORM
+          includePatterns: ["/api/admin/**", "/ops/**", "/actuator/**"]
+          excludePatterns: []
+          requiredContexts: []
+          optionalContexts: []
+

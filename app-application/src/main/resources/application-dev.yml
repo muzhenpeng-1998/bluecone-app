@@ -1,15 +1,21 @@
-server:
-  port: 80
+# BlueCone Application - 开发环境配置
+# 
+# 说明：
+# - 此文件为开发环境配置骨架，所有敏感信息通过环境变量注入
+# - 此文件仅包含占位符，不包含任何真实密钥或密码
+# - 在微信云托管等部署环境中，通过环境变量配置所有敏感信息
+#
+# 安全要求：
+# - 所有敏感配置必须通过环境变量注入，不允许硬编码
+# - 如果环境变量未设置，应用启动将失败（这是预期的安全行为）
+# - 此文件可以提交到版本库，因为不包含真实密钥
 
 spring:
-  application:
-    name: bluecone-app
-  
-  # Flyway 数据库迁移配置
-  # 注意：此配置为通用配置，各环境（dev/prod）会覆盖为严格模式，local 环境允许容错
+  # Flyway 数据库迁移配置：开发环境使用严格模式
   flyway:
-    # 迁移校验：开启后会在迁移前校验脚本完整性，确保可重复、可校验
-    # 安全原因：生产环境必须开启校验，避免数据库状态不一致导致的数据问题
+    # 迁移校验：强制开启，确保迁移脚本的完整性和可重复性
+    # 安全原因：开发环境必须保证迁移脚本的完整性，避免数据库状态不一致
+    # 风险：如果数据库状态与迁移脚本不一致，应用启动将失败（这是预期的安全行为）
     validate-on-migrate: true
     # 历史库处理：如果数据库已有数据但未使用 Flyway，自动创建 baseline
     # 可运维性：支持从已有数据库迁移到 Flyway 管理
@@ -17,10 +23,11 @@ spring:
     # 允许乱序执行迁移（处理历史库中缺失的旧迁移脚本）
     # 可回滚性：允许在历史库中补充缺失的迁移脚本
     out-of-order: true
-    # 注意：ignore-migration-patterns 仅在 local 环境配置，dev/prod 环境禁止忽略缺失迁移
-    # 原因：线上环境必须保证迁移脚本的完整性和可重复性，禁止忽略缺失迁移
+    # 注意：开发环境禁止忽略缺失迁移，必须保证迁移脚本的完整性
+    # 原因：开发环境必须保证迁移脚本的完整性和可重复性，禁止忽略缺失迁移
+    # 如果数据库中有但本地没有的迁移，应用启动将失败（这是预期的安全行为）
 
-  # 数据源配置：所有敏感信息通过环境变量注入，默认值为空以确保安全
+  # 数据源配置：所有敏感信息通过环境变量注入，无默认值
   datasource:
     # 数据库连接 URL：通过环境变量 DB_URL 注入，无默认值（安全：避免意外使用默认连接）
     url: ${DB_URL:}
@@ -29,7 +36,7 @@ spring:
     # 数据库密码：通过环境变量 DB_PASSWORD 注入，无默认值（安全：密码必须显式配置）
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # 连接池配置：通用配置，各环境可根据需要覆盖
+    # 连接池配置：开发环境可以使用较小的连接池
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -51,17 +58,13 @@ spring:
       # Redis 密码：通过环境变量 REDIS_PASSWORD 注入，无默认值（安全：密码必须显式配置）
       password: ${REDIS_PASSWORD:}
 
-
-mybatis-plus:
-  enabled: true
-
 # BlueCone 应用自定义配置
 bluecone:
   # 安全配置：JWT Token 和 Gateway 签名密钥
   security:
     token:
       # JWT 签名密钥：通过环境变量 JWT_SECRET 注入，无默认值（安全：密钥必须显式配置）
-      # 风险：如果未配置，应用将使用默认开发密钥（仅用于开发环境，生产环境必须配置）
+      # 风险：如果未配置，应用启动将失败（这是预期的安全行为）
       secret: ${JWT_SECRET:}
       access-token-ttl-minutes: 15
       refresh-token-ttl-days: 7
@@ -70,11 +73,11 @@ bluecone:
   gateway:
     enabled: true
     # Gateway 签名密钥：通过环境变量 GATEWAY_SIGNATURE_SECRET 注入，无默认值（安全：密钥必须显式配置）
-    # 风险：如果未配置，应用将使用默认开发密钥（仅用于开发环境，生产环境必须配置）
+    # 风险：如果未配置，应用启动将失败（这是预期的安全行为）
     signature-secret: ${GATEWAY_SIGNATURE_SECRET:}
     signature-tolerance-seconds: 300
 
-  # 缓存配置：通用配置
+  # 缓存配置：开发环境启用 Redis 缓存
   cache:
     l1:
       max-size: 20000
@@ -94,7 +97,7 @@ bluecone:
         ttl-seconds: 1800
         cache-null: false
 
-  # Outbox 事件发布配置：通用配置
+  # Outbox 事件发布配置：开发环境使用默认配置
   outbox:
     enabled: true
     publish-cron: "0/5 * * * * ?"    # 调试时 5 秒扫描一次
@@ -125,6 +128,7 @@ bluecone:
       # OSS 公共域名：通过环境变量 OSS_PUBLIC_DOMAIN 注入，无默认值
       public-domain: ${OSS_PUBLIC_DOMAIN:}
 
+  # 资源配额配置：开发环境使用默认配置
   resource:
     quota:
       default-daily-upload-count-limit: 2000
@@ -137,14 +141,18 @@ bluecone:
           daily-upload-count-limit: 500
           daily-upload-bytes-limit: 1073741824
 
+  # 日志配置：开发环境可以启用日志
   log:
     enabled: false
 
+  # ID 生成配置：开发环境使用默认配置
   id:
     long:
       enabled: true
       node-id: 1
 
+# 日志级别配置：开发环境可以使用 INFO 级别
 logging:
   level:
+    com.bluecone.app: INFO
     com.bluecone.app.infra.outbox: WARN

@@ -13,10 +13,12 @@ import com.bluecone.app.id.core.Ulid128;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
 import com.bluecone.app.store.application.command.CreateStoreCommand;
 import com.bluecone.app.store.dao.entity.BcStore;
+import com.bluecone.app.store.application.service.StoreCacheInvalidator;
 import com.bluecone.app.store.dao.service.IBcStoreCapabilityService;
 import com.bluecone.app.store.dao.service.IBcStoreOpeningHoursService;
 import com.bluecone.app.store.dao.service.IBcStoreService;
 import com.bluecone.app.store.dao.service.IBcStoreSpecialDayService;
+import com.bluecone.app.store.domain.repository.StoreRepository;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +34,8 @@ class StoreCommandServiceCreateTest {
         IBcStoreOpeningHoursService openingHoursService = mock(IBcStoreOpeningHoursService.class);
         IBcStoreSpecialDayService specialDayService = mock(IBcStoreSpecialDayService.class);
         StoreConfigChangeService storeConfigChangeService = mock(StoreConfigChangeService.class);
+        StoreRepository storeRepository = mock(StoreRepository.class);
+        StoreCacheInvalidator storeCacheInvalidator = mock(StoreCacheInvalidator.class);
         IdService idService = mock(IdService.class);
         PublicIdCodec publicIdCodec = mock(PublicIdCodec.class);
         PublicIdRegistrar publicIdRegistrar = mock(PublicIdRegistrar.class);
@@ -50,6 +54,8 @@ class StoreCommandServiceCreateTest {
                 openingHoursService,
                 specialDayService,
                 storeConfigChangeService,
+                storeRepository,
+                storeCacheInvalidator,
                 idService,
                 publicIdCodec,
                 publicIdRegistrar
