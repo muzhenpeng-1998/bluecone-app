@@ -7,7 +7,7 @@ import com.bluecone.app.core.idresolve.api.ResolveResult;
 import com.bluecone.app.core.idresolve.api.PublicIdInvalidException;
 import com.bluecone.app.core.idresolve.api.PublicIdNotFoundException;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.gateway.ApiContext;
 import com.bluecone.app.gateway.context.ApiContextHolder;
 import com.bluecone.app.id.api.ResourceType;
@@ -53,7 +53,7 @@ public class StoreContextResolver {
 
         if (!StringUtils.hasText(storePublicId)) {
             if (props.isRequireStoreId() && !isAllowMissingStoreIdPath(request.getRequestURI())) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "storeId 不能为空");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "storeId 不能为空");
             }
             return null;
         }
@@ -71,13 +71,13 @@ public class StoreContextResolver {
         Ulid128 internalId = resolve.internalId();
         Optional<StoreSnapshot> snapshotOpt = snapshotProvider.getOrLoad(tenantId, internalId, storePublicId);
         StoreSnapshot snapshot = snapshotOpt.orElseThrow(() ->
-                new BizException(StoreErrorCode.STORE_NOT_FOUND, "门店不存在或已删除"));
+                new BusinessException(StoreErrorCode.STORE_NOT_FOUND, "门店不存在或已删除"));
 
         if (snapshot.status() == 0) {
-            throw new BizException(StoreErrorCode.STORE_DISABLED, "门店已停用");
+            throw new BusinessException(StoreErrorCode.STORE_DISABLED, "门店已停用");
         }
         if (!snapshot.openForOrders()) {
-            throw new BizException(StoreErrorCode.STORE_CLOSED_FOR_ORDERS, "门店当前不可接单");
+            throw new BusinessException(StoreErrorCode.STORE_CLOSED_FOR_ORDERS, "门店当前不可接单");
         }
 
         StoreContext ctx = new StoreContext(tenantId, internalId, storePublicId, snapshot);
@@ -120,12 +120,12 @@ public class StoreContextResolver {
             tenantStr = request.getHeader("X-Tenant-Id");
         }
         if (!StringUtils.hasText(tenantStr)) {
-            throw new BizException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
         }
         try {
             return Long.parseLong(tenantStr);
         } catch (NumberFormatException ex) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
         }
     }
 

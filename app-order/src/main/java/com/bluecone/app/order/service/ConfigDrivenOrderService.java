@@ -4,7 +4,7 @@ import com.bluecone.app.core.config.Feature;
 import com.bluecone.app.core.config.FeatureGate;
 import com.bluecone.app.core.config.domain.OrderConfig;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderResponse;
 import com.bluecone.app.order.application.OrderConfirmAppService;
@@ -63,7 +63,7 @@ public class ConfigDrivenOrderService {
      */
     public ConfirmOrderResponse confirmOrder(ConfirmOrderCommand command) {
         if (command == null || command.getTenantId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "缺少租户标识");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "缺少租户标识");
         }
         ConfirmOrderRequest req = new ConfirmOrderRequest();
         req.setTenantId(command.getTenantId());

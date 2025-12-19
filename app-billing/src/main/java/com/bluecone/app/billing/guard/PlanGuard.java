@@ -5,7 +5,7 @@ import com.bluecone.app.billing.dao.entity.TenantSubscriptionDO;
 import com.bluecone.app.billing.dao.mapper.TenantSubscriptionMapper;
 import com.bluecone.app.billing.domain.enums.SubscriptionStatus;
 import com.bluecone.app.billing.domain.error.BillingErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,14 +50,14 @@ public class PlanGuard {
         // GRACE 状态下限制写操作
         if (status.isGrace()) {
             log.warn("[plan-guard] 宽限期内限制写操作，tenantId={}, operation={}", tenantId, operation);
-            throw new BizException(BillingErrorCode.GRACE_PERIOD_WRITE_RESTRICTED, 
+            throw new BusinessException(BillingErrorCode.GRACE_PERIOD_WRITE_RESTRICTED, 
                     "您的订阅已到期，当前处于宽限期。宽限期内限制写操作，请续费以恢复全部功能。");
         }
         
         // EXPIRED 状态下限制写操作
         if (status.isExpired()) {
             log.warn("[plan-guard] 订阅已过期，限制写操作，tenantId={}, operation={}", tenantId, operation);
-            throw new BizException(BillingErrorCode.SUBSCRIPTION_EXPIRED_WRITE_RESTRICTED, 
+            throw new BusinessException(BillingErrorCode.SUBSCRIPTION_EXPIRED_WRITE_RESTRICTED, 
                     "您的订阅已过期，限制写操作。请续费以恢复全部功能。");
         }
     }
@@ -71,7 +71,7 @@ public class PlanGuard {
         
         if (subscription == null) {
             // 没有订阅，使用免费版，不允许高级功能
-            throw new BizException(BillingErrorCode.PLAN_FEATURE_RESTRICTED, 
+            throw new BusinessException(BillingErrorCode.PLAN_FEATURE_RESTRICTED, 
                     String.format("免费版不支持 %s 功能，请升级套餐。", featureName));
         }
         
@@ -85,14 +85,14 @@ public class PlanGuard {
         // GRACE 状态下限制高级功能
         if (status.isGrace()) {
             log.warn("[plan-guard] 宽限期内限制高级功能，tenantId={}, feature={}", tenantId, featureName);
-            throw new BizException(BillingErrorCode.GRACE_PERIOD_FEATURE_RESTRICTED, 
+            throw new BusinessException(BillingErrorCode.GRACE_PERIOD_FEATURE_RESTRICTED, 
                     String.format("您的订阅已到期，当前处于宽限期。宽限期内限制 %s 功能，请续费以恢复。", featureName));
         }
         
         // EXPIRED 状态下限制高级功能
         if (status.isExpired()) {
             log.warn("[plan-guard] 订阅已过期，限制高级功能，tenantId={}, feature={}", tenantId, featureName);
-            throw new BizException(BillingErrorCode.SUBSCRIPTION_EXPIRED_FEATURE_RESTRICTED, 
+            throw new BusinessException(BillingErrorCode.SUBSCRIPTION_EXPIRED_FEATURE_RESTRICTED, 
                     String.format("您的订阅已过期，限制 %s 功能。请续费以恢复。", featureName));
         }
     }
@@ -116,7 +116,7 @@ public class PlanGuard {
         if (status != null && (status.isGrace() || status.isExpired())) {
             log.warn("[plan-guard] 订阅状态异常，限制创建资源，tenantId={}, status={}, resourceType={}", 
                     tenantId, status.getCode(), resourceType);
-            throw new BizException(BillingErrorCode.SUBSCRIPTION_STATUS_RESTRICTED, 
+            throw new BusinessException(BillingErrorCode.SUBSCRIPTION_STATUS_RESTRICTED, 
                     "您的订阅状态异常，限制创建新资源。请续费以恢复。");
         }
         
@@ -166,7 +166,7 @@ public class PlanGuard {
         };
         
         if (currentCount >= maxCount) {
-            throw new BizException(BillingErrorCode.FREE_PLAN_QUOTA_EXCEEDED, 
+            throw new BusinessException(BillingErrorCode.FREE_PLAN_QUOTA_EXCEEDED, 
                     String.format("免费版 %s 数量已达上限（%d），请升级套餐。", resourceType, maxCount));
         }
     }

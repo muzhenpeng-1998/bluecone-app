@@ -1,7 +1,7 @@
 package com.bluecone.app.inventory.domain.service;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.inventory.domain.model.InventoryLock;
 import com.bluecone.app.inventory.domain.model.InventoryStock;
 import com.bluecone.app.inventory.domain.model.InventoryTxn;
@@ -49,7 +49,7 @@ public class StockReleaseDomainService {
                     lock.getItemId(),
                     lock.getLocationId());
             if (stock == null) {
-                throw new BizException(CommonErrorCode.SYSTEM_ERROR, String.format(
+                throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, String.format(
                         "库存不存在，无法释放，tenantId=%s,storeId=%s,itemId=%s,lockId=%s",
                         lock.getTenantId(), lock.getStoreId(), lock.getItemId(), lock.getId()));
             }

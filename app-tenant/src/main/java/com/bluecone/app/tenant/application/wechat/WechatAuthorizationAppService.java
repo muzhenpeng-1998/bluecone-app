@@ -1,7 +1,7 @@
 package com.bluecone.app.tenant.application.wechat;
 
 import com.bluecone.app.core.error.BizErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.infra.tenant.dataobject.TenantOnboardingSessionDO;
 import com.bluecone.app.infra.wechat.openplatform.PreAuthCodeResult;
 import com.bluecone.app.infra.wechat.openplatform.WeChatOpenPlatformClient;
@@ -53,22 +53,22 @@ public class WechatAuthorizationAppService {
     @Transactional(readOnly = true)
     public String buildAuthorizeUrlForOnboarding(BuildAuthorizeUrlCommand command) {
         if (!StringUtils.hasText(command.sessionToken())) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "sessionToken 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "sessionToken 不能为空");
         }
         if (!StringUtils.hasText(command.redirectUri())) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "redirectUri 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "redirectUri 不能为空");
         }
 
         TenantOnboardingSessionDO session = tenantOnboardingAppService.findBySessionToken(command.sessionToken());
         if (session == null) {
-            throw new BizException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
+            throw new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
         }
         if (session.getTenantId() == null) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定租户，无法生成授权链接");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定租户，无法生成授权链接");
         }
 
         if (!StringUtils.hasText(componentAppId)) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "微信开放平台 componentAppId 未配置");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "微信开放平台 componentAppId 未配置");
         }
 
         String componentAccessToken = wechatComponentCredentialService.getValidComponentAccessToken();
@@ -79,7 +79,7 @@ public class WechatAuthorizationAppService {
                     session.getTenantId(), command.sessionToken(),
                     preAuth != null ? preAuth.getErrcode() : null,
                     preAuth != null ? preAuth.getErrmsg() : null);
-            throw new BizException(BizErrorCode.INVALID_PARAM, "获取微信预授权码失败");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "获取微信预授权码失败");
         }
 
         String redirectUriWithSession = appendSessionToken(command.redirectUri(), command.sessionToken());

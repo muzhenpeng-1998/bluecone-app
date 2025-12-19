@@ -1,6 +1,6 @@
 package com.bluecone.app.application.resource;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.resource.api.ResourceClient;
 import com.bluecone.app.resource.api.dto.ResourceHandle;
 import com.bluecone.app.resource.api.dto.ResourceUploadRequest;

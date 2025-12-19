@@ -2,7 +2,7 @@ package com.bluecone.app.order.application;
 
 import com.bluecone.app.Application;
 import com.bluecone.app.core.domain.IndustryType;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.domain.error.OrderErrorCode;
 import com.bluecone.app.store.api.StoreFacade;
 import com.bluecone.app.store.api.dto.StoreOrderAcceptResult;
@@ -74,7 +74,7 @@ class OrderPreCheckServiceTest {
             orderPreCheckService.preCheck(tenantId, storeId, null, now, null);
             // 如果校验通过，说明门店默认是可接单的，那么我们需要关闭接单开关后再次测试
             // 但由于需要 configVersion，这里我们验证逻辑正确性即可
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             // 如果抛出异常，验证错误码和原因
             assertEquals(OrderErrorCode.STORE_NOT_ACCEPTABLE.getCode(), e.getCode());
             assertNotNull(e.getMessage());

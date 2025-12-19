@@ -1,7 +1,7 @@
 package com.bluecone.app.payment.application.reconcile;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.domain.reconcile.ChannelBillClient;
 import com.bluecone.app.payment.domain.reconcile.ChannelBillRecord;
 import com.bluecone.app.payment.domain.reconcile.ChannelBillRecordRepository;
@@ -50,7 +50,7 @@ public class ChannelBillImportService {
         return billClients.stream()
                 .filter(c -> c.supports(channelCode))
                 .findFirst()
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "未找到渠道账单客户端: " + channelCode));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "未找到渠道账单客户端: " + channelCode));
     }
 
     private List<ChannelBillRecord> parseLines(String channelCode, LocalDate billDate, List<String> lines) {

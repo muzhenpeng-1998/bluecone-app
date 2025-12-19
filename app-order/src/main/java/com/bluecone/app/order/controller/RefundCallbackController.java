@@ -1,7 +1,7 @@
 package com.bluecone.app.order.controller;
 
 import com.bluecone.app.core.log.annotation.ApiLog;
-import com.bluecone.app.order.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.order.application.RefundAppService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
  *   <li>后续扩展：解析真实的微信/支付宝回调报文（XML/JSON）</li>
  *   <li>后续扩展：验证签名、幂等性检查</li>
  * </ul>
+ * 
+ * <p>注意：此接口已通过路径 /notify 被 ApiResponseAdvice 自动排除包装</p>
  */
 @RestController
 @RequestMapping("/api/pay/refund")

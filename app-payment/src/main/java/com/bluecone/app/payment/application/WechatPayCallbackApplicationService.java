@@ -2,7 +2,7 @@ package com.bluecone.app.payment.application;
 
 import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.api.WechatPayCallbackCommand;
 import com.bluecone.app.payment.domain.enums.PaymentStatus;
 import com.bluecone.app.payment.domain.model.PaymentOrder;
@@ -98,7 +98,7 @@ public class WechatPayCallbackApplicationService {
                 if (!expectedFenEquals(expectedFen, command.getTotalAmount())) {
                     log.error("[wechat-callback] 金额不一致，outTradeNo={}, transactionId={}, expectFen={}, notifyFen={}",
                             command.getOutTradeNo(), command.getTransactionId(), expectedFen, command.getTotalAmount());
-                    throw new BizException(CommonErrorCode.BAD_REQUEST, "支付金额不一致");
+                    throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付金额不一致");
                 }
             }
 
@@ -163,7 +163,7 @@ public class WechatPayCallbackApplicationService {
                     command.getTransactionId(),
                     command.getTradeState(),
                     event.getTraceId());
-        } catch (BizException ex) {
+        } catch (BusinessException ex) {
             resultTag = "FAIL";
             log.warn("[wechat-callback] biz error traceId={} paymentId={} outTradeNo={} transactionId={} msg={}",
                     MDC.get("traceId"), parsePaymentId(command.getOutTradeNo()), command.getOutTradeNo(), command.getTransactionId(), ex.getMessage());
@@ -180,7 +180,7 @@ public class WechatPayCallbackApplicationService {
 
     private void validateCommand(WechatPayCallbackCommand command) {
         if (isBlank(command.getOutTradeNo()) || isBlank(command.getTransactionId()) || isBlank(command.getTradeState())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "微信回调缺少必要字段");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "微信回调缺少必要字段");
         }
     }
 

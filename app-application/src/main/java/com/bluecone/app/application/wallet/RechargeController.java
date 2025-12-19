@@ -1,6 +1,6 @@
 package com.bluecone.app.application.wallet;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.wallet.api.dto.RechargeCreateCommand;
 import com.bluecone.app.wallet.api.dto.RechargeCreateResult;
 import com.bluecone.app.wallet.api.facade.WalletRechargeFacade;

@@ -9,7 +9,7 @@ import com.bluecone.app.store.application.command.UpdateStoreCapabilitiesCommand
 import com.bluecone.app.store.application.command.UpdateStoreOpeningHoursCommand;
 import com.bluecone.app.store.application.command.UpdateStoreSpecialDaysCommand;
 import com.bluecone.app.core.idresolve.api.PublicIdRegistrar;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.dao.entity.BcStore;
 import com.bluecone.app.store.dao.entity.BcStoreCapability;
 import com.bluecone.app.store.dao.entity.BcStoreOpeningHours;
@@ -229,7 +229,7 @@ public class StoreCommandService {
                     .count();
             // 若统计数量 > 0，则说明同租户下已有相同门店编码，属于配置冲突
             if (cnt > 0) {
-                throw new BizException(StoreErrorCode.STORE_CONFIG_CONFLICT, "门店编码已存在");
+                throw new BusinessException(StoreErrorCode.STORE_CONFIG_CONFLICT, "门店编码已存在");
             }
         }
 
@@ -375,7 +375,7 @@ public class StoreCommandService {
         // 执行更新，如果因版本不匹配或记录不存在导致更新失败，则抛出并发冲突异常
         boolean updated = bcStoreService.update(wrapper);
         if (!updated) {
-            throw new BizException(StoreErrorCode.STORE_CONFIG_CONFLICT, "更新门店基础信息失败，可能存在并发修改，请刷新后重试");
+            throw new BusinessException(StoreErrorCode.STORE_CONFIG_CONFLICT, "更新门店基础信息失败，可能存在并发修改，请刷新后重试");
         }
         // 更新成功后触发配置变更通知，便于缓存或下游系统刷新最新配置
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, expectedVersion + 1);
@@ -583,7 +583,7 @@ public class StoreCommandService {
         // 执行更新操作，若因版本不匹配或记录不存在导致更新失败，则视为并发冲突
         boolean updated = bcStoreService.update(wrapper);
         if (!updated) {
-            throw new BizException(StoreErrorCode.STORE_CONFIG_CONFLICT, "切换门店状态失败，可能存在并发修改，请刷新后重试");
+            throw new BusinessException(StoreErrorCode.STORE_CONFIG_CONFLICT, "切换门店状态失败，可能存在并发修改，请刷新后重试");
         }
         // 更新成功后触发配置变更通知
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, expectedVersion + 1);
@@ -632,7 +632,7 @@ public class StoreCommandService {
         // 执行更新操作，若因版本不匹配或记录不存在导致更新失败，则视为并发冲突
         boolean updated = bcStoreService.update(wrapper);
         if (!updated) {
-            throw new BizException(StoreErrorCode.STORE_CONFIG_CONFLICT, "切换接单开关失败，可能存在并发修改，请刷新后重试");
+            throw new BusinessException(StoreErrorCode.STORE_CONFIG_CONFLICT, "切换接单开关失败，可能存在并发修改，请刷新后重试");
         }
         // 更新成功后触发配置变更通知
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, expectedVersion + 1);
@@ -662,7 +662,7 @@ public class StoreCommandService {
         // 执行更新操作，若因版本不匹配或记录不存在导致更新失败，则视为并发冲突
         boolean updated = bcStoreService.update(wrapper);
         if (!updated) {
-            throw new BizException(StoreErrorCode.STORE_CONFIG_CONFLICT, "更新门店配置版本失败，可能存在并发修改，请刷新后重试");
+            throw new BusinessException(StoreErrorCode.STORE_CONFIG_CONFLICT, "更新门店配置版本失败，可能存在并发修改，请刷新后重试");
         }
         // 更新成功后触发配置变更通知
         storeConfigChangeService.onStoreConfigChanged(tenantId, storeId, expectedVersion + 1);

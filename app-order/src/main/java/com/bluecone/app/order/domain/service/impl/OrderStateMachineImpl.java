@@ -1,7 +1,7 @@
 package com.bluecone.app.order.domain.service.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.domain.enums.BizType;
 import com.bluecone.app.order.domain.enums.OrderEvent;
 import com.bluecone.app.order.domain.enums.OrderStatus;
@@ -179,7 +179,7 @@ public class OrderStateMachineImpl implements OrderStateMachine {
     @Override
     public OrderStatus transitOrThrow(BizType bizType, OrderStatus current, OrderEvent event) {
         if (!canTransit(bizType, current, event)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST,
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST,
                     String.format("非法的订单状态流转：current=%s, event=%s",
                             current != null ? current.name() : "null",
                             event != null ? event.name() : "null"));

@@ -1,6 +1,6 @@
 package com.bluecone.app.order.application.impl;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.OrderPreCheckService;
 import com.bluecone.app.order.domain.error.OrderErrorCode;
 import com.bluecone.app.store.api.StoreFacade;
@@ -36,7 +36,7 @@ public class OrderPreCheckServiceImpl implements OrderPreCheckService {
     @Override
     public void preCheck(Long tenantId, Long storeId, String channelType, LocalDateTime now, CartSummary cartSummary) {
         if (tenantId == null || storeId == null) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "租户ID和门店ID不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "租户ID和门店ID不能为空");
         }
 
         LocalDateTime checkTime = now != null ? now : LocalDateTime.now();
@@ -52,7 +52,7 @@ public class OrderPreCheckServiceImpl implements OrderPreCheckService {
             log.warn("门店前置校验失败：tenantId={}, storeId={}, channelType={}, reasonCode={}, detail={}",
                     tenantId, storeId, channelType, result.getReasonCode(), detail);
             // 使用统一的订单错误码，但携带门店返回的 reasonCode 作为 detail 的一部分，便于前端和埋点使用
-            throw new BizException(OrderErrorCode.STORE_NOT_ACCEPTABLE,
+            throw new BusinessException(OrderErrorCode.STORE_NOT_ACCEPTABLE,
                     String.format("门店当前不可接单：%s（原因码：%s）", result.getReasonMessage(), result.getReasonCode()));
         }
 

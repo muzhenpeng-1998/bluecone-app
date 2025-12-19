@@ -1,5 +1,6 @@
 package com.bluecone.app.application.wechat;
 
+import com.bluecone.app.api.advice.NoApiResponseWrap;
 import com.bluecone.app.infra.wechat.openplatform.AuthorizerInfoResult;
 import com.bluecone.app.infra.wechat.openplatform.QueryAuthResult;
 import com.bluecone.app.infra.wechat.openplatform.WeChatOpenPlatformClient;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/wechat/open")
+@NoApiResponseWrap
 public class WechatOpenAuthCallbackController {
 
     private static final Logger log = LoggerFactory.getLogger(WechatOpenAuthCallbackController.class);

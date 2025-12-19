@@ -1,17 +1,17 @@
 package com.bluecone.app.infra.wechat;
 
 /**
- * 微信开放平台网关接口：
- * - 试用小程序快速注册 fastregisterbetaweapp
- * - 主体小程序快速注册 fastregisterweapp
- * - 查询注册结果 fastregisterweapp.search 等接口
- *
- * 这里只定义能力，具体 HTTP 调用后续再接入真实实现。
+ * 微信开放平台快速注册小程序接口。
+ * 
+ * 提供试用小程序和正式小程序快速注册能力：
+ * - fastregisterbetaweapp: 试用小程序快速注册
+ * - fastregisterweapp: 主体小程序快速注册
+ * - 查询注册结果等接口
  */
-public interface WeChatOpenPlatformClient {
+public interface WeChatFastRegisterClient {
 
     /**
-     * 调用 fastregisterbetaweapp，为个人微信号创建“试用小程序”。
+     * 调用 fastregisterbetaweapp，为个人微信号创建"试用小程序"。
      *
      * 典型入参：name, openid。
      */
@@ -37,4 +37,3 @@ public interface WeChatOpenPlatformClient {
      */
     WeChatRegisterStatusResult queryRegisterStatus(WeChatRegisterStatusQuery query);
 }
-

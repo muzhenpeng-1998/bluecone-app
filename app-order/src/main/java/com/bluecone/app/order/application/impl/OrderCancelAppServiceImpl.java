@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.OrderCancelAppService;
 import com.bluecone.app.order.application.RefundAppService;
 import com.bluecone.app.order.application.command.ApplyRefundCommand;
@@ -65,7 +65,7 @@ public class OrderCancelAppServiceImpl implements OrderCancelAppService {
         
         // 1. 参数校验
         if (command.getTenantId() == null || command.getOrderId() == null || command.getRequestId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId/requestId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId/requestId 不能为空");
         }
         
         // 2. 幂等性检查：根据 action_log 判断是否已执行
@@ -80,14 +80,14 @@ public class OrderCancelAppServiceImpl implements OrderCancelAppService {
         // 3. 查询订单
         Order order = orderRepository.findById(command.getTenantId(), command.getOrderId());
         if (order == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单不存在");
         }
         
         // 4. 权限校验（用户取消时）
         if (command.getUserId() != null && !command.getUserId().equals(order.getUserId())) {
             log.warn("用户无权取消该订单：tenantId={}, userId={}, orderUserId={}, orderId={}",
                     command.getTenantId(), command.getUserId(), order.getUserId(), command.getOrderId());
-            throw new BizException(CommonErrorCode.FORBIDDEN, "无权操作该订单");
+            throw new BusinessException(CommonErrorCode.FORBIDDEN, "无权操作该订单");
         }
         
         // 5. 幂等性：如果订单已取消，直接返回
@@ -105,7 +105,7 @@ public class OrderCancelAppServiceImpl implements OrderCancelAppService {
         if (command.getExpectedVersion() != null && !command.getExpectedVersion().equals(order.getVersion())) {
             log.warn("订单版本号不匹配（乐观锁冲突）：tenantId={}, orderId={}, expectedVersion={}, actualVersion={}",
                     command.getTenantId(), command.getOrderId(), command.getExpectedVersion(), order.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "订单状态已变更，请刷新后重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "订单状态已变更，请刷新后重试");
         }
         
         // 7. 状态约束检查
@@ -113,7 +113,7 @@ public class OrderCancelAppServiceImpl implements OrderCancelAppService {
             String msg = String.format("订单状态不允许取消：当前状态=%s", order.getStatus().getCode());
             log.warn("订单状态不允许取消：tenantId={}, orderId={}, status={}",
                     command.getTenantId(), command.getOrderId(), order.getStatus());
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 8. 取消订单（调用领域模型方法）

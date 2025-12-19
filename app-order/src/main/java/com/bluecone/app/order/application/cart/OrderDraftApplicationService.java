@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.cart;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.cart.OrderDraftFacade;
 import com.bluecone.app.order.api.cart.dto.AddDraftItemCommandDTO;
 import com.bluecone.app.order.api.cart.dto.ChangeDraftItemQuantityCommandDTO;
@@ -154,7 +154,7 @@ public class OrderDraftApplicationService implements OrderDraftFacade {
                 long clientAmount = command.getClientPayableAmount();
                 long serverAmount = toCents(draft.getPayableAmount());
                 if (clientAmount != serverAmount) {
-                    throw new BizException(CommonErrorCode.BAD_REQUEST, "金额有变化，请刷新后重试");
+                    throw new BusinessException(CommonErrorCode.BAD_REQUEST, "金额有变化，请刷新后重试");
                 }
             }
             draft.setStatus(OrderStatus.LOCKED_FOR_CHECKOUT);
@@ -172,7 +172,7 @@ public class OrderDraftApplicationService implements OrderDraftFacade {
 
     private Order loadOrThrow(Context ctx) {
         return orderDraftRepository.findDraft(ctx.tenantId, ctx.storeId, ctx.userId, ctx.channel, ctx.scene)
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "购物车订单不存在"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "购物车订单不存在"));
     }
 
     private Order newDraft(Context ctx) {
@@ -309,7 +309,7 @@ public class OrderDraftApplicationService implements OrderDraftFacade {
         String owner = ownerId();
         boolean locked = distributedLock.tryLock(bizKey, owner, waitMs, leaseMs);
         if (!locked) {
-            throw new BizException(CommonErrorCode.CONFLICT, "购物车正被操作，请稍后重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "购物车正被操作，请稍后重试");
         }
         try {
             return supplier.get();
@@ -328,7 +328,7 @@ public class OrderDraftApplicationService implements OrderDraftFacade {
         Long storeId = currentStoreId();
         Long userId = currentUserId();
         if (tenantId == null || storeId == null || userId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户/门店/用户信息缺失");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户/门店/用户信息缺失");
         }
         String channel = currentChannel();
         String scene = currentScene();

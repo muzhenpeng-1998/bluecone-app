@@ -1,6 +1,6 @@
 package com.bluecone.app.order.application.impl;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.dto.*;
 import com.bluecone.app.order.application.OrderConfirmApplicationService;
 import com.bluecone.app.order.application.OrderPreCheckService;
@@ -125,7 +125,7 @@ public class OrderConfirmApplicationServiceImpl implements OrderConfirmApplicati
             return pricingFacade.quote(pricingRequest);
         } catch (Exception e) {
             log.error("计价失败", e);
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "计价失败: " + e.getMessage());
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "计价失败: " + e.getMessage());
         }
     }
     
@@ -154,31 +154,31 @@ public class OrderConfirmApplicationServiceImpl implements OrderConfirmApplicati
      */
     private void validateRequest(OrderConfirmRequest request) {
         if (request == null) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "请求参数不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "请求参数不能为空");
         }
         if (request.getTenantId() == null || request.getTenantId() <= 0) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "租户ID不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "租户ID不能为空");
         }
         if (request.getStoreId() == null || request.getStoreId() <= 0) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "门店ID不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "门店ID不能为空");
         }
         if (request.getUserId() == null || request.getUserId() <= 0) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "用户ID不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "用户ID不能为空");
         }
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "订单明细不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "订单明细不能为空");
         }
         if (request.getDeliveryType() == null || request.getDeliveryType().isBlank()) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "配送类型不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "配送类型不能为空");
         }
 
         // 校验明细项
         for (OrderConfirmItemRequest item : request.getItems()) {
             if (item.getSkuId() == null || item.getSkuId() <= 0) {
-                throw new BizException(OrderErrorCode.ORDER_INVALID, "商品SKU ID不能为空");
+                throw new BusinessException(OrderErrorCode.ORDER_INVALID, "商品SKU ID不能为空");
             }
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new BizException(OrderErrorCode.ORDER_INVALID, "商品数量必须大于0");
+                throw new BusinessException(OrderErrorCode.ORDER_INVALID, "商品数量必须大于0");
             }
         }
     }

@@ -2,7 +2,7 @@ package com.bluecone.app.store.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.dto.StoreBaseView;
 import com.bluecone.app.store.application.query.StoreDetailQuery;
 import com.bluecone.app.store.application.query.StoreListQuery;
@@ -106,16 +106,16 @@ public class StoreQueryService {
         } else if (query.getStoreCode() != null) {
             wrapper.eq(BcStore::getStoreCode, query.getStoreCode());
         } else {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "需要提供 storePublicId、storeId 或 storeCode");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "需要提供 storePublicId、storeId 或 storeCode");
         }
         BcStore entity = bcStoreService.getOne(wrapper, false);
         if (entity == null) {
-            throw new BizException(StoreErrorCode.STORE_NOT_FOUND);
+            throw new BusinessException(StoreErrorCode.STORE_NOT_FOUND);
         }
         StoreBaseView view = storeViewAssembler.toStoreBaseView(entity);
         // 确保不返回 null：如果装配器返回 null，抛出异常
         if (view == null) {
-            throw new BizException(StoreErrorCode.STORE_NOT_FOUND, "门店数据装配失败");
+            throw new BusinessException(StoreErrorCode.STORE_NOT_FOUND, "门店数据装配失败");
         }
         // 补充 Logo URL（如果存在）
         String logoUrl = storeResourceService.resolveStoreLogoUrl(entity.getId());
@@ -156,7 +156,7 @@ public class StoreQueryService {
                 .select(BcStore::getConfigVersion)
                 .one();
         if (entity == null) {
-            throw new BizException(StoreErrorCode.STORE_NOT_FOUND);
+            throw new BusinessException(StoreErrorCode.STORE_NOT_FOUND);
         }
         return storeConfigService.loadConfig(tenantId, storeId, entity.getConfigVersion());
     }

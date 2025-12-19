@@ -2,7 +2,7 @@ package com.bluecone.app.inventory.application.service;
 
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.event.DomainEventPublisher;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.infra.cache.core.CacheKey;
 import com.bluecone.app.infra.cache.facade.CacheClient;
 import com.bluecone.app.infra.cache.profile.CacheProfile;
@@ -73,7 +73,7 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
         InventoryStock stock = inventoryStockRepository.findByTenantStoreItem(
                 tenantId, storeId, itemId, locationId);
         if (stock == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存不存在，tenantId=" + tenantId
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存不存在，tenantId=" + tenantId
                     + ", storeId=" + storeId + ", itemId=" + itemId + ", locationId=" + locationId);
         }
 
@@ -196,7 +196,7 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
         InventoryStock stock = inventoryStockRepository.findByTenantStoreItem(
                 tenantId, storeId, itemId, locationId);
         if (stock == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法调整，tenantId=" + tenantId
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法调整，tenantId=" + tenantId
                     + ", storeId=" + storeId + ", itemId=" + itemId + ", locationId=" + locationId);
         }
 
@@ -220,7 +220,7 @@ public class InventoryCommandApplicationService implements InventoryCommandApi {
                     command.getBizRefType(),
                     command.getBizRefId(),
                     command.getRequestId());
-            default -> throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的调整类型");
+            default -> throw new BusinessException(CommonErrorCode.BAD_REQUEST, "不支持的调整类型");
         }
 
         evictStockCache(tenantId, storeId, itemId, locationId);

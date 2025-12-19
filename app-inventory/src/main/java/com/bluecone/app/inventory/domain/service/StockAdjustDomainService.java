@@ -1,7 +1,7 @@
 package com.bluecone.app.inventory.domain.service;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.inventory.domain.model.InventoryStock;
 import com.bluecone.app.inventory.domain.model.InventoryTxn;
 import com.bluecone.app.inventory.domain.repository.InventoryStockRepository;
@@ -28,10 +28,10 @@ public class StockAdjustDomainService {
                         Long bizRefId,
                         String requestId) {
         if (stock == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法入库");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法入库");
         }
         if (qty <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "入库数量必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "入库数量必须大于0");
         }
         long beforeTotal = nullSafe(stock.getTotalQty());
         long beforeLocked = nullSafe(stock.getLockedQty());
@@ -71,16 +71,16 @@ public class StockAdjustDomainService {
                          Long bizRefId,
                          String requestId) {
         if (stock == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法出库");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法出库");
         }
         if (qty <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "出库数量必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "出库数量必须大于0");
         }
         long beforeTotal = nullSafe(stock.getTotalQty());
         long beforeLocked = nullSafe(stock.getLockedQty());
         long beforeAvailable = nullSafe(stock.getAvailableQty());
         if (beforeAvailable < qty || beforeTotal < qty) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存不足，无法出库");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存不足，无法出库");
         }
 
         stock.setTotalQty(beforeTotal - qty);
@@ -121,7 +121,7 @@ public class StockAdjustDomainService {
                          Long bizRefId,
                          String requestId) {
         if (stock == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法盘点调整");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法盘点调整");
         }
         long currentTotal = nullSafe(stock.getTotalQty());
         long diff = targetTotalQty - currentTotal;
@@ -129,7 +129,7 @@ public class StockAdjustDomainService {
             return;
         }
         if (targetTotalQty < nullSafe(stock.getLockedQty())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "目标库存低于已锁定库存，无法调整");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "目标库存低于已锁定库存，无法调整");
         }
 
         long beforeTotal = currentTotal;
@@ -141,7 +141,7 @@ public class StockAdjustDomainService {
             long delta = Math.abs(diff);
             long available = nullSafe(stock.getAvailableQty());
             if (available < delta) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "可用库存不足，无法调整");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "可用库存不足，无法调整");
             }
             stock.setTotalQty(currentTotal - delta);
             stock.setAvailableQty(available - delta);

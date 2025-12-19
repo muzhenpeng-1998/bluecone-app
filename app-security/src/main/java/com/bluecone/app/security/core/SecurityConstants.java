@@ -18,6 +18,7 @@ public final class SecurityConstants {
             "/api/admin/**",
             "/api/auth/**",
             "/api/gw/auth/**",
+            "/api/user/auth/wechat-miniapp/**",
             "/actuator/health",
             "/error"
     };

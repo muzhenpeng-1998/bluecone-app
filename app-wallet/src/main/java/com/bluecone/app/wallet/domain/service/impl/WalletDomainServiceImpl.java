@@ -1,7 +1,7 @@
 package com.bluecone.app.wallet.domain.service.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.id.api.ResourceType;
@@ -65,14 +65,14 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         // 获取或创建账户
         WalletAccount account = accountRepository.getOrCreate(tenantId, userId);
         if (!account.isActive()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "账户状态异常，无法冻结余额");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "账户状态异常，无法冻结余额");
         }
         
         // 检查可用余额是否足够
         if (!account.hasEnoughBalance(amount)) {
             log.warn("可用余额不足：tenantId={}, userId={}, available={}, required={}", 
                     tenantId, userId, account.getAvailableBalance(), amount);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "可用余额不足");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "可用余额不足");
         }
         
         // 冻结余额（可用 -> 冻结）
@@ -83,7 +83,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         if (updated == 0) {
             log.warn("账户乐观锁冲突，冻结失败：tenantId={}, userId={}, version={}", 
                     tenantId, userId, account.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
         }
         
         // 创建冻结记录
@@ -133,7 +133,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
                               String idempotencyKey, Long operatorId) {
         // 参数校验
         if (tenantId == null || userId == null || bizOrderId == null || idempotencyKey == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "提交参数不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "提交参数不能为空");
         }
         
         // 幂等性检查：如果已存在账本流水，直接返回
@@ -147,7 +147,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         // 查询冻结记录
         WalletFreeze freeze = freezeRepository.findByBizOrderId(tenantId, BizType.ORDER_CHECKOUT.getCode(), bizOrderId);
         if (freeze == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "冻结记录不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "冻结记录不存在");
         }
         
         // 幂等性检查：如果冻结记录已提交，查询对应的账本流水返回
@@ -163,14 +163,14 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         
         // 状态检查：只能提交 FROZEN 状态的冻结记录
         if (!freeze.canCommit()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, 
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, 
                     "冻结状态不允许提交：" + freeze.getStatus());
         }
         
         // 获取账户
         WalletAccount account = accountRepository.findById(tenantId, freeze.getAccountId());
         if (account == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "账户不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "账户不存在");
         }
         
         // 提交冻结（冻结 -> 扣除）
@@ -184,7 +184,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         if (updated == 0) {
             log.warn("账户乐观锁冲突，提交失败：tenantId={}, userId={}, version={}", 
                     tenantId, userId, account.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
         }
         
         // 更新冻结记录状态
@@ -195,7 +195,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         if (freezeUpdated == 0) {
             log.warn("冻结记录乐观锁冲突，提交失败：tenantId={}, freezeNo={}, version={}", 
                     tenantId, freeze.getFreezeNo(), freeze.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "冻结记录状态冲突，请重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "冻结记录状态冲突，请重试");
         }
         
         // 写入账本流水（ORDER_PAY 出账）
@@ -242,7 +242,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
                        String idempotencyKey, Long operatorId) {
         // 参数校验
         if (tenantId == null || userId == null || bizOrderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "释放参数不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "释放参数不能为空");
         }
         
         // 查询冻结记录
@@ -269,7 +269,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         // 获取账户
         WalletAccount account = accountRepository.findById(tenantId, freeze.getAccountId());
         if (account == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "账户不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "账户不存在");
         }
         
         // 释放冻结（冻结 -> 可用）
@@ -281,7 +281,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         if (updated == 0) {
             log.warn("账户乐观锁冲突，释放失败：tenantId={}, userId={}, version={}", 
                     tenantId, userId, account.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
         }
         
         // 更新冻结记录状态
@@ -292,7 +292,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         if (freezeUpdated == 0) {
             log.warn("冻结记录乐观锁冲突，释放失败：tenantId={}, freezeNo={}, version={}", 
                     tenantId, freeze.getFreezeNo(), freeze.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "冻结记录状态冲突，请重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "冻结记录状态冲突，请重试");
         }
         
         log.info("释放冻结成功：tenantId={}, userId={}, amount={}, freezeNo={}, bizOrderId={}", 
@@ -312,10 +312,10 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         // 参数校验
         if (tenantId == null || userId == null || amount == null || 
                 bizType == null || bizOrderId == null || idempotencyKey == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "回退参数不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "回退参数不能为空");
         }
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "回退金额必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "回退金额必须大于0");
         }
         
         // 幂等性检查：如果已存在账本流水，直接返回
@@ -339,7 +339,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         if (updated == 0) {
             log.warn("账户乐观锁冲突，回退失败：tenantId={}, userId={}, version={}", 
                     tenantId, userId, account.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
         }
         
         // 写入账本流水（REFUND 入账）
@@ -388,10 +388,10 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         // 参数校验
         if (tenantId == null || userId == null || amount == null || 
                 bizType == null || bizOrderId == null || idempotencyKey == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送参数不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "赠送参数不能为空");
         }
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送金额必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "赠送金额必须大于0");
         }
         
         // 幂等性检查：如果已存在账本流水，直接返回
@@ -415,7 +415,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         if (updated == 0) {
             log.warn("账户乐观锁冲突，赠送失败：tenantId={}, userId={}, version={}", 
                     tenantId, userId, account.getVersion());
-            throw new BizException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
         }
         
         // 写入账本流水（CAMPAIGN_BONUS/REWARD/COMPENSATION 入账）
@@ -474,10 +474,10 @@ public class WalletDomainServiceImpl implements WalletDomainService {
                                      String bizType, Long bizOrderId, String idempotencyKey) {
         if (tenantId == null || userId == null || amount == null || 
                 bizType == null || bizOrderId == null || idempotencyKey == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "冻结参数不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "冻结参数不能为空");
         }
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "冻结金额必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "冻结金额必须大于0");
         }
     }
     

@@ -2,7 +2,7 @@ package com.bluecone.app.application.middleware;
 
 import com.bluecone.app.config.InventoryContextProperties;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.gateway.ApiContext;
 import com.bluecone.app.gateway.ApiContextHolder;
 import com.bluecone.app.id.core.Ulid128;

@@ -1,7 +1,7 @@
 package com.bluecone.app.order.domain.model;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.command.ConfirmOrderCommand;
 import com.bluecone.app.order.domain.command.SubmitOrderFromDraftCommand;
 import com.bluecone.app.order.domain.enums.BizType;
@@ -222,7 +222,7 @@ public class Order implements Serializable {
         BigDecimal allowedTolerance = tolerance == null ? BigDecimal.ZERO : tolerance.abs();
         BigDecimal diff = serverPayable.subtract(clientPayableAmount).abs();
         if (diff.compareTo(allowedTolerance) > 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单金额校验失败，请刷新后重试");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单金额校验失败，请刷新后重试");
         }
     }
 
@@ -273,7 +273,7 @@ public class Order implements Serializable {
             String msg = String.format("订单状态不允许支付：当前状态=%s，只允许 WAIT_PAY 状态支付", 
                     this.status != null ? this.status.getCode() : "NULL");
             log.warn("订单状态不允许支付：orderId={}, currentStatus={}", this.id, this.status);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：WAIT_PAY -> PAID
@@ -333,7 +333,7 @@ public class Order implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("订单状态不允许接单：当前状态=%s，只允许 WAIT_ACCEPT 状态接单", currentStatus);
             log.warn("订单状态不允许接单：orderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：WAIT_ACCEPT -> ACCEPTED
@@ -390,7 +390,7 @@ public class Order implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("订单状态不允许拒单：当前状态=%s，只允许 WAIT_ACCEPT 状态拒单", currentStatus);
             log.warn("订单状态不允许拒单：orderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：WAIT_ACCEPT -> CANCELED
@@ -445,7 +445,7 @@ public class Order implements Serializable {
             String msg = String.format("订单状态不允许取消：当前状态=%s", 
                     this.status.getCode());
             log.warn("订单状态不允许取消：orderId={}, currentStatus={}", this.id, this.status);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态（使用 Canonical 状态）
@@ -536,7 +536,7 @@ public class Order implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("订单状态不允许开始制作：当前状态=%s，只允许 ACCEPTED 状态开始制作", currentStatus);
             log.warn("订单状态不允许开始制作：orderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：ACCEPTED -> IN_PROGRESS
@@ -584,7 +584,7 @@ public class Order implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("订单状态不允许出餐完成：当前状态=%s，只允许 IN_PROGRESS 状态出餐完成", currentStatus);
             log.warn("订单状态不允许出餐完成：orderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：IN_PROGRESS -> READY
@@ -632,7 +632,7 @@ public class Order implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("订单状态不允许完成：当前状态=%s，只允许 READY 状态完成", currentStatus);
             log.warn("订单状态不允许完成：orderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：READY -> COMPLETED
@@ -692,7 +692,7 @@ public class Order implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("订单状态不允许取消：当前状态=%s，只允许 WAIT_PAY/WAIT_ACCEPT/ACCEPTED 状态取消", currentStatus);
             log.warn("订单状态不允许取消：orderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：WAIT_PAY/WAIT_ACCEPT/ACCEPTED -> CANCELED
@@ -768,7 +768,7 @@ public class Order implements Serializable {
             String msg = String.format("订单状态不允许退款：当前状态=%s，只允许已支付且未退款的订单退款", currentStatus);
             log.warn("订单状态不允许退款：orderId={}, currentStatus={}, payStatus={}", 
                     this.id, currentStatus, this.payStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 检查支付状态：必须已支付
@@ -776,7 +776,7 @@ public class Order implements Serializable {
             String msg = String.format("订单支付状态不允许退款：当前支付状态=%s，只允许已支付订单退款", 
                     this.payStatus != null ? this.payStatus.name() : "NULL");
             log.warn("订单支付状态不允许退款：orderId={}, payStatus={}", this.id, this.payStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：WAIT_ACCEPT/ACCEPTED/CANCELED -> REFUNDED
@@ -814,7 +814,7 @@ public class Order implements Serializable {
      */
     public void assertEditable() {
         if (!isDraft()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单当前状态不可编辑购物车");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单当前状态不可编辑购物车");
         }
     }
 
@@ -847,12 +847,12 @@ public class Order implements Serializable {
     public void changeItemQuantity(Long skuId, Map<String, Object> attrs, int newQuantity) {
         assertEditable();
         if (newQuantity <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "明细数量必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "明细数量必须大于0");
         }
         List<OrderItem> working = ensureMutableItems();
         OrderItem target = findLineItem(working, skuId, attrs);
         if (target == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "待修改的购物车明细不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "待修改的购物车明细不存在");
         }
         target.setQuantity(newQuantity);
         target.recalculateAmounts();
@@ -868,7 +868,7 @@ public class Order implements Serializable {
         List<OrderItem> working = ensureMutableItems();
         OrderItem target = findLineItem(working, skuId, attrs);
         if (target == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "待删除的购物车明细不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "待删除的购物车明细不存在");
         }
         working.remove(target);
         this.items = working;
@@ -890,19 +890,19 @@ public class Order implements Serializable {
      */
     public void confirmFromDraft(SubmitOrderFromDraftCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "确认订单命令不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "确认订单命令不能为空");
         }
         if (!isDraft() && !OrderStatus.LOCKED_FOR_CHECKOUT.equals(this.status)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单当前状态不可提交");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单当前状态不可提交");
         }
         if (items == null || items.isEmpty()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单无商品，无法提交");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单无商品，无法提交");
         }
         recalculateAmounts();
         BigDecimal clientAmount = Objects.requireNonNull(command.getClientPayableAmount(), "clientPayableAmount");
         BigDecimal diff = payableAmount.subtract(clientAmount).abs();
         if (diff.compareTo(CONFIRM_TOLERANCE) > 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单金额有变化，请刷新后重试");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单金额有变化，请刷新后重试");
         }
         this.payStatus = PayStatus.UNPAID;
         // 使用 Canonical 状态 WAIT_PAY 替代 PENDING_PAYMENT
@@ -972,13 +972,13 @@ public class Order implements Serializable {
      */
     public static Order createFromConfirmCommand(ConfirmOrderCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "确认订单命令不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "确认订单命令不能为空");
         }
         if (command.getTenantId() == null || command.getStoreId() == null || command.getUserId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户/门店/用户信息不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户/门店/用户信息不能为空");
         }
         if (command.getItems() == null || command.getItems().isEmpty()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单明细不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单明细不能为空");
         }
         LocalDateTime now = LocalDateTime.now();
         List<OrderItem> items = command.getItems().stream()

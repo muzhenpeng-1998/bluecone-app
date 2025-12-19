@@ -1,7 +1,7 @@
 package com.bluecone.app.payment.domain.model;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.domain.enums.PaymentChannel;
 import com.bluecone.app.payment.domain.enums.PaymentMethod;
 import com.bluecone.app.payment.domain.enums.PaymentScene;
@@ -116,11 +116,11 @@ public class PaymentOrder implements Serializable {
         BigDecimal safeTotal = totalAmount == null ? BigDecimal.ZERO : totalAmount;
         BigDecimal safeDiscount = discountAmount == null ? BigDecimal.ZERO : discountAmount;
         if (safeTotal.compareTo(BigDecimal.ZERO) < 0 || safeDiscount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付金额不合法");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付金额不合法");
         }
         BigDecimal payable = safeTotal.subtract(safeDiscount);
         if (payable.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付金额不合法");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付金额不合法");
         }
         this.totalAmount = safeTotal;
         this.discountAmount = safeDiscount;
@@ -140,7 +140,7 @@ public class PaymentOrder implements Serializable {
      */
     public void markPending() {
         if (this.status != PaymentStatus.INIT) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "当前状态不允许进入待支付");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "当前状态不允许进入待支付");
         }
         this.status = PaymentStatus.PENDING;
     }
@@ -160,14 +160,14 @@ public class PaymentOrder implements Serializable {
             BigDecimal currentPaid = this.paidAmount == null ? BigDecimal.ZERO : this.paidAmount;
             String currentTradeNo = this.channelTradeNo;
             if (currentPaid.compareTo(safePaid) != 0 || (currentTradeNo != null && !currentTradeNo.equals(channelTradeNo))) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "支付回调与当前支付单不一致");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付回调与当前支付单不一致");
             }
             return;
         }
 
         if (this.status == PaymentStatus.PENDING || this.status == PaymentStatus.INIT) {
             if (safePaid.compareTo(BigDecimal.ZERO) < 0 || safePaid.compareTo(safePayable) > 0) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "支付金额不合法");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付金额不合法");
             }
             this.paidAmount = safePaid;
             this.channelTradeNo = channelTradeNo;
@@ -177,10 +177,10 @@ public class PaymentOrder implements Serializable {
         }
 
         if (this.status == PaymentStatus.CLOSED || this.status == PaymentStatus.FAILED || this.status == PaymentStatus.REFUNDED) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付单已终态，拒绝变更为成功");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付单已终态，拒绝变更为成功");
         }
 
-        throw new BizException(CommonErrorCode.BAD_REQUEST, "当前状态不支持支付成功回调");
+        throw new BusinessException(CommonErrorCode.BAD_REQUEST, "当前状态不支持支付成功回调");
     }
 
     /**
@@ -191,7 +191,7 @@ public class PaymentOrder implements Serializable {
             this.status = PaymentStatus.FAILED;
             return;
         }
-        throw new BizException(CommonErrorCode.BAD_REQUEST, "当前状态不允许标记为失败");
+        throw new BusinessException(CommonErrorCode.BAD_REQUEST, "当前状态不允许标记为失败");
     }
 
     /**
@@ -199,7 +199,7 @@ public class PaymentOrder implements Serializable {
      */
     public void markCanceled() {
         if (this.status == PaymentStatus.SUCCESS || this.status == PaymentStatus.REFUNDED) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付已完成，不能取消");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付已完成，不能取消");
         }
         if (this.status == PaymentStatus.CANCELED) {
             return;
@@ -212,7 +212,7 @@ public class PaymentOrder implements Serializable {
      */
     public void markClosed() {
         if (this.status == PaymentStatus.SUCCESS || this.status == PaymentStatus.REFUNDED) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付已完成，不能关闭");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付已完成，不能关闭");
         }
         this.status = PaymentStatus.CLOSED;
     }

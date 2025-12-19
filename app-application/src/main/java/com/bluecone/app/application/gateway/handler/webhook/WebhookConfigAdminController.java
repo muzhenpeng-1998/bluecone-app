@@ -1,6 +1,6 @@
 package com.bluecone.app.application.gateway.handler.webhook;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigCreateRequest;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestRequest;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestResult;

@@ -6,7 +6,7 @@ import com.bluecone.app.core.contextkit.ContextCache;
 import com.bluecone.app.core.contextkit.ContextKitProperties;
 import com.bluecone.app.core.contextkit.VersionChecker;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.user.runtime.api.UserSnapshot;
 import com.bluecone.app.core.user.runtime.spi.UserPrincipalResolver;
 import com.bluecone.app.core.user.runtime.spi.UserSnapshotRepository;

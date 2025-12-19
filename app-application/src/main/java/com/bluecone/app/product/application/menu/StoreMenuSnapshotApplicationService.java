@@ -3,7 +3,7 @@ package com.bluecone.app.product.application.menu;
 import com.bluecone.app.product.domain.model.readmodel.StoreMenuSnapshot;
 import com.bluecone.app.product.domain.repository.ProductRepository;
 import com.bluecone.app.product.dto.view.StoreMenuSnapshotView;
-import com.bluecone.app.user.application.CurrentUserContext;
+import com.bluecone.app.core.context.CurrentUserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

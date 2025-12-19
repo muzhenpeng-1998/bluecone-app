@@ -1,6 +1,6 @@
 package com.bluecone.app.user.controller;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.user.application.account.AccountApplicationService;
 import com.bluecone.app.user.dto.account.AccountSummaryDTO;
 import com.bluecone.app.user.dto.account.BalanceLedgerItemDTO;

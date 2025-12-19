@@ -1,6 +1,6 @@
 package com.bluecone.app.wallet.application.consumer;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.id.api.ResourceType;
@@ -96,7 +96,7 @@ public class RechargeEventConsumer {
             // 5. 查询钱包账户
             WalletAccount account = walletAccountRepository.findById(tenantId, accountId);
             if (account == null) {
-                throw new BizException(com.bluecone.app.core.error.BizErrorCode.RESOURCE_NOT_FOUND, "钱包账户不存在：accountId=" + accountId);
+                throw new BusinessException(com.bluecone.app.core.error.BizErrorCode.RESOURCE_NOT_FOUND, "钱包账户不存在：accountId=" + accountId);
             }
             
             // 6. 转换金额（分 -> 元）
@@ -147,7 +147,7 @@ public class RechargeEventConsumer {
             
             int updated = walletAccountRepository.updateWithVersion(account);
             if (updated == 0) {
-                throw new BizException(com.bluecone.app.core.error.CommonErrorCode.CONFLICT, "账户余额更新失败（版本冲突），请重试");
+                throw new BusinessException(com.bluecone.app.core.error.CommonErrorCode.CONFLICT, "账户余额更新失败（版本冲突），请重试");
             }
             
             // 11. 记录消费成功

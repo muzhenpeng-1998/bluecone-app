@@ -1,13 +1,13 @@
 package com.bluecone.app.tenant.application.wechat;
 
 import com.bluecone.app.core.error.BizErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.infra.tenant.dataobject.TenantOnboardingSessionDO;
 import com.bluecone.app.infra.wechat.WeChatBetaRegisterRequest;
 import com.bluecone.app.infra.wechat.WeChatBetaRegisterResult;
+import com.bluecone.app.infra.wechat.WeChatFastRegisterClient;
 import com.bluecone.app.infra.wechat.WeChatFastRegisterRequest;
 import com.bluecone.app.infra.wechat.WeChatFastRegisterResult;
-import com.bluecone.app.infra.wechat.WeChatOpenPlatformClient;
 import com.bluecone.app.infra.wechat.dataobject.WechatRegisterTaskDO;
 import com.bluecone.app.infra.wechat.mapper.WechatRegisterTaskMapper;
 import com.bluecone.app.tenant.service.TenantOnboardingAppService;
@@ -33,7 +33,7 @@ public class WechatMiniProgramRegisterAppService {
 
     private final TenantOnboardingAppService tenantOnboardingAppService;
     private final WechatRegisterTaskMapper wechatRegisterTaskMapper;
-    private final WeChatOpenPlatformClient weChatOpenPlatformClient;
+    private final WeChatFastRegisterClient weChatFastRegisterClient;
 
     /**
      * 根据入驻会话和注册类型创建一条微信小程序注册任务记录，并调用微信开放平台注册接口。
@@ -49,20 +49,20 @@ public class WechatMiniProgramRegisterAppService {
     public Long createRegisterTask(CreateWechatRegisterTaskCommand command) {
         TenantOnboardingSessionDO session = tenantOnboardingAppService.findBySessionToken(command.sessionToken());
         if (session == null) {
-            throw new BizException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
+            throw new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
         }
         Long tenantId = session.getTenantId();
         if (tenantId == null) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定租户，无法发起注册任务");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定租户，无法发起注册任务");
         }
 
         String registerType = command.registerType();
         if (!StringUtils.hasText(registerType)) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "registerType 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "registerType 不能为空");
         }
         String type = registerType.toUpperCase();
         if (!("FORMAL".equals(type) || "TRIAL".equals(type))) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "注册类型仅支持 FORMAL 或 TRIAL");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "注册类型仅支持 FORMAL 或 TRIAL");
         }
 
         WechatRegisterTaskDO task = new WechatRegisterTaskDO();
@@ -89,7 +89,7 @@ public class WechatMiniProgramRegisterAppService {
                 log.info("[MiniAppRegister] calling fastregisterbetaweapp, tenantId={}, storeId={}, name={}, openId={}",
                         tenantId, session.getStoreId(), req.getName(), req.getOpenId());
 
-                WeChatBetaRegisterResult result = weChatOpenPlatformClient.fastRegisterBetaWeapp(req);
+                WeChatBetaRegisterResult result = weChatFastRegisterClient.fastRegisterBetaWeapp(req);
                 if (result != null) {
                     if (StringUtils.hasText(result.getAppId())) {
                         task.setAuthorizerAppid(result.getAppId());
@@ -110,7 +110,7 @@ public class WechatMiniProgramRegisterAppService {
                 log.info("[MiniAppRegister] calling fastregisterweapp, tenantId={}, storeId={}, name={}, code={}, codeType={}",
                         tenantId, session.getStoreId(), req.getName(), req.getCode(), req.getCodeType());
 
-                WeChatFastRegisterResult result = weChatOpenPlatformClient.fastRegisterWeapp(req);
+                WeChatFastRegisterResult result = weChatFastRegisterClient.fastRegisterWeapp(req);
                 if (result != null) {
                     if (StringUtils.hasText(result.getAppId())) {
                         task.setAuthorizerAppid(result.getAppId());

@@ -11,7 +11,7 @@ import com.bluecone.app.core.user.domain.repository.BalanceLedgerRepository;
 import com.bluecone.app.core.user.domain.repository.CouponRepository;
 import com.bluecone.app.core.user.domain.repository.PointsAccountRepository;
 import com.bluecone.app.core.user.domain.repository.PointsLedgerRepository;
-import com.bluecone.app.user.application.CurrentUserContext;
+import com.bluecone.app.core.context.CurrentUserContext;
 import com.bluecone.app.user.dto.account.AccountSummaryDTO;
 import com.bluecone.app.user.dto.account.AdjustBalanceCommand;
 import com.bluecone.app.user.dto.account.AdjustPointsCommand;

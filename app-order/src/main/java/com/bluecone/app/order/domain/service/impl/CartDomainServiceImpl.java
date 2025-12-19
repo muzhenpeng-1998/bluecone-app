@@ -1,7 +1,7 @@
 package com.bluecone.app.order.domain.service.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
 import com.bluecone.app.order.domain.model.Order;
 import com.bluecone.app.order.domain.model.OrderItem;
@@ -21,10 +21,10 @@ public class CartDomainServiceImpl implements CartDomainService {
     public Order addItem(Order draft, ConfirmOrderItemDTO itemDTO) {
         requireDraft(draft);
         if (itemDTO == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "购物车明细不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "购物车明细不能为空");
         }
         if (itemDTO.getQuantity() == null || itemDTO.getQuantity() <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "明细数量必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "明细数量必须大于0");
         }
         OrderItem item = toOrderItem(itemDTO);
         draft.addOrMergeItem(item);
@@ -54,7 +54,7 @@ public class CartDomainServiceImpl implements CartDomainService {
 
     private void requireDraft(Order draft) {
         if (draft == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "草稿订单不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "草稿订单不能为空");
         }
         draft.assertEditable();
     }

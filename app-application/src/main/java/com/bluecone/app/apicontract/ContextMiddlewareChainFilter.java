@@ -8,12 +8,12 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.config.ApiContractProperties;
 import com.bluecone.app.core.apicontract.ApiSide;
 import com.bluecone.app.core.apicontract.ContextType;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.core.idresolve.api.PublicIdInvalidException;
 import com.bluecone.app.core.idresolve.api.PublicIdNotFoundException;
@@ -166,14 +166,14 @@ public class ContextMiddlewareChainFilter extends OncePerRequestFilter {
         if (ex instanceof PublicIdNotFoundException) {
             return HttpStatus.NOT_FOUND.value();
         }
-        if (ex instanceof BizException biz) {
+        if (ex instanceof BusinessException biz) {
             return mapBizErrorCodeToStatus(biz.getCode());
         }
         return HttpStatus.BAD_REQUEST.value();
     }
 
     private String determineErrorCode(Exception ex) {
-        if (ex instanceof BizException biz) {
+        if (ex instanceof BusinessException biz) {
             return biz.getCode();
         }
         if (ex instanceof PublicIdInvalidException) {

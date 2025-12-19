@@ -1,7 +1,7 @@
 package com.bluecone.app.store.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.dto.StoreDeviceView;
 import com.bluecone.app.store.application.command.ChangeStoreDeviceStatusCommand;
 import com.bluecone.app.store.application.command.RegisterStoreDeviceCommand;
@@ -57,7 +57,7 @@ public class StoreDeviceAppService {
                 .eq(BcStoreDevice::getIsDeleted, false)
                 .one();
         if (entity == null) {
-            throw new BizException(StoreErrorCode.DEVICE_NOT_FOUND);
+            throw new BusinessException(StoreErrorCode.DEVICE_NOT_FOUND);
         }
         return storeDeviceAssembler.toView(entity);
     }
@@ -87,7 +87,7 @@ public class StoreDeviceAppService {
                 .set(command.getConfigJson() != null, BcStoreDevice::getConfigJson, command.getConfigJson())
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.DEVICE_NOT_FOUND, "更新设备信息失败");
+            throw new BusinessException(StoreErrorCode.DEVICE_NOT_FOUND, "更新设备信息失败");
         }
     }
 
@@ -101,7 +101,7 @@ public class StoreDeviceAppService {
                 .set(BcStoreDevice::getStatus, command.getTargetStatus())
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.DEVICE_NOT_FOUND, "更新设备状态失败");
+            throw new BusinessException(StoreErrorCode.DEVICE_NOT_FOUND, "更新设备状态失败");
         }
     }
 }

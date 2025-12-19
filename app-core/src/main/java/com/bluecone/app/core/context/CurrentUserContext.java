@@ -1,4 +1,4 @@
-package com.bluecone.app.user.application;
+package com.bluecone.app.core.context;
 
 /**
  * 当前用户上下文抽象，屏蔽具体安全实现。

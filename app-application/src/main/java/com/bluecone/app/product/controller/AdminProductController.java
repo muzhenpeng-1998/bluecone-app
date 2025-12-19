@@ -1,6 +1,6 @@
 package com.bluecone.app.product.controller;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.product.application.query.ProductQueryApplicationService;
 import com.bluecone.app.product.dto.view.ProductDetailView;
 import java.util.List;

@@ -3,7 +3,7 @@ package com.bluecone.app.order.infra.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.domain.enums.OrderSource;
 import com.bluecone.app.order.domain.enums.OrderStatus;
 import com.bluecone.app.order.domain.model.Order;
@@ -121,11 +121,11 @@ public class OrderDraftRepositoryImpl implements OrderDraftRepository {
 
     private Order updateDraft(Order draft) {
         if (draft.getId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "草稿订单 ID 缺失");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "草稿订单 ID 缺失");
         }
         Integer currentVersion = draft.getVersion();
         if (currentVersion == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "草稿订单版本缺失");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "草稿订单版本缺失");
         }
         LocalDateTime now = LocalDateTime.now();
         OrderPO po = OrderConverter.toPO(draft);
@@ -142,7 +142,7 @@ public class OrderDraftRepositoryImpl implements OrderDraftRepository {
                 .eq(OrderPO::getVersion, currentVersion);
         int updated = orderMapper.update(po, update);
         if (updated == 0) {
-            throw new BizException(CommonErrorCode.CONFLICT, "订单草稿已被修改，请刷新后重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "订单草稿已被修改，请刷新后重试");
         }
         deleteItems(draft);
         saveItems(draft, now);
@@ -190,22 +190,22 @@ public class OrderDraftRepositoryImpl implements OrderDraftRepository {
                 || draft.getUserId() == null
                 || draft.getChannel() == null
                 || draft.getChannel().isBlank()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "草稿订单缺少租户/门店/用户/渠道信息");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "草稿订单缺少租户/门店/用户/渠道信息");
         }
     }
 
     private void validateContext(Long tenantId, Long storeId, Long userId, String channel) {
         if (tenantId == null || storeId == null || userId == null || !StringUtils.hasText(channel)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "查询草稿需提供 tenantId/storeId/userId/channel");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "查询草稿需提供 tenantId/storeId/userId/channel");
         }
     }
 
     private void requireDraft(Order draft) {
         if (draft == null || draft.getStatus() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "仅允许操作草稿订单");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "仅允许操作草稿订单");
         }
         if (!OrderStatus.DRAFT.equals(draft.getStatus()) && !OrderStatus.LOCKED_FOR_CHECKOUT.equals(draft.getStatus())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "仅允许操作草稿订单");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "仅允许操作草稿订单");
         }
     }
 

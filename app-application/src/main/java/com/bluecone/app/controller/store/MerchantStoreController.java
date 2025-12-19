@@ -1,6 +1,6 @@
 package com.bluecone.app.controller.store;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.publicid.api.ResolvedPublicId;
 import com.bluecone.app.core.publicid.web.ResolvePublicId;
 import com.bluecone.app.id.api.ResourceType;

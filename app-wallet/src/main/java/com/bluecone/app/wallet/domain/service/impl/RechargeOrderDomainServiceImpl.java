@@ -1,6 +1,6 @@
 package com.bluecone.app.wallet.domain.service.impl;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.id.api.ResourceType;
@@ -46,7 +46,7 @@ public class RechargeOrderDomainServiceImpl implements RechargeOrderDomainServic
         
         // 2. 参数校验
         if (rechargeAmountInCents == null || rechargeAmountInCents <= 0) {
-            throw new BizException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "充值金额必须大于0");
+            throw new BusinessException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "充值金额必须大于0");
         }
         
         // 3. 生成充值单
@@ -80,7 +80,7 @@ public class RechargeOrderDomainServiceImpl implements RechargeOrderDomainServic
             // 并发情况下，唯一约束冲突，重新查询返回
             log.warn("充值单创建冲突（并发），重新查询：idempotencyKey={}", idempotencyKey);
             return rechargeOrderRepository.findByIdempotencyKey(tenantId, idempotencyKey)
-                    .orElseThrow(() -> new BizException(com.bluecone.app.core.error.CommonErrorCode.SYSTEM_ERROR, "充值单创建失败"));
+                    .orElseThrow(() -> new BusinessException(com.bluecone.app.core.error.CommonErrorCode.SYSTEM_ERROR, "充值单创建失败"));
         }
     }
     
@@ -107,7 +107,7 @@ public class RechargeOrderDomainServiceImpl implements RechargeOrderDomainServic
         // 乐观锁更新
         int updated = rechargeOrderRepository.updateWithVersion(rechargeOrder);
         if (updated == 0) {
-            throw new BizException(com.bluecone.app.core.error.CommonErrorCode.CONFLICT, "充值单状态更新失败（版本冲突），请重试");
+            throw new BusinessException(com.bluecone.app.core.error.CommonErrorCode.CONFLICT, "充值单状态更新失败（版本冲突），请重试");
         }
         
         log.info("充值单标记为支付中：rechargeNo={}, payOrderId={}, payChannel={}", 
@@ -149,7 +149,7 @@ public class RechargeOrderDomainServiceImpl implements RechargeOrderDomainServic
     @Override
     public RechargeOrder getByRechargeNo(Long tenantId, String rechargeNo) {
         return rechargeOrderRepository.findByRechargeNo(tenantId, rechargeNo)
-                .orElseThrow(() -> new BizException(com.bluecone.app.core.error.BizErrorCode.RESOURCE_NOT_FOUND, "充值单不存在：" + rechargeNo));
+                .orElseThrow(() -> new BusinessException(com.bluecone.app.core.error.BizErrorCode.RESOURCE_NOT_FOUND, "充值单不存在：" + rechargeNo));
     }
     
     @Override
@@ -168,7 +168,7 @@ public class RechargeOrderDomainServiceImpl implements RechargeOrderDomainServic
         }
         
         if (rechargeOrder.getStatus() == RechargeStatus.CLOSED) {
-            throw new BizException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "充值单已关闭，无法标记为已支付：" + rechargeOrder.getRechargeNo());
+            throw new BusinessException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "充值单已关闭，无法标记为已支付：" + rechargeOrder.getRechargeNo());
         }
         
         // 状态流转
@@ -177,7 +177,7 @@ public class RechargeOrderDomainServiceImpl implements RechargeOrderDomainServic
         // 乐观锁更新
         int updated = rechargeOrderRepository.updateWithVersion(rechargeOrder);
         if (updated == 0) {
-            throw new BizException(com.bluecone.app.core.error.CommonErrorCode.CONFLICT, "充值单状态更新失败（版本冲突），请重试");
+            throw new BusinessException(com.bluecone.app.core.error.CommonErrorCode.CONFLICT, "充值单状态更新失败（版本冲突），请重试");
         }
         
         log.info("充值单标记为已支付：rechargeNo={}, channelTradeNo={}, paidAt={}", 

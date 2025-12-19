@@ -2,11 +2,11 @@ package com.bluecone.app.order.controller;
 
 import com.bluecone.app.core.log.annotation.ApiLog;
 import com.bluecone.app.core.user.domain.member.repository.read.PageResult;
-import com.bluecone.app.order.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
 import com.bluecone.app.order.api.dto.ConfirmOrderPreviewRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderPreviewResponse;
@@ -106,7 +106,7 @@ public class OrderController {
         request.setUserId(userId);
         StoreOrderSnapshot snapshot = RequestContextHelper.currentStoreSnapshot();
         if (snapshot == null || !Boolean.TRUE.equals(snapshot.getCanAcceptOrder())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "门店已打烊或暂停接单");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "门店已打烊或暂停接单");
         }
         log.info("User submit order, tenantId={}, storeId={}, userId={}, clientOrderNo={}, items={}",
                 tenantId,
@@ -136,7 +136,7 @@ public class OrderController {
         request.setUserId(userId);
         StoreOrderSnapshot snapshot = RequestContextHelper.currentStoreSnapshot();
         if (snapshot == null || !Boolean.TRUE.equals(snapshot.getCanAcceptOrder())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "门店已打烊或暂停接单");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "门店已打烊或暂停接单");
         }
         log.info("User preview order, tenantId={}, storeId={}, userId={}, items={}",
                 tenantId,

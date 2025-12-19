@@ -10,7 +10,7 @@ import com.bluecone.app.billing.domain.enums.InvoiceStatus;
 import com.bluecone.app.billing.domain.enums.PlanCode;
 import com.bluecone.app.billing.domain.enums.SubscriptionStatus;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +49,7 @@ public class BillingDomainService {
     public PlanSkuDO getPlanSkuById(Long id) {
         PlanSkuDO planSku = planSkuMapper.selectById(id);
         if (planSku == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "套餐 SKU 不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "套餐 SKU 不存在");
         }
         return planSku;
     }
@@ -72,7 +72,7 @@ public class BillingDomainService {
         // 获取套餐 SKU
         PlanSkuDO planSku = getPlanSkuById(planSkuId);
         if (!"ACTIVE".equals(planSku.getStatus())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "套餐 SKU 不可用");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "套餐 SKU 不可用");
         }
         
         // 生成账单号
@@ -109,7 +109,7 @@ public class BillingDomainService {
     public BillingInvoiceDO markInvoiceAsPaid(Long invoiceId, String channelTradeNo, Long paidAmountFen, LocalDateTime paidAt) {
         BillingInvoiceDO invoice = invoiceMapper.selectById(invoiceId);
         if (invoice == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "账单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "账单不存在");
         }
         
         // 幂等性检查
@@ -215,7 +215,7 @@ public class BillingDomainService {
     public BillingInvoiceDO getInvoiceById(Long invoiceId) {
         BillingInvoiceDO invoice = invoiceMapper.selectById(invoiceId);
         if (invoice == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "账单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "账单不存在");
         }
         return invoice;
     }
@@ -240,7 +240,7 @@ public class BillingDomainService {
         );
         
         if (freePlan == null) {
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "免费版套餐不存在");
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "免费版套餐不存在");
         }
         
         subscription.setCurrentPlanCode(freePlan.getPlanCode());

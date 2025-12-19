@@ -1,7 +1,7 @@
 package com.bluecone.app.store.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.dto.StoreChannelView;
 import com.bluecone.app.store.application.command.BindStoreChannelCommand;
 import com.bluecone.app.store.application.command.ChangeStoreChannelStatusCommand;
@@ -59,7 +59,7 @@ public class StoreChannelAppService {
                 .eq(BcStoreChannel::getIsDeleted, false)
                 .one();
         if (entity == null) {
-            throw new BizException(StoreErrorCode.CHANNEL_NOT_FOUND);
+            throw new BusinessException(StoreErrorCode.CHANNEL_NOT_FOUND);
         }
         return storeChannelAssembler.toView(entity);
     }
@@ -88,7 +88,7 @@ public class StoreChannelAppService {
                 .set(BcStoreChannel::getConfigJson, command.getConfigJson())
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.CHANNEL_NOT_FOUND, "更新渠道配置失败");
+            throw new BusinessException(StoreErrorCode.CHANNEL_NOT_FOUND, "更新渠道配置失败");
         }
     }
 
@@ -102,7 +102,7 @@ public class StoreChannelAppService {
                 .set(BcStoreChannel::getStatus, command.getTargetStatus())
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.CHANNEL_NOT_FOUND, "更新渠道状态失败");
+            throw new BusinessException(StoreErrorCode.CHANNEL_NOT_FOUND, "更新渠道状态失败");
         }
     }
 
@@ -115,7 +115,7 @@ public class StoreChannelAppService {
                 .set(BcStoreChannel::getIsDeleted, true)
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.CHANNEL_NOT_FOUND, "解绑渠道失败");
+            throw new BusinessException(StoreErrorCode.CHANNEL_NOT_FOUND, "解绑渠道失败");
         }
     }
 }

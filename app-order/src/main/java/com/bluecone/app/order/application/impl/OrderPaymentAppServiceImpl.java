@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.OrderPaymentAppService;
 import com.bluecone.app.order.application.dto.OrderPaymentResult;
 import com.bluecone.app.order.domain.enums.OrderStatus;
@@ -19,11 +19,11 @@ public class OrderPaymentAppServiceImpl implements OrderPaymentAppService {
     @Override
     public OrderPaymentResult onPaymentSuccess(Long tenantId, Long orderId, Long payOrderId, Long paidAmount) {
         if (tenantId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单不存在");
         }
         if (order.getStatus() != OrderStatus.WAIT_PAY) {
             OrderPaymentResult result = toResult(order);

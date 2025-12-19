@@ -3,7 +3,7 @@ package com.bluecone.app.wallet.application.facade;
 import com.bluecone.app.core.event.outbox.AggregateType;
 import com.bluecone.app.core.event.outbox.EventType;
 import com.bluecone.app.core.event.outbox.OutboxEvent;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.infra.event.outbox.OutboxEventService;
 import com.bluecone.app.wallet.api.dto.RechargeCreateCommand;
 import com.bluecone.app.wallet.api.dto.RechargeCreateResult;
@@ -139,16 +139,16 @@ public class WalletRechargeFacadeImpl implements WalletRechargeFacade {
     
     private void validateCommand(RechargeCreateCommand command) {
         if (command.getTenantId() == null) {
-            throw new BizException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "租户ID不能为空");
+            throw new BusinessException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "租户ID不能为空");
         }
         if (command.getUserId() == null) {
-            throw new BizException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "用户ID不能为空");
+            throw new BusinessException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "用户ID不能为空");
         }
         if (command.getRechargeAmount() == null || command.getRechargeAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BizException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "充值金额必须大于0");
+            throw new BusinessException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "充值金额必须大于0");
         }
         if (command.getIdempotencyKey() == null || command.getIdempotencyKey().trim().isEmpty()) {
-            throw new BizException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "幂等键不能为空");
+            throw new BusinessException(com.bluecone.app.core.error.BizErrorCode.INVALID_PARAM, "幂等键不能为空");
         }
     }
 }

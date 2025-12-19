@@ -1,7 +1,7 @@
 package com.bluecone.app.store.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.dto.StoreResourceView;
 import com.bluecone.app.store.application.command.ChangeStoreResourceStatusCommand;
 import com.bluecone.app.store.application.command.CreateStoreResourceCommand;
@@ -60,7 +60,7 @@ public class StoreResourceAppService {
                 .eq(BcStoreResource::getIsDeleted, false)
                 .one();
         if (entity == null) {
-            throw new BizException(StoreErrorCode.RESOURCE_NOT_FOUND);
+            throw new BusinessException(StoreErrorCode.RESOURCE_NOT_FOUND);
         }
         return storeResourceAssembler.toView(entity);
     }
@@ -92,7 +92,7 @@ public class StoreResourceAppService {
                 .set(command.getMetadataJson() != null, BcStoreResource::getMetadataJson, command.getMetadataJson())
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.RESOURCE_NOT_FOUND, "更新门店资源失败");
+            throw new BusinessException(StoreErrorCode.RESOURCE_NOT_FOUND, "更新门店资源失败");
         }
     }
 
@@ -106,7 +106,7 @@ public class StoreResourceAppService {
                 .set(BcStoreResource::getStatus, command.getTargetStatus())
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.RESOURCE_NOT_FOUND, "调整资源状态失败");
+            throw new BusinessException(StoreErrorCode.RESOURCE_NOT_FOUND, "调整资源状态失败");
         }
     }
 }

@@ -3,9 +3,12 @@ package com.bluecone.app.core.exception;
 import com.bluecone.app.core.error.ErrorCode;
 
 /**
- * 统一业务异常。
+ * 统一业务异常（已废弃）。
  * <p>携带错误码与提示信息，便于全局异常处理器统一返回。</p>
+ * 
+ * @deprecated 已统一为 {@link BusinessException}，请使用 BusinessException 替代
  */
+@Deprecated
 public class BizException extends RuntimeException {
 
     private final String code;

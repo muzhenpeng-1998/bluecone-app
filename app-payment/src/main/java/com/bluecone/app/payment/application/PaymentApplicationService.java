@@ -1,7 +1,7 @@
 package com.bluecone.app.payment.application;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.api.PaymentApi;
 import com.bluecone.app.payment.api.command.CreatePaymentCommand;
 import com.bluecone.app.payment.api.dto.CreatePaymentResult;
@@ -79,19 +79,19 @@ public class PaymentApplicationService implements PaymentApi {
                 command.getSceneCode());
         try {
             if (channel == null) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付渠道");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "不支持的支付渠道");
             }
             if (method == null) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付方式");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "不支持的支付方式");
             }
             if (scene == null) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的支付场景");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "不支持的支付场景");
             }
 
             // 微信 JSAPI 必填 openId
             if (channel == PaymentChannel.WECHAT && method == PaymentMethod.WECHAT_JSAPI) {
                 if (isBlank(command.getPayerOpenId())) {
-                    throw new BizException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 支付需要提供 payerOpenId");
+                    throw new BusinessException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 支付需要提供 payerOpenId");
                 }
             }
 
@@ -162,7 +162,7 @@ public class PaymentApplicationService implements PaymentApi {
                     scene.getCode(),
                     MDC.get("traceId"));
             return toCreateResult(paymentOrder, channelContext);
-        } catch (BizException ex) {
+        } catch (BusinessException ex) {
             resultTag = "FAIL";
             log.warn("[payment-create] biz error traceId={} tenantId={} storeId={} bizOrderNo={} msg={}",
                     MDC.get("traceId"), command.getTenantId(), command.getStoreId(), command.getBizOrderNo(), ex.getMessage());
@@ -186,7 +186,7 @@ public class PaymentApplicationService implements PaymentApi {
     @Override
     public PaymentOrderView getPaymentById(Long paymentId) {
         PaymentOrder order = paymentOrderRepository.findById(paymentId)
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "支付单不存在"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "支付单不存在"));
         return toView(order);
     }
 
@@ -252,7 +252,7 @@ public class PaymentApplicationService implements PaymentApi {
         try {
             return objectMapper.writeValueAsString(attach);
         } catch (JsonProcessingException e) {
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "支付附加信息序列化失败", e);
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "支付附加信息序列化失败", e);
         }
     }
 

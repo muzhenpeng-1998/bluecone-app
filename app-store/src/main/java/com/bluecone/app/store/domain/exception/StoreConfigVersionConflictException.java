@@ -1,13 +1,13 @@
 package com.bluecone.app.store.domain.exception;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.domain.error.StoreErrorCode;
 
 /**
  * 配置版本号乐观锁冲突异常。
  * <p>高并发写入时，若 config_version 不匹配，则抛出该异常通知调用方重试或刷新配置。</p>
  */
-public class StoreConfigVersionConflictException extends BizException {
+public class StoreConfigVersionConflictException extends BusinessException {
 
     public StoreConfigVersionConflictException(String message) {
         super(StoreErrorCode.STORE_CONFIG_CONFLICT, message);

@@ -1,9 +1,9 @@
 package com.bluecone.app.user.controller;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.user.application.auth.UserAuthApplicationService;
-import com.bluecone.app.user.dto.auth.LoginByWeChatMiniAppCommand;
-import com.bluecone.app.user.dto.auth.LoginResultDTO;
+import com.bluecone.app.user.dto.auth.WechatMiniAppLoginRequest;
+import com.bluecone.app.user.dto.auth.LoginResponse;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,8 +28,8 @@ public class UserAuthController {
      * 微信小程序登录。
      */
     @PostMapping("/wechat-miniapp/login")
-    public ApiResponse<LoginResultDTO> loginByWeChatMiniApp(@RequestBody LoginByWeChatMiniAppCommand command) {
-        LoginResultDTO result = userAuthApplicationService.loginByWeChatMiniApp(command);
+    public ApiResponse<LoginResponse> loginByWeChatMiniApp(@RequestBody WechatMiniAppLoginRequest command) {
+        LoginResponse result = userAuthApplicationService.loginByWeChatMiniApp(command);
         return ApiResponse.success(result);
     }
 }

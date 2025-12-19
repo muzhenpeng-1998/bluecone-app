@@ -3,7 +3,7 @@ package com.bluecone.app.order.domain.model;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.domain.enums.OrderStatus;
 import com.bluecone.app.order.domain.enums.PayStatus;
 import java.util.Collections;

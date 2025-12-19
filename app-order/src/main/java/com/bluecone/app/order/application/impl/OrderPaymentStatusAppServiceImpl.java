@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.OrderPaymentStatusAppService;
 import com.bluecone.app.order.domain.enums.BizType;
 import com.bluecone.app.order.domain.enums.OrderEvent;
@@ -34,7 +34,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
     @Transactional(rollbackFor = Exception.class)
     public void onPaySuccess(Long tenantId, Long orderId, String payChannel, String thirdTradeNo, BigDecimal payAmount) {
         if (tenantId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
@@ -46,7 +46,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
         if (payment == null) {
             log.error("onPaySuccess: payment not found, tenantId={}, orderId={}, channel={}, tradeNo={}",
                     tenantId, orderId, payChannel, thirdTradeNo);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
         }
 
         PayStatus payStatus = payment.getPayStatus();
@@ -90,7 +90,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
     @Transactional(rollbackFor = Exception.class)
     public void onPayFailed(Long tenantId, Long orderId, String payChannel, String thirdTradeNo) {
         if (tenantId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
@@ -102,7 +102,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
         if (payment == null) {
             log.error("onPayFailed: payment not found, tenantId={}, orderId={}, channel={}, tradeNo={}",
                     tenantId, orderId, payChannel, thirdTradeNo);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
         }
 
         OrderStatus currentStatus = order.getStatus();
@@ -141,7 +141,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
     @Transactional(rollbackFor = Exception.class)
     public void onPayTimeoutCancel(Long tenantId, Long orderId) {
         if (tenantId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
@@ -176,7 +176,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
     @Transactional(rollbackFor = Exception.class)
     public void onFullRefundSuccess(Long tenantId, Long orderId, BigDecimal refundAmount, String refundTradeNo) {
         if (tenantId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
@@ -188,7 +188,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
         if (payment == null) {
             log.error("onFullRefundSuccess: payment not found, tenantId={}, orderId={}, refundTradeNo={}",
                     tenantId, orderId, refundTradeNo);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
         }
         if (payment.getPayStatus() == PayStatus.REFUNDED) {
             log.info("onFullRefundSuccess: already refunded, tenantId={}, orderId={}, refundTradeNo={}",
@@ -236,7 +236,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
     @Transactional(rollbackFor = Exception.class)
     public void onPartialRefundSuccess(Long tenantId, Long orderId, BigDecimal refundAmount, String refundTradeNo) {
         if (tenantId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
@@ -248,7 +248,7 @@ public class OrderPaymentStatusAppServiceImpl implements OrderPaymentStatusAppSe
         if (payment == null) {
             log.error("onPartialRefundSuccess: payment not found, tenantId={}, orderId={}, refundTradeNo={}",
                     tenantId, orderId, refundTradeNo);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单支付记录不存在");
         }
         if (payment.getPayStatus() == PayStatus.REFUNDED) {
             log.info("onPartialRefundSuccess: already fully refunded, tenantId={}, orderId={}, refundTradeNo={}",

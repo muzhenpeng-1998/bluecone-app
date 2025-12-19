@@ -1,7 +1,7 @@
 package com.bluecone.app.payment.domain.gateway.channel;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.domain.enums.PaymentChannel;
 import com.bluecone.app.payment.domain.enums.PaymentMethod;
 import org.springframework.stereotype.Component;
@@ -28,7 +28,7 @@ public class PaymentChannelGatewayRouter {
                 .filter(gw -> gw.supports(channel, method))
                 .findFirst()
                 .map(gw -> gw.prepay(command))
-                .orElseThrow(() -> new BizException(
+                .orElseThrow(() -> new BusinessException(
                         CommonErrorCode.BAD_REQUEST,
                         "未找到匹配的支付网关实现: channel=" + channel + ", method=" + method
                 ));

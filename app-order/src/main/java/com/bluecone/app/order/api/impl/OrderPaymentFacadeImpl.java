@@ -1,6 +1,6 @@
 package com.bluecone.app.order.api.impl;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.OrderPaymentFacade;
 import com.bluecone.app.order.domain.error.OrderErrorCode;
 import com.bluecone.app.order.domain.model.Order;
@@ -38,7 +38,7 @@ public class OrderPaymentFacadeImpl implements OrderPaymentFacade {
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
             log.error("订单不存在：tenantId={}, orderId={}", tenantId, orderId);
-            throw new BizException(OrderErrorCode.ORDER_NOT_FOUND);
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
         }
         
         // 2. 调用领域模型方法，推进状态（含状态机校验和幂等处理）
@@ -64,7 +64,7 @@ public class OrderPaymentFacadeImpl implements OrderPaymentFacade {
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
             log.error("订单不存在：tenantId={}, orderId={}", tenantId, orderId);
-            throw new BizException(OrderErrorCode.ORDER_NOT_FOUND);
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_FOUND);
         }
         
         // 2. 调用领域模型方法，推进状态（含状态机校验和幂等处理）

@@ -1,6 +1,6 @@
 package com.bluecone.app.api.onboarding;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.api.onboarding.dto.AttachStoreRequest;
 import com.bluecone.app.api.onboarding.dto.AttachTenantRequest;
 import com.bluecone.app.api.onboarding.dto.BindAccountRequest;
@@ -14,7 +14,7 @@ import com.bluecone.app.api.onboarding.dto.WechatAuthUrlResponse;
 import com.bluecone.app.api.onboarding.dto.WechatRegisterRequest;
 import com.bluecone.app.api.onboarding.dto.WechatRegisterResponse;
 import com.bluecone.app.core.error.BizErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.infra.tenant.dataobject.TenantOnboardingSessionDO;
 import com.bluecone.app.tenant.application.onboarding.CreateStoreDraftCommand;
 import com.bluecone.app.tenant.application.onboarding.CreateTenantDraftCommand;
@@ -116,10 +116,10 @@ public class OnboardingController {
             @RequestBody TenantBasicInfoRequest request) {
         TenantOnboardingSessionDO session = tenantOnboardingAppService.findBySessionToken(request.getSessionToken());
         if (session == null) {
-            throw new BizException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
+            throw new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
         }
         if (session.getUserId() == null) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定用户");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定用户");
         }
 
         String sourceChannel = request.getSourceChannel() != null
@@ -154,10 +154,10 @@ public class OnboardingController {
             @RequestBody StoreBasicInfoRequest request) {
         TenantOnboardingSessionDO session = tenantOnboardingAppService.findBySessionToken(request.getSessionToken());
         if (session == null) {
-            throw new BizException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
+            throw new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
         }
         if (session.getTenantId() == null) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定租户");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "入驻会话尚未绑定租户");
         }
 
         String contactPhone = request.getContactPhone() != null
@@ -191,10 +191,10 @@ public class OnboardingController {
     @GetMapping("/wechat/auth-url")
     public ApiResponse<WechatAuthUrlResponse> getWechatAuthorizeUrl(@RequestParam("sessionToken") String sessionToken) {
         if (sessionToken == null || sessionToken.isBlank()) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "sessionToken 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "sessionToken 不能为空");
         }
         if (wechatAuthRedirectUri == null || wechatAuthRedirectUri.isBlank()) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "微信授权回调地址未配置");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "微信授权回调地址未配置");
         }
 
         BuildAuthorizeUrlCommand cmd = new BuildAuthorizeUrlCommand(sessionToken, wechatAuthRedirectUri);
@@ -213,10 +213,10 @@ public class OnboardingController {
     @PostMapping("/wechat/register")
     public ApiResponse<WechatRegisterResponse> registerMiniProgram(@RequestBody WechatRegisterRequest request) {
         if (request.getSessionToken() == null || request.getSessionToken().isBlank()) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "sessionToken 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "sessionToken 不能为空");
         }
         if (request.getRegisterType() == null || request.getRegisterType().isBlank()) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "registerType 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "registerType 不能为空");
         }
 
         String type = request.getRegisterType().toUpperCase();
@@ -227,14 +227,14 @@ public class OnboardingController {
                     || request.getCompanyCodeType() == null
                     || request.getLegalPersonaWechat() == null || request.getLegalPersonaWechat().isBlank()
                     || request.getLegalPersonaName() == null || request.getLegalPersonaName().isBlank()) {
-                throw new BizException(BizErrorCode.INVALID_PARAM, "FORMAL 注册需要完整的企业主体信息");
+                throw new BusinessException(BizErrorCode.INVALID_PARAM, "FORMAL 注册需要完整的企业主体信息");
             }
         } else if ("TRIAL".equals(type)) {
             if (request.getTrialOpenId() == null || request.getTrialOpenId().isBlank()) {
-                throw new BizException(BizErrorCode.INVALID_PARAM, "TRIAL 注册需要提供联系人 openid");
+                throw new BusinessException(BizErrorCode.INVALID_PARAM, "TRIAL 注册需要提供联系人 openid");
             }
         } else {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "registerType 仅支持 FORMAL 或 TRIAL");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "registerType 仅支持 FORMAL 或 TRIAL");
         }
 
         CreateWechatRegisterTaskCommand command = new CreateWechatRegisterTaskCommand(

@@ -1,6 +1,6 @@
 package com.bluecone.app.controller.store;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.create.api.CreateRequest;
 import com.bluecone.app.core.create.api.CreateWorkWithEvents;
 import com.bluecone.app.core.create.api.CreateWorkWithEventsResult;
@@ -8,7 +8,7 @@ import com.bluecone.app.core.create.api.IdempotentCreateResult;
 import com.bluecone.app.core.create.api.IdempotentCreateTemplate;
 import com.bluecone.app.core.create.api.TxMode;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.event.EventMetadata;
 import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.id.api.IdService;
@@ -233,7 +233,7 @@ public class AdminStoreController {
         );
 
         if (result.inProgress()) {
-            throw new BizException(CommonErrorCode.CONFLICT, "创建门店请求正在处理，请稍后重试");
+            throw new BusinessException(CommonErrorCode.CONFLICT, "创建门店请求正在处理，请稍后重试");
         }
 
         return ApiResponse.success(new CreateStoreResponse(result.publicId()));
@@ -434,14 +434,14 @@ public class AdminStoreController {
         // 如果上下文中没有租户信息，或者是空字符串，则认为用户未登录或请求中缺少租户标识
         if (tenantIdStr == null || tenantIdStr.isBlank()) {
             // 抛出统一的业务异常，错误码为未授权，提示前端需要重新登录或补充上下文
-            throw new BizException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
         }
         try {
             // 将字符串形式的租户 ID 转换成 Long 类型，便于后续数据库查询与比较
             return Long.parseLong(tenantIdStr);
         } catch (NumberFormatException ex) {
             // 如果转换失败，说明上下文中携带的租户标识不是合法的数字，返回 400 错误
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
         }
     }
 

@@ -13,8 +13,8 @@ import com.bluecone.app.infra.wechat.WeChatMiniAppClient;
 import com.bluecone.app.infra.wechat.WeChatPhoneNumberResult;
 import com.bluecone.app.security.session.AuthSessionCreateResult;
 import com.bluecone.app.security.session.AuthSessionManager;
-import com.bluecone.app.user.dto.auth.LoginByWeChatMiniAppCommand;
-import com.bluecone.app.user.dto.auth.LoginResultDTO;
+import com.bluecone.app.user.dto.auth.WechatMiniAppLoginRequest;
+import com.bluecone.app.user.dto.auth.LoginResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -35,7 +35,7 @@ public class UserAuthApplicationService {
     /**
      * 微信小程序登录/注册。
      */
-    public LoginResultDTO loginByWeChatMiniApp(LoginByWeChatMiniAppCommand cmd) {
+    public LoginResponse loginByWeChatMiniApp(WechatMiniAppLoginRequest cmd) {
         // TODO: 从配置加载 appId，与租户或渠道绑定
         String appId = "WECHAT_MINI_APP_ID_PLACEHOLDER";
 
@@ -89,7 +89,7 @@ public class UserAuthApplicationService {
         AuthSessionCreateResult session = authSessionManager.createSession(identity.getId(), tenantId, "MINIAPP", null, null, null);
 
         // 8. 组装结果
-        LoginResultDTO result = new LoginResultDTO();
+        LoginResponse result = new LoginResponse();
         result.setAccessToken(session.getAccessToken());
         result.setRefreshToken(session.getRefreshToken());
         result.setExpireAt(session.getExpireAt());

@@ -1,6 +1,6 @@
 package com.bluecone.app.controller.product;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.publicid.api.ResolvedPublicId;
 import com.bluecone.app.core.publicid.web.ResolvePublicId;
 import com.bluecone.app.id.api.ResourceType;
@@ -133,7 +133,7 @@ public class MerchantProductController {
         
         // 业务逻辑：校验 SKU 是否归属于 Product
         // if (!skuBelongsToProduct(skuPk, productPk)) {
-        //     throw new BizException("SKU 不属于该商品");
+        //     throw new BusinessException("SKU 不属于该商品");
         // }
         
         // 模拟查询 SKU 详情

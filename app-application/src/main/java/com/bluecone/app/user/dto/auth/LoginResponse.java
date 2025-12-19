@@ -6,13 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 登录结果 DTO。
+ * 登录响应。
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginResultDTO {
+public class LoginResponse {
 
     private String accessToken;
 

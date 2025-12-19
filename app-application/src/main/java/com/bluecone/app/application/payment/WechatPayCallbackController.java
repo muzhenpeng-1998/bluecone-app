@@ -1,7 +1,8 @@
 package com.bluecone.app.application.payment;
 
+import com.bluecone.app.api.advice.NoApiResponseWrap;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.api.WechatPayCallbackCommand;
 import com.bluecone.app.payment.application.WechatPayCallbackApplicationService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/open-api/wechat/pay")
+@NoApiResponseWrap
 public class WechatPayCallbackController {
 
     private static final Logger log = LoggerFactory.getLogger(WechatPayCallbackController.class);
@@ -57,7 +59,7 @@ public class WechatPayCallbackController {
             resp.put("code", "SUCCESS");
             resp.put("message", "成功");
             return ResponseEntity.ok(resp);
-        } catch (BizException ex) {
+        } catch (BusinessException ex) {
             log.warn("[WechatPay] 业务处理失败: {}", ex.getMessage(), ex);
             Map<String, String> resp = new HashMap<>();
             resp.put("code", "FAIL");
@@ -121,7 +123,7 @@ public class WechatPayCallbackController {
 
             return cmd;
         } catch (Exception e) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的微信支付回调报文", e);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的微信支付回调报文", e);
         }
     }
 

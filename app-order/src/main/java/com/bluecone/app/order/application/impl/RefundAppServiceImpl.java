@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.RefundAppService;
 import com.bluecone.app.order.application.command.ApplyRefundCommand;
 import com.bluecone.app.order.application.generator.OrderIdGenerator;
@@ -65,10 +65,10 @@ public class RefundAppServiceImpl implements RefundAppService {
         
         // 1. 参数校验
         if (command.getTenantId() == null || command.getOrderId() == null || command.getRequestId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId/requestId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/orderId/requestId 不能为空");
         }
         if (command.getRefundAmount() == null || command.getRefundAmount().signum() <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "退款金额必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "退款金额必须大于0");
         }
         
         // 2. 幂等性检查：根据 idemKey 判断是否已创建退款单
@@ -84,7 +84,7 @@ public class RefundAppServiceImpl implements RefundAppService {
         // 3. 查询订单
         Order order = orderRepository.findById(command.getTenantId(), command.getOrderId());
         if (order == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单不存在");
         }
         
         // 4. 创建退款单（状态为 INIT）
@@ -186,7 +186,7 @@ public class RefundAppServiceImpl implements RefundAppService {
                     command.getTenantId(), command.getOrderId(), refundOrderId, 
                     gatewayResponse.getErrorCode(), gatewayResponse.getErrorMsg());
             
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, 
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, 
                     "退款失败：" + gatewayResponse.getErrorMsg());
         }
     }
@@ -216,7 +216,7 @@ public class RefundAppServiceImpl implements RefundAppService {
         
         // 1. 参数校验
         if (notifyId == null || notifyId.isBlank() || refundId == null || refundId.isBlank()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "notifyId/refundId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "notifyId/refundId 不能为空");
         }
         
         // 2. 幂等性检查：根据 notifyId 判断是否已处理

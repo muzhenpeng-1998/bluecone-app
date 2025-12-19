@@ -6,7 +6,7 @@ import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestResult;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigUpdateRequest;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigView;
 import com.bluecone.app.core.error.BizErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.gateway.context.RuntimeContextUtil;
 import com.bluecone.app.infra.webhook.entity.WebhookConfigDO;
 import com.bluecone.app.infra.webhook.repository.WebhookConfigRepository;
@@ -47,7 +47,7 @@ public class WebhookConfigAppService {
     public List<WebhookConfigView> listByCurrentTenant() {
         Long tenantId = RuntimeContextUtil.currentTenantId();
         if (tenantId == null) {
-            throw new BizException(BizErrorCode.CONTEXT_MISSING);
+            throw new BusinessException(BizErrorCode.CONTEXT_MISSING);
         }
         List<WebhookConfigDO> configs = webhookConfigRepository.listByTenant(tenantId);
         return configs.stream().map(this::toView).toList();
@@ -60,7 +60,7 @@ public class WebhookConfigAppService {
     public WebhookConfigView create(WebhookConfigCreateRequest request) {
         Long tenantId = RuntimeContextUtil.currentTenantId();
         if (tenantId == null) {
-            throw new BizException(BizErrorCode.CONTEXT_MISSING);
+            throw new BusinessException(BizErrorCode.CONTEXT_MISSING);
         }
 
         validateEventType(request.getEventType());
@@ -92,14 +92,14 @@ public class WebhookConfigAppService {
     public WebhookConfigView update(WebhookConfigUpdateRequest request) {
         Long tenantId = RuntimeContextUtil.currentTenantId();
         if (tenantId == null) {
-            throw new BizException(BizErrorCode.CONTEXT_MISSING);
+            throw new BusinessException(BizErrorCode.CONTEXT_MISSING);
         }
 
         WebhookConfigDO config = webhookConfigRepository.findById(request.getId())
-                .orElseThrow(() -> new BizException(BizErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND));
 
         if (!tenantId.equals(config.getTenantId())) {
-            throw new BizException(BizErrorCode.PERMISSION_DENIED);
+            throw new BusinessException(BizErrorCode.PERMISSION_DENIED);
         }
 
         if (request.getTargetUrl() != null) {
@@ -135,13 +135,13 @@ public class WebhookConfigAppService {
     public void delete(Long id) {
         Long tenantId = RuntimeContextUtil.currentTenantId();
         if (tenantId == null) {
-            throw new BizException(BizErrorCode.CONTEXT_MISSING);
+            throw new BusinessException(BizErrorCode.CONTEXT_MISSING);
         }
 
         WebhookConfigDO config = webhookConfigRepository.findById(id)
-                .orElseThrow(() -> new BizException(BizErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND));
         if (!tenantId.equals(config.getTenantId())) {
-            throw new BizException(BizErrorCode.PERMISSION_DENIED);
+            throw new BusinessException(BizErrorCode.PERMISSION_DENIED);
         }
 
         webhookConfigRepository.deleteById(id);
@@ -153,18 +153,18 @@ public class WebhookConfigAppService {
     public WebhookConfigTestResult test(WebhookConfigTestRequest request) {
         Long tenantId = RuntimeContextUtil.currentTenantId();
         if (tenantId == null) {
-            throw new BizException(BizErrorCode.CONTEXT_MISSING);
+            throw new BusinessException(BizErrorCode.CONTEXT_MISSING);
         }
 
         if (request == null || request.getId() == null) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "id 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "id 不能为空");
         }
 
         WebhookConfigDO config = webhookConfigRepository.findById(request.getId())
-                .orElseThrow(() -> new BizException(BizErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND));
 
         if (!tenantId.equals(config.getTenantId())) {
-            throw new BizException(BizErrorCode.PERMISSION_DENIED);
+            throw new BusinessException(BizErrorCode.PERMISSION_DENIED);
         }
 
         Map<String, Object> testBody = new LinkedHashMap<>();
@@ -212,16 +212,16 @@ public class WebhookConfigAppService {
 
     private void validateEventType(String eventType) {
         if (!StringUtils.hasText(eventType)) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "eventType 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "eventType 不能为空");
         }
     }
 
     private void validateUrl(String url) {
         if (!StringUtils.hasText(url)) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "targetUrl 不能为空");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "targetUrl 不能为空");
         }
         if (!(url.startsWith("http://") || url.startsWith("https://"))) {
-            throw new BizException(BizErrorCode.INVALID_PARAM, "仅支持 http/https 协议");
+            throw new BusinessException(BizErrorCode.INVALID_PARAM, "仅支持 http/https 协议");
         }
     }
 

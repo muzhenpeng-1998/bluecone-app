@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.UserOrderCommandAppService;
 import com.bluecone.app.order.domain.enums.OrderEvent;
 import com.bluecone.app.order.domain.enums.OrderStatus;
@@ -27,7 +27,7 @@ public class UserOrderCommandAppServiceImpl implements UserOrderCommandAppServic
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long tenantId, Long userId, Long orderId) {
         if (tenantId == null || userId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/userId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/userId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
@@ -37,14 +37,14 @@ public class UserOrderCommandAppServiceImpl implements UserOrderCommandAppServic
         if (!userId.equals(order.getUserId())) {
             log.warn("User cancel order but not owner, tenantId={}, userId={}, orderUserId={}, orderId={}",
                     tenantId, userId, order.getUserId(), orderId);
-            throw new BizException(CommonErrorCode.FORBIDDEN, "无权操作该订单");
+            throw new BusinessException(CommonErrorCode.FORBIDDEN, "无权操作该订单");
         }
         if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REFUNDED) {
             log.info("User cancel order but already cancelled/refunded, tenantId={}, userId={}, orderId={}, status={}", tenantId, userId, orderId, order.getStatus());
             return;
         }
         if (!order.canCancelByUser()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "当前状态不允许取消订单");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "当前状态不允许取消订单");
         }
         OrderStatus fromStatus = order.getStatus();
         OrderStatus toStatus = orderStateMachine.transitOrThrow(order.getBizType(), fromStatus, OrderEvent.USER_CANCEL);
@@ -62,7 +62,7 @@ public class UserOrderCommandAppServiceImpl implements UserOrderCommandAppServic
     @Transactional(rollbackFor = Exception.class)
     public void deleteOrder(Long tenantId, Long userId, Long orderId) {
         if (tenantId == null || userId == null || orderId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId/userId/orderId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId/userId/orderId 不能为空");
         }
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
@@ -72,7 +72,7 @@ public class UserOrderCommandAppServiceImpl implements UserOrderCommandAppServic
         if (!userId.equals(order.getUserId())) {
             log.warn("User delete order but not owner, tenantId={}, userId={}, orderUserId={}, orderId={}",
                     tenantId, userId, order.getUserId(), orderId);
-            throw new BizException(CommonErrorCode.FORBIDDEN, "无权操作该订单");
+            throw new BusinessException(CommonErrorCode.FORBIDDEN, "无权操作该订单");
         }
         if (order.isUserDeleted()) {
             log.info("User delete order but already deleted, tenantId={}, userId={}, orderId={}", tenantId, userId, orderId);

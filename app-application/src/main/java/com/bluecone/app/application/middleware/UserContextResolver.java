@@ -4,7 +4,7 @@ import com.bluecone.app.config.UserContextProperties;
 import com.bluecone.app.core.cacheepoch.api.CacheEpochProvider;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.error.UserErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.user.runtime.api.UserSnapshot;
 import com.bluecone.app.core.user.runtime.spi.UserPrincipalResolver;
 import com.bluecone.app.core.user.runtime.spi.UserSnapshotRepository;
@@ -88,7 +88,7 @@ public class UserContextResolver {
                 injectAnonymous();
                 return null;
             }
-            throw new BizException(CommonErrorCode.UNAUTHORIZED, "未登录或登录已失效");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "未登录或登录已失效");
         }
 
         UserPrincipalResolver.UserPrincipal principal = principalOpt.get();
@@ -105,13 +105,13 @@ public class UserContextResolver {
                 epochProvider
         );
         if (snapshot == null) {
-            throw new BizException(UserErrorCode.USER_NOT_FOUND, "用户不存在或已删除");
+            throw new BusinessException(UserErrorCode.USER_NOT_FOUND, "用户不存在或已删除");
         }
         if (snapshot.status() == 0) {
-            throw new BizException(UserErrorCode.USER_FROZEN, "用户已冻结");
+            throw new BusinessException(UserErrorCode.USER_FROZEN, "用户已冻结");
         }
         if (snapshot.status() == -1) {
-            throw new BizException(UserErrorCode.USER_DELETED, "用户已注销");
+            throw new BusinessException(UserErrorCode.USER_DELETED, "用户已注销");
         }
 
         injectIntoApiContext(snapshot);

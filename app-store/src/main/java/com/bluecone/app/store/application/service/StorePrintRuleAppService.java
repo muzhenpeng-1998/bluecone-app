@@ -1,7 +1,7 @@
 package com.bluecone.app.store.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.dto.StorePrintRuleView;
 import com.bluecone.app.store.application.command.ChangeStorePrintRuleStatusCommand;
 import com.bluecone.app.store.application.command.UpsertStorePrintRulesCommand;
@@ -102,7 +102,7 @@ public class StorePrintRuleAppService {
                 .set(BcStorePrintRule::getIsDeleted, "DISABLED".equalsIgnoreCase(command.getTargetStatus()))
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.PRINT_RULE_NOT_FOUND, "更新打印规则状态失败");
+            throw new BusinessException(StoreErrorCode.PRINT_RULE_NOT_FOUND, "更新打印规则状态失败");
         }
     }
 }

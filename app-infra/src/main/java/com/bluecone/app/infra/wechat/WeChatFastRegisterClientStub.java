@@ -1,17 +1,17 @@
 package com.bluecone.app.infra.wechat;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * 微信开放平台网关的占位实现（快速注册相关）。
+ * 微信快速注册接口的占位实现。
  *
- * 先保证编译通过，后续再接入真实 HTTP 调用（可选引入 WxJava 或基于 WebClient/RestTemplate 自行封装）。
- * 
- * 说明：为避免与 {@link com.bluecone.app.infra.wechat.openplatform.WeChatOpenPlatformClientStub} 的 Bean 名称冲突，
- * 此处指定 Bean 名称为 weChatFastRegisterClientStub。
+ * 用于本地开发/测试时的占位实现，不真正调用微信接口。
+ * 后续会在同包下新增基于 WebClient 或 RestTemplate 的正式实现。
  */
-@Component("weChatFastRegisterClientStub")
-public class WeChatOpenPlatformClientStub implements WeChatOpenPlatformClient {
+@Component
+@Profile({"local", "dev", "stub-wechat"})
+public class WeChatFastRegisterClientStub implements WeChatFastRegisterClient {
 
     @Override
     public WeChatBetaRegisterResult fastRegisterBetaWeapp(WeChatBetaRegisterRequest request) {
@@ -28,4 +28,3 @@ public class WeChatOpenPlatformClientStub implements WeChatOpenPlatformClient {
         throw new UnsupportedOperationException("TODO: integrate with WeChat fastregisterweapp.search or related API");
     }
 }
-

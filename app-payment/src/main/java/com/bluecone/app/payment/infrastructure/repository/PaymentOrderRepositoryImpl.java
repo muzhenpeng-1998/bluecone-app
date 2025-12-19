@@ -3,7 +3,7 @@ package com.bluecone.app.payment.infrastructure.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.domain.model.PaymentOrder;
 import com.bluecone.app.payment.domain.repository.PaymentOrderRepository;
 import com.bluecone.app.payment.infrastructure.converter.PaymentOrderConverter;
@@ -73,7 +73,7 @@ public class PaymentOrderRepositoryImpl implements PaymentOrderRepository {
     @Override
     public void update(PaymentOrder paymentOrder) {
         if (paymentOrder.getId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付单更新失败：ID 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付单更新失败：ID 不能为空");
         }
         PaymentOrderDO doObj = PaymentOrderConverter.toDO(paymentOrder);
         Long currentVersion = doObj.getVersion() == null ? 0L : doObj.getVersion();
@@ -100,7 +100,7 @@ public class PaymentOrderRepositoryImpl implements PaymentOrderRepository {
 
         int rows = paymentOrderMapper.update(null, wrapper);
         if (rows == 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付单更新失败，版本冲突");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付单更新失败，版本冲突");
         }
         paymentOrder.setVersion(currentVersion.intValue() + 1);
     }

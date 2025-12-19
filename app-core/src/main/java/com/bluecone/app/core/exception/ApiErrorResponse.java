@@ -4,6 +4,12 @@ import org.slf4j.MDC;
 
 import java.time.LocalDateTime;
 
+/**
+ * API 错误响应（已废弃）。
+ * 
+ * @deprecated 已统一为 {@link com.bluecone.app.core.api.ApiResponse}，请使用 ApiResponse.fail(code, message) 替代
+ */
+@Deprecated
 public class ApiErrorResponse {
 
     private String code;

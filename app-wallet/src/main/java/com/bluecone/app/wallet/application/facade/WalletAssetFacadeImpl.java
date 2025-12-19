@@ -1,7 +1,7 @@
 package com.bluecone.app.wallet.application.facade;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.wallet.api.dto.WalletAssetCommand;
 import com.bluecone.app.wallet.api.dto.WalletAssetResult;
 import com.bluecone.app.wallet.api.facade.WalletAssetFacade;
@@ -64,7 +64,7 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
                     account.getFrozenBalance(),
                     idempotent
             );
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             log.error("冻结余额失败：tenantId={}, userId={}, amount={}, error={}", 
                     command.getTenantId(), command.getUserId(), command.getAmount(), e.getMessage());
             return WalletAssetResult.failure(e.getMessage());
@@ -109,7 +109,7 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
                     account.getFrozenBalance(),
                     idempotent
             );
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             log.error("提交冻结失败：tenantId={}, userId={}, bizOrderId={}, error={}", 
                     command.getTenantId(), command.getUserId(), command.getBizOrderId(), e.getMessage());
             return WalletAssetResult.failure(e.getMessage());
@@ -149,7 +149,7 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
                     account.getFrozenBalance(),
                     false
             );
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             log.error("释放冻结失败：tenantId={}, userId={}, bizOrderId={}, error={}", 
                     command.getTenantId(), command.getUserId(), command.getBizOrderId(), e.getMessage());
             return WalletAssetResult.failure(e.getMessage());
@@ -197,7 +197,7 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
                     account.getFrozenBalance(),
                     idempotent
             );
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             log.error("回退余额失败：tenantId={}, userId={}, amount={}, error={}", 
                     command.getTenantId(), command.getUserId(), command.getAmount(), e.getMessage());
             return WalletAssetResult.failure(e.getMessage());
@@ -212,64 +212,64 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
     
     private void validateFreezeCommand(WalletAssetCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "冻结命令不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "冻结命令不能为空");
         }
         if (command.getTenantId() == null || command.getUserId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
         }
         if (command.getAmount() == null || command.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "冻结金额必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "冻结金额必须大于0");
         }
         if (command.getBizType() == null || command.getBizOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "业务类型和业务单ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "业务类型和业务单ID不能为空");
         }
         if (command.getIdempotencyKey() == null || command.getIdempotencyKey().isEmpty()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
         }
     }
     
     private void validateCommitCommand(WalletAssetCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "提交命令不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "提交命令不能为空");
         }
         if (command.getTenantId() == null || command.getUserId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
         }
         if (command.getBizOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "业务单ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "业务单ID不能为空");
         }
         if (command.getIdempotencyKey() == null || command.getIdempotencyKey().isEmpty()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
         }
     }
     
     private void validateReleaseCommand(WalletAssetCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "释放命令不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "释放命令不能为空");
         }
         if (command.getTenantId() == null || command.getUserId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
         }
         if (command.getBizOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "业务单ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "业务单ID不能为空");
         }
     }
     
     private void validateRevertCommand(WalletAssetCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "回退命令不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "回退命令不能为空");
         }
         if (command.getTenantId() == null || command.getUserId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
         }
         if (command.getAmount() == null || command.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "回退金额必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "回退金额必须大于0");
         }
         if (command.getBizType() == null || command.getBizOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "业务类型和业务单ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "业务类型和业务单ID不能为空");
         }
         if (command.getIdempotencyKey() == null || command.getIdempotencyKey().isEmpty()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
         }
     }
     
@@ -310,7 +310,7 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
                     account.getFrozenBalance(),
                     idempotent
             );
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             log.error("赠送余额失败：tenantId={}, userId={}, amount={}, error={}", 
                     command.getTenantId(), command.getUserId(), command.getAmount(), e.getMessage());
             return WalletAssetResult.failure(e.getMessage());
@@ -323,19 +323,19 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
     
     private void validateCreditCommand(WalletAssetCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送命令不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "赠送命令不能为空");
         }
         if (command.getTenantId() == null || command.getUserId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
         }
         if (command.getAmount() == null || command.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送金额必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "赠送金额必须大于0");
         }
         if (command.getBizType() == null || command.getBizOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "业务类型和业务单ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "业务类型和业务单ID不能为空");
         }
         if (command.getIdempotencyKey() == null || command.getIdempotencyKey().isEmpty()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
         }
     }
 }

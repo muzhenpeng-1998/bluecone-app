@@ -2,7 +2,7 @@ package com.bluecone.app.application.middleware;
 
 import com.bluecone.app.config.InventoryContextProperties;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.gateway.ApiContext;
 import com.bluecone.app.gateway.context.ApiContextHolder;
 import com.bluecone.app.inventory.domain.error.InventoryErrorCode;
@@ -52,7 +52,7 @@ public class InventoryContextResolver {
                 storeNumericId
         );
         InventoryPolicySnapshot snapshot = snapshotOpt.orElseThrow(
-                () -> new BizException(InventoryErrorCode.INVENTORY_POLICY_NOT_FOUND));
+                () -> new BusinessException(InventoryErrorCode.INVENTORY_POLICY_NOT_FOUND));
 
         injectIntoApiContext(snapshot);
         writeMdc(snapshot);
@@ -76,30 +76,30 @@ public class InventoryContextResolver {
     private long resolveTenantId(ApiContext ctx) {
         String tenantStr = ctx.getTenantId();
         if (!StringUtils.hasText(tenantStr)) {
-            throw new BizException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
         }
         try {
             return Long.parseLong(tenantStr);
         } catch (NumberFormatException ex) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
         }
     }
 
     private StoreContext resolveStoreContext() {
         ApiContext apiCtx = ApiContextHolder.get();
         if (apiCtx == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "门店上下文缺失，无法加载库存策略");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "门店上下文缺失，无法加载库存策略");
         }
         Object attr = apiCtx.getAttribute("STORE_CONTEXT");
         if (!(attr instanceof StoreContext storeContext)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "门店上下文缺失，无法加载库存策略");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "门店上下文缺失，无法加载库存策略");
         }
         return storeContext;
     }
 
     private Long resolveStoreNumericId(StoreContext storeContext) {
         if (storeContext.snapshot() == null || storeContext.snapshot().ext() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "门店上下文不包含数值型门店ID，无法加载库存策略");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "门店上下文不包含数值型门店ID，无法加载库存策略");
         }
         Object storeIdObj = storeContext.snapshot().ext().get("storeId");
         if (storeIdObj instanceof Long l) {
@@ -108,7 +108,7 @@ public class InventoryContextResolver {
         if (storeIdObj instanceof Number n) {
             return n.longValue();
         }
-        throw new BizException(CommonErrorCode.BAD_REQUEST, "门店上下文不包含有效的数值型门店ID，无法加载库存策略");
+        throw new BusinessException(CommonErrorCode.BAD_REQUEST, "门店上下文不包含有效的数值型门店ID，无法加载库存策略");
     }
 
     private void injectIntoApiContext(InventoryPolicySnapshot snapshot) {

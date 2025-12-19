@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.dto.MerchantOrderView;
 import com.bluecone.app.order.application.MerchantFulfillmentAppService;
 import com.bluecone.app.order.application.command.CompleteOrderCommand;
@@ -85,12 +85,12 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
             // 3. 查询订单
             Order order = orderRepository.findById(command.getTenantId(), command.getOrderId());
             if (order == null) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_FOUND.getMessage());
             }
             
             // 4. 业务校验
             if (!Objects.equals(order.getStoreId(), command.getStoreId())) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_BELONG_TO_STORE.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_BELONG_TO_STORE.getMessage());
             }
             
             // 版本号校验（如果传了 expectedVersion）
@@ -99,7 +99,7 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
                         command.getExpectedVersion(), order.getVersion());
                 log.warn("开始制作失败，版本冲突：orderId={}, expectedVersion={}, actualVersion={}", 
                         order.getId(), command.getExpectedVersion(), order.getVersion());
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_VERSION_CONFLICT.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_VERSION_CONFLICT.getMessage());
             }
             
             // 5. 状态变更（调用聚合根方法，内部会校验状态约束）
@@ -120,7 +120,7 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
                     order.getId(), command.getOperatorId(), order.getVersion(), alreadyStarted);
             return view;
             
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             // 业务异常：更新 action_log 为失败
             actionLog.markFailed(e.getCode(), e.getMessage());
             actionLogRepository.update(actionLog);
@@ -129,7 +129,7 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
             // 系统异常：更新 action_log 为失败
             actionLog.markFailed("SYSTEM_ERROR", e.getMessage());
             actionLogRepository.update(actionLog);
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "开始制作失败：" + e.getMessage());
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "开始制作失败：" + e.getMessage());
         }
     }
 
@@ -161,12 +161,12 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
             // 3. 查询订单
             Order order = orderRepository.findById(command.getTenantId(), command.getOrderId());
             if (order == null) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_FOUND.getMessage());
             }
             
             // 4. 业务校验
             if (!Objects.equals(order.getStoreId(), command.getStoreId())) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_BELONG_TO_STORE.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_BELONG_TO_STORE.getMessage());
             }
             
             if (command.getExpectedVersion() != null && !Objects.equals(order.getVersion(), command.getExpectedVersion())) {
@@ -174,7 +174,7 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
                         command.getExpectedVersion(), order.getVersion());
                 log.warn("出餐完成失败，版本冲突：orderId={}, expectedVersion={}, actualVersion={}", 
                         order.getId(), command.getExpectedVersion(), order.getVersion());
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_VERSION_CONFLICT.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_VERSION_CONFLICT.getMessage());
             }
             
             // 5. 状态变更
@@ -195,14 +195,14 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
                     order.getId(), command.getOperatorId(), order.getVersion(), alreadyReady);
             return view;
             
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             actionLog.markFailed(e.getCode(), e.getMessage());
             actionLogRepository.update(actionLog);
             throw e;
         } catch (Exception e) {
             actionLog.markFailed("SYSTEM_ERROR", e.getMessage());
             actionLogRepository.update(actionLog);
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "出餐完成失败：" + e.getMessage());
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "出餐完成失败：" + e.getMessage());
         }
     }
 
@@ -234,12 +234,12 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
             // 3. 查询订单
             Order order = orderRepository.findById(command.getTenantId(), command.getOrderId());
             if (order == null) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_FOUND.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_FOUND.getMessage());
             }
             
             // 4. 业务校验
             if (!Objects.equals(order.getStoreId(), command.getStoreId())) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_BELONG_TO_STORE.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_NOT_BELONG_TO_STORE.getMessage());
             }
             
             if (command.getExpectedVersion() != null && !Objects.equals(order.getVersion(), command.getExpectedVersion())) {
@@ -247,7 +247,7 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
                         command.getExpectedVersion(), order.getVersion());
                 log.warn("订单完成失败，版本冲突：orderId={}, expectedVersion={}, actualVersion={}", 
                         order.getId(), command.getExpectedVersion(), order.getVersion());
-                throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_VERSION_CONFLICT.getMessage());
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.ORDER_VERSION_CONFLICT.getMessage());
             }
             
             // 5. 状态变更
@@ -268,14 +268,14 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
                     order.getId(), command.getOperatorId(), order.getVersion(), alreadyCompleted);
             return view;
             
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             actionLog.markFailed(e.getCode(), e.getMessage());
             actionLogRepository.update(actionLog);
             throw e;
         } catch (Exception e) {
             actionLog.markFailed("SYSTEM_ERROR", e.getMessage());
             actionLogRepository.update(actionLog);
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "订单完成失败：" + e.getMessage());
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "订单完成失败：" + e.getMessage());
         }
     }
 
@@ -304,18 +304,18 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
             log.info("幂等键冲突，查询已有记录：actionKey={}", actionKey);
             OrderActionLog existing = actionLogRepository.findByActionKey(tenantId, actionKey);
             if (existing == null) {
-                throw new BizException(CommonErrorCode.SYSTEM_ERROR, "幂等记录查询失败");
+                throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "幂等记录查询失败");
             }
             if (existing.isSuccess()) {
                 // 之前已成功，直接返回已有结果（幂等返回）
                 return existing;
             } else if (existing.isFailed()) {
                 // 之前失败，提示用户使用新的 requestId 重试
-                throw new BizException(CommonErrorCode.BAD_REQUEST, 
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, 
                         OrderErrorCode.IDEMPOTENT_ACTION_FAILED.getMessage() + "：" + existing.getErrorMsg());
             } else {
                 // 正在处理中（PROCESSING），说明有并发请求
-                throw new BizException(CommonErrorCode.BAD_REQUEST, 
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, 
                         OrderErrorCode.ORDER_CONCURRENT_MODIFICATION.getMessage());
             }
         }
@@ -323,37 +323,37 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
 
     private void validateStartCommand(StartOrderCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.PARAM_INVALID.getMessage());
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.PARAM_INVALID.getMessage());
         }
         if (command.getTenantId() == null || command.getOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID/订单ID 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID/订单ID 不能为空");
         }
         if (command.getRequestId() == null || command.getRequestId().isBlank()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.REQUEST_ID_REQUIRED.getMessage());
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.REQUEST_ID_REQUIRED.getMessage());
         }
     }
 
     private void validateMarkReadyCommand(MarkReadyCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.PARAM_INVALID.getMessage());
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.PARAM_INVALID.getMessage());
         }
         if (command.getTenantId() == null || command.getOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID/订单ID 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID/订单ID 不能为空");
         }
         if (command.getRequestId() == null || command.getRequestId().isBlank()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.REQUEST_ID_REQUIRED.getMessage());
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.REQUEST_ID_REQUIRED.getMessage());
         }
     }
 
     private void validateCompleteCommand(CompleteOrderCommand command) {
         if (command == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.PARAM_INVALID.getMessage());
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.PARAM_INVALID.getMessage());
         }
         if (command.getTenantId() == null || command.getOrderId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID/订单ID 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户ID/订单ID 不能为空");
         }
         if (command.getRequestId() == null || command.getRequestId().isBlank()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.REQUEST_ID_REQUIRED.getMessage());
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, OrderErrorCode.REQUEST_ID_REQUIRED.getMessage());
         }
     }
 
@@ -395,7 +395,7 @@ public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentApp
             return objectMapper.readValue(actionLog.getResultJson(), MerchantOrderView.class);
         } catch (Exception e) {
             log.warn("解析幂等结果失败：actionKey={}, resultJson={}", actionLog.getActionKey(), actionLog.getResultJson(), e);
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "解析幂等结果失败");
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "解析幂等结果失败");
         }
     }
 

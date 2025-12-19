@@ -1,6 +1,6 @@
 package com.bluecone.app.application.payment.debug;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.order.application.OrderPaymentAppService;
 import com.bluecone.app.order.application.dto.OrderPaymentResult;
 import com.bluecone.app.payment.simple.application.PaymentCommandAppService;

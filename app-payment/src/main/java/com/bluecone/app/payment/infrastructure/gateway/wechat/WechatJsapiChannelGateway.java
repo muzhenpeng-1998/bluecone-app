@@ -1,7 +1,7 @@
 package com.bluecone.app.payment.infrastructure.gateway.wechat;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.domain.channel.PaymentChannelConfig;
 import com.bluecone.app.payment.domain.channel.PaymentChannelConfigRepository;
 import com.bluecone.app.payment.domain.channel.PaymentChannelType;
@@ -51,18 +51,18 @@ public class WechatJsapiChannelGateway implements PaymentChannelGateway {
         PaymentChannelType channelType = PaymentChannelType.fromChannelAndMethod(
                 paymentOrder.getChannel(), paymentOrder.getMethod());
         if (channelType != PaymentChannelType.WECHAT_JSAPI) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "WechatJsapiChannelGateway 只支持 WECHAT_JSAPI");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "WechatJsapiChannelGateway 只支持 WECHAT_JSAPI");
         }
 
         PaymentChannelConfig config = paymentChannelConfigRepository.findByTenantStoreAndChannel(
                         paymentOrder.getTenantId(),
                         paymentOrder.getStoreId(),
                         channelType)
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 渠道未配置"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 渠道未配置"));
 
         BigDecimal payable = paymentOrder.getPayableAmount();
         if (payable == null) {
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "支付单缺少应付金额");
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "支付单缺少应付金额");
         }
         long fen = payable.multiply(BigDecimal.valueOf(100))
                 .setScale(0, RoundingMode.HALF_UP)

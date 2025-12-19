@@ -6,7 +6,7 @@ import com.bluecone.app.core.cacheinval.api.InvalidationScope;
 import com.bluecone.app.core.contextkit.CacheNamespaces;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.event.DomainEventPublisher;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.product.application.command.ChangeSkuPriceCommand;
 import com.bluecone.app.product.application.command.PublishSkuCommand;
@@ -49,9 +49,9 @@ public class ProductAdminApplicationService {
         Objects.requireNonNull(command.getSkuId(), "skuId 不能为空");
 
         Product product = productRepository.findById(command.getTenantId(), command.getProductId())
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "商品不存在或已下线"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "商品不存在或已下线"));
         ProductSku sku = productRepository.findSkuById(command.getTenantId(), command.getSkuId())
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "SKU 不存在"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "SKU 不存在"));
         ensureSkuBelongsToProduct(product, sku);
 
         productRepository.updateSkuStatus(command.getTenantId(), command.getSkuId(), ProductStatus.ENABLED, command.getOperatorId());
@@ -82,13 +82,13 @@ public class ProductAdminApplicationService {
         Objects.requireNonNull(command.getSkuId(), "skuId 不能为空");
         Objects.requireNonNull(command.getNewPrice(), "newPrice 不能为空");
         if (command.getNewPrice() < 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "newPrice 不能为负数");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "newPrice 不能为负数");
         }
 
         Product product = productRepository.findById(command.getTenantId(), command.getProductId())
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "商品不存在或已下线"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "商品不存在或已下线"));
         ProductSku sku = productRepository.findSkuById(command.getTenantId(), command.getSkuId())
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "SKU 不存在"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "SKU 不存在"));
         ensureSkuBelongsToProduct(product, sku);
 
         Long oldPrice = toCentLong(sku.getBasePrice());
@@ -114,10 +114,10 @@ public class ProductAdminApplicationService {
 
     private void ensureSkuBelongsToProduct(Product product, ProductSku sku) {
         if (product == null || sku == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "商品或 SKU 不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "商品或 SKU 不存在");
         }
         if (!Objects.equals(product.getId(), sku.getProductId())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "SKU 不属于当前商品");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "SKU 不属于当前商品");
         }
     }
 

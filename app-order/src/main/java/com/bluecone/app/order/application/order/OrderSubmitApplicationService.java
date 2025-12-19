@@ -2,7 +2,7 @@ package com.bluecone.app.order.application.order;
 
 import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.event.EventMetadata;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.order.OrderSubmitFacade;
 import com.bluecone.app.order.api.order.dto.OrderSubmitResponse;
 import com.bluecone.app.order.api.order.dto.SubmitOrderFromDraftDTO;
@@ -57,9 +57,9 @@ public class OrderSubmitApplicationService implements OrderSubmitFacade {
                         command.getUserId(),
                         channel,
                         scene)
-                .orElseThrow(() -> new BizException(OrderErrorCode.ORDER_NOT_FOUND, "当前没有可提交的订单草稿"));
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND, "当前没有可提交的订单草稿"));
         if (!OrderStatus.DRAFT.equals(draft.getStatus()) && !OrderStatus.LOCKED_FOR_CHECKOUT.equals(draft.getStatus())) {
-            throw new BizException(OrderErrorCode.ORDER_STATE_INVALID, "订单当前状态不可提交");
+            throw new BusinessException(OrderErrorCode.ORDER_STATE_INVALID, "订单当前状态不可提交");
         }
         SubmitOrderFromDraftCommand domainCommand = toDomainCommand(command);
         draft.confirmFromDraft(domainCommand);
@@ -116,16 +116,16 @@ public class OrderSubmitApplicationService implements OrderSubmitFacade {
 
     private void validate(SubmitOrderFromDraftDTO command) {
         if (command == null) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "订单提交参数不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "订单提交参数不能为空");
         }
         if (command.getTenantId() == null || command.getStoreId() == null || command.getUserId() == null) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "租户/门店/用户信息缺失");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "租户/门店/用户信息缺失");
         }
         if (!StringUtils.hasText(command.getOrderToken())) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "orderToken 不能为空");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "orderToken 不能为空");
         }
         if (command.getClientPayableAmount() == null || command.getClientPayableAmount() < 0) {
-            throw new BizException(OrderErrorCode.ORDER_INVALID, "clientPayableAmount 缺失或非法");
+            throw new BusinessException(OrderErrorCode.ORDER_INVALID, "clientPayableAmount 缺失或非法");
         }
     }
 

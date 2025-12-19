@@ -1,7 +1,7 @@
 package com.bluecone.app.inventory.domain.service;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.inventory.domain.model.InventoryLock;
 import com.bluecone.app.inventory.domain.model.InventoryStock;
 import com.bluecone.app.inventory.domain.model.InventoryTxn;
@@ -41,7 +41,7 @@ public class StockDeductDomainService {
                     lock.getItemId(),
                     lock.getLocationId());
             if (stock == null) {
-                throw new BizException(CommonErrorCode.SYSTEM_ERROR, String.format(
+                throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, String.format(
                         "库存不存在，无法扣减，tenantId=%s,storeId=%s,itemId=%s,lockId=%s",
                         lock.getTenantId(), lock.getStoreId(), lock.getItemId(), lock.getId()));
             }
@@ -52,7 +52,7 @@ public class StockDeductDomainService {
 
             boolean updated = inventoryStockRepository.tryDeduct(stock, lockQty);
             if (!updated) {
-                throw new BizException(CommonErrorCode.SYSTEM_ERROR, String.format(
+                throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, String.format(
                         "扣减库存失败，可能并发冲突或库存不足，tenantId=%s,storeId=%s,itemId=%s,lockId=%s,qty=%s",
                         stock.getTenantId(), stock.getStoreId(), stock.getItemId(), lock.getId(), lockQty));
             }

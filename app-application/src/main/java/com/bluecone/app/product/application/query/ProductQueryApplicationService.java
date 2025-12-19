@@ -19,7 +19,7 @@ import com.bluecone.app.product.dto.view.ProductDetailView;
 import com.bluecone.app.product.dto.view.ProductSkuView;
 import com.bluecone.app.product.dto.view.ProductSpecGroupView;
 import com.bluecone.app.product.dto.view.ProductSpecOptionView;
-import com.bluecone.app.user.application.CurrentUserContext;
+import com.bluecone.app.core.context.CurrentUserContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;

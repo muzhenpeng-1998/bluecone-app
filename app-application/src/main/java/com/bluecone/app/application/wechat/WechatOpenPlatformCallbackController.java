@@ -1,5 +1,6 @@
 package com.bluecone.app.application.wechat;
 
+import com.bluecone.app.api.advice.NoApiResponseWrap;
 import com.bluecone.app.tenant.application.wechat.WechatOpenCallbackAppService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/wechat/open")
+@NoApiResponseWrap
 public class WechatOpenPlatformCallbackController {
 
     private static final Logger log = LoggerFactory.getLogger(WechatOpenPlatformCallbackController.class);

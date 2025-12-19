@@ -1,7 +1,7 @@
 package com.bluecone.app.order.domain.model;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.domain.enums.RefundChannel;
 import com.bluecone.app.order.domain.enums.RefundStatus;
 import lombok.AllArgsConstructor;
@@ -217,7 +217,7 @@ public class RefundOrder implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("退款单状态不允许流转到PROCESSING：当前状态=%s，只允许 INIT 状态流转", currentStatus);
             log.warn("退款单状态不允许流转到PROCESSING：refundOrderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：INIT -> PROCESSING
@@ -256,7 +256,7 @@ public class RefundOrder implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("退款单状态不允许流转到SUCCESS：当前状态=%s，只允许 INIT/PROCESSING 状态流转", currentStatus);
             log.warn("退款单状态不允许流转到SUCCESS：refundOrderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：INIT/PROCESSING -> SUCCESS
@@ -297,7 +297,7 @@ public class RefundOrder implements Serializable {
             String currentStatus = this.status != null ? this.status.getCode() : "NULL";
             String msg = String.format("退款单状态不允许流转到FAILED：当前状态=%s，只允许 INIT/PROCESSING 状态流转", currentStatus);
             log.warn("退款单状态不允许流转到FAILED：refundOrderId={}, currentStatus={}", this.id, currentStatus);
-            throw new BizException(CommonErrorCode.BAD_REQUEST, msg);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, msg);
         }
         
         // 流转状态：INIT/PROCESSING -> FAILED

@@ -1,8 +1,8 @@
 package com.bluecone.app.controller.store;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.store.api.StoreDeviceFacade;
 import com.bluecone.app.store.api.dto.StoreDeviceView;
@@ -96,12 +96,12 @@ public class AdminStoreDeviceController {
     private Long requireTenantId() {
         String tenantIdStr = TenantContext.getTenantId();
         if (tenantIdStr == null || tenantIdStr.isBlank()) {
-            throw new BizException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
         }
         try {
             return Long.parseLong(tenantIdStr);
         } catch (NumberFormatException ex) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
         }
     }
 }

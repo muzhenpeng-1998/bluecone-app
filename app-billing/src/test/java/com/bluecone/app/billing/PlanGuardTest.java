@@ -6,7 +6,7 @@ import com.bluecone.app.billing.dao.entity.TenantSubscriptionDO;
 import com.bluecone.app.billing.dao.mapper.TenantSubscriptionMapper;
 import com.bluecone.app.billing.domain.enums.SubscriptionStatus;
 import com.bluecone.app.billing.guard.PlanGuard;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;

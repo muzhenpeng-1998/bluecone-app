@@ -2,7 +2,7 @@ package com.bluecone.app.user.application.member;
 
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.event.DomainEventPublisher;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.user.domain.event.MemberLevelChangedEvent;
 import com.bluecone.app.core.user.domain.member.MemberLevel;
 import com.bluecone.app.core.user.domain.member.TenantMember;
@@ -19,7 +19,7 @@ import com.bluecone.app.core.user.domain.repository.PointsAccountRepository;
 import com.bluecone.app.core.user.domain.repository.TenantMemberRepository;
 import com.bluecone.app.core.user.domain.repository.UserIdentityRepository;
 import com.bluecone.app.core.user.domain.repository.UserProfileRepository;
-import com.bluecone.app.user.application.CurrentUserContext;
+import com.bluecone.app.core.context.CurrentUserContext;
 import com.bluecone.app.user.dto.member.ChangeMemberLevelCommand;
 import com.bluecone.app.user.dto.member.EnrollMemberCommand;
 import com.bluecone.app.user.dto.member.MemberDetailDTO;
@@ -100,17 +100,17 @@ public class MemberApplicationService {
     public void changeMemberLevel(ChangeMemberLevelCommand command) {
         Long tenantId = resolveTenantId(command.getTenantId());
         if (command.getMemberId() == null || !StringUtils.hasText(command.getNewLevelCode())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "memberId 或 newLevelCode 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "memberId 或 newLevelCode 不能为空");
         }
         TenantMember member = tenantMemberRepository.findById(command.getMemberId())
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "会员不存在"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "会员不存在"));
         if (member.getTenantId() == null || !member.getTenantId().equals(tenantId)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "会员不属于当前租户");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "会员不属于当前租户");
         }
         Long oldLevelId = member.getLevelId();
         Optional<MemberLevel> oldLevelOpt = oldLevelId == null ? Optional.empty() : memberLevelRepository.findById(oldLevelId);
         MemberLevel newLevel = memberLevelRepository.findByTenantAndCode(tenantId, command.getNewLevelCode())
-                .orElseThrow(() -> new BizException(CommonErrorCode.BAD_REQUEST, "目标等级不存在"));
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "目标等级不存在"));
 
         member.changeLevel(newLevel.getId());
         tenantMemberRepository.save(member);

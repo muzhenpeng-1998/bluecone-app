@@ -1,7 +1,7 @@
 package com.bluecone.app.order.domain.service.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.dto.ConfirmOrderItemDTO;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.domain.enums.BizType;
@@ -36,17 +36,17 @@ public class OrderDomainServiceImpl implements OrderDomainService {
     @Override
     public Order buildConfirmedOrder(ConfirmOrderRequest request) {
         if (request == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "请求不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "请求不能为空");
         }
         validateBasic(request);
 
         BizType bizType = BizType.fromCode(request.getBizType());
         if (bizType == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的业务业态");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "不支持的业务业态");
         }
         OrderSource orderSource = OrderSource.fromCode(request.getOrderSource());
         if (orderSource == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "不支持的订单场景");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "不支持的订单场景");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -91,16 +91,16 @@ public class OrderDomainServiceImpl implements OrderDomainService {
 
     private void validateBasic(ConfirmOrderRequest request) {
         if (request.getTenantId() == null || request.getStoreId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户或门店不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "租户或门店不能为空");
         }
         if (!StringUtils.hasText(request.getChannel())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "下单渠道不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "下单渠道不能为空");
         }
         if (!StringUtils.hasText(request.getClientOrderNo())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "客户端订单号不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "客户端订单号不能为空");
         }
         if (CollectionUtils.isEmpty(request.getItems())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单明细不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单明细不能为空");
         }
     }
 
@@ -111,7 +111,7 @@ public class OrderDomainServiceImpl implements OrderDomainService {
                 continue;
             }
             if (dto.getQuantity() == null || dto.getQuantity() <= 0) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST, "明细数量必须大于0");
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "明细数量必须大于0");
             }
             OrderItem item = new OrderItem();
             item.setProductId(dto.getProductId());

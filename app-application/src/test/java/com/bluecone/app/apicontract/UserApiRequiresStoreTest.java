@@ -1,7 +1,7 @@
 package com.bluecone.app.apicontract;
 
 import com.bluecone.app.Application;
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.config.StoreContextProperties;
 import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.ErrorCode;

@@ -1,6 +1,6 @@
 package com.bluecone.app.application.gateway.handler.product;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.product.application.UserProductQueryAppService;
 import com.bluecone.app.application.gateway.dto.product.UserStoreMenuResponse;
 import com.bluecone.app.product.application.dto.UserStoreMenuView;

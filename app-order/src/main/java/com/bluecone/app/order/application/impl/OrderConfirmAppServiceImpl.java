@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.api.dto.ConfirmOrderRequest;
 import com.bluecone.app.order.api.dto.ConfirmOrderResponse;
 import com.bluecone.app.core.event.DomainEventPublisher;
@@ -114,7 +114,7 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
             
             if (!paySuccess) {
                 log.error("钱包支付失败：orderId={}, userId={}", order.getId(), request.getUserId());
-                throw new BizException(CommonErrorCode.SYSTEM_ERROR, "钱包支付失败");
+                throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "钱包支付失败");
             }
             
             log.info("钱包余额支付完成：orderId={}, userId={}, amount={}", 
@@ -173,13 +173,13 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
 
     private void requireClientOrderNo(ConfirmOrderRequest request) {
         if (!StringUtils.hasText(request.getClientOrderNo())) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "clientOrderNo 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "clientOrderNo 不能为空");
         }
     }
 
     private void requireTenantId(ConfirmOrderRequest request) {
         if (request.getTenantId() == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "tenantId 不能为空");
         }
     }
     
@@ -209,19 +209,19 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
             if (!result.isSuccess()) {
                 log.error("冻结钱包余额失败：orderId={}, userId={}, amount={}, error={}", 
                         order.getId(), userId, order.getPayableAmount(), result.getErrorMessage());
-                throw new BizException(CommonErrorCode.BAD_REQUEST, 
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, 
                         "冻结钱包余额失败：" + result.getErrorMessage());
             }
             
             log.info("冻结钱包余额成功：orderId={}, userId={}, amount={}, freezeNo={}, idempotent={}", 
                     order.getId(), userId, order.getPayableAmount(), 
                     result.getFreezeNo(), result.isIdempotent());
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             log.error("冻结钱包余额异常：orderId={}, userId={}, amount={}", 
                     order.getId(), userId, order.getPayableAmount(), e);
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "冻结钱包余额失败");
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "冻结钱包余额失败");
         }
     }
 }

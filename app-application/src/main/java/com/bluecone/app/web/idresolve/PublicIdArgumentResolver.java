@@ -11,7 +11,7 @@ import com.bluecone.app.core.idresolve.api.ResolvePublicId;
 import com.bluecone.app.core.idresolve.api.ResolveResult;
 import com.bluecone.app.core.idresolve.api.ResolvedId;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.id.core.Ulid128;
 import com.bluecone.app.core.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
@@ -84,12 +84,12 @@ public class PublicIdArgumentResolver implements HandlerMethodArgumentResolver {
     private long resolveTenantId() {
         String tenantIdStr = TenantContext.getTenantId();
         if (tenantIdStr == null || tenantIdStr.isBlank()) {
-            throw new BizException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
         }
         try {
             return Long.parseLong(tenantIdStr);
         } catch (NumberFormatException ex) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
         }
     }
 

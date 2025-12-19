@@ -1,6 +1,6 @@
 package com.bluecone.app.store.application;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.StoreContextProvider;
 import com.bluecone.app.store.api.dto.StoreBaseView;
 import com.bluecone.app.store.api.dto.StoreOrderSnapshot;
@@ -42,7 +42,7 @@ public class StoreContextProviderImpl implements StoreContextProvider {
 
     private StoreRuntime loadStoreRuntime(Long tenantId, Long storeId) {
         return storeRepository.loadStoreRuntime(tenantId, storeId)
-                .orElseThrow(() -> new BizException(StoreErrorCode.STORE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(StoreErrorCode.STORE_NOT_FOUND));
     }
 
     private StoreBaseView mapToStoreBaseView(StoreRuntime runtime) {

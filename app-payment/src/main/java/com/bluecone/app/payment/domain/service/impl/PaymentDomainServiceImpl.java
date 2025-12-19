@@ -1,7 +1,7 @@
 package com.bluecone.app.payment.domain.service.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.domain.enums.PaymentChannel;
 import com.bluecone.app.payment.domain.enums.PaymentEvent;
 import com.bluecone.app.payment.domain.enums.PaymentMethod;
@@ -44,20 +44,20 @@ public class PaymentDomainServiceImpl implements PaymentDomainService {
                                           LocalDateTime expireAt) {
         // 1. 基本参数校验
         if (tenantId == null || storeId == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：tenantId/storeId 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：tenantId/storeId 不能为空");
         }
         if (isBlank(bizType) || isBlank(bizOrderNo)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：bizType/bizOrderNo 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：bizType/bizOrderNo 不能为空");
         }
         if (channel == null || method == null || scene == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：channel/method/scene 不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：channel/method/scene 不能为空");
         }
 
         // 2. 归一化金额并校验
         BigDecimal safeTotal = totalAmount == null ? BigDecimal.ZERO : totalAmount;
         BigDecimal safeDiscount = discountAmount == null ? BigDecimal.ZERO : discountAmount;
         if (safeTotal.compareTo(BigDecimal.ZERO) < 0 || safeDiscount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：金额不能为负数");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付建单请求参数不合法：金额不能为负数");
         }
 
         String safeCurrency = isBlank(currency) ? "CNY" : currency;
@@ -92,23 +92,23 @@ public class PaymentDomainServiceImpl implements PaymentDomainService {
                                                     String channelTradeNo,
                                                     LocalDateTime paidAt) {
         if (paymentOrder == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：支付单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：支付单不存在");
         }
         if (scene == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：场景不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：场景不能为空");
         }
         if (paidAmount == null || paidAmount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：支付金额不合法");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：支付金额不合法");
         }
         if (isBlank(channelTradeNo)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：渠道交易号不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付回调处理失败：渠道交易号不能为空");
         }
 
         PaymentStatus current = paymentOrder.getStatus();
         PaymentEvent event = PaymentEvent.PAY_SUCCESS;
         String sceneCode = scene.getCode();
         if (!paymentStateMachine.canTransit(sceneCode, current, event)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST,
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST,
                     String.format("当前支付状态不允许标记为成功：current=%s, event=%s, scene=%s",
                             current, event, sceneCode));
         }
@@ -123,10 +123,10 @@ public class PaymentDomainServiceImpl implements PaymentDomainService {
                                            String reasonCode,
                                            boolean timeout) {
         if (paymentOrder == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付关闭处理失败：支付单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付关闭处理失败：支付单不存在");
         }
         if (scene == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "支付关闭处理失败：场景不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "支付关闭处理失败：场景不能为空");
         }
 
         PaymentStatus current = paymentOrder.getStatus();
@@ -135,7 +135,7 @@ public class PaymentDomainServiceImpl implements PaymentDomainService {
         if (timeout) {
             PaymentEvent event = PaymentEvent.PAY_TIMEOUT;
             if (!paymentStateMachine.canTransit(sceneCode, current, event)) {
-                throw new BizException(CommonErrorCode.BAD_REQUEST,
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST,
                         String.format("当前支付状态不允许超时关闭：current=%s, event=%s, scene=%s",
                                 current, event, sceneCode));
             }
@@ -146,7 +146,7 @@ public class PaymentDomainServiceImpl implements PaymentDomainService {
 
         // 渠道或业务失败场景
         if (current == PaymentStatus.SUCCESS || current == PaymentStatus.REFUNDED) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "已完成支付的订单不允许标记失败");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "已完成支付的订单不允许标记失败");
         }
         if (current == PaymentStatus.CANCELED || current == PaymentStatus.CLOSED) {
             // 幂等重入，直接返回
@@ -155,7 +155,7 @@ public class PaymentDomainServiceImpl implements PaymentDomainService {
 
         PaymentEvent event = PaymentEvent.PAY_FAILED;
         if (!paymentStateMachine.canTransit(sceneCode, current, event)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST,
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST,
                     String.format("当前支付状态不允许标记失败：current=%s, event=%s, scene=%s",
                             current, event, sceneCode));
         }

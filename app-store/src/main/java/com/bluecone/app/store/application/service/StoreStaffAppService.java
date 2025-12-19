@@ -1,7 +1,7 @@
 package com.bluecone.app.store.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.api.dto.StoreStaffView;
 import com.bluecone.app.store.application.command.AddStoreStaffCommand;
 import com.bluecone.app.store.application.command.BatchBindStoreStaffCommand;
@@ -59,7 +59,7 @@ public class StoreStaffAppService {
                 .eq(BcStoreStaff::getIsDeleted, false)
                 .count();
         if (existing > 0) {
-            throw new BizException(StoreErrorCode.STAFF_ALREADY_EXISTS);
+            throw new BusinessException(StoreErrorCode.STAFF_ALREADY_EXISTS);
         }
         BcStoreStaff entity = new BcStoreStaff();
         entity.setTenantId(command.getTenantId());
@@ -79,7 +79,7 @@ public class StoreStaffAppService {
                 .set(BcStoreStaff::getIsDeleted, true)
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.STAFF_NOT_FOUND, "移除门店员工失败");
+            throw new BusinessException(StoreErrorCode.STAFF_NOT_FOUND, "移除门店员工失败");
         }
     }
 
@@ -93,7 +93,7 @@ public class StoreStaffAppService {
                 .set(BcStoreStaff::getRole, command.getNewRole())
                 .update();
         if (!updated) {
-            throw new BizException(StoreErrorCode.STAFF_NOT_FOUND, "调整员工角色失败");
+            throw new BusinessException(StoreErrorCode.STAFF_NOT_FOUND, "调整员工角色失败");
         }
     }
 

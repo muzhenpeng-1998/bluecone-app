@@ -1,6 +1,6 @@
 package com.bluecone.app.order.application;
 
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.application.command.CancelOrderCommand;
 import com.bluecone.app.order.application.impl.OrderCancelAppServiceImpl;
 import com.bluecone.app.order.domain.enums.OrderStatus;

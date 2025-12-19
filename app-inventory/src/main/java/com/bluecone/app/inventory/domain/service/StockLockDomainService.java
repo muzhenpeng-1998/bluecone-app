@@ -1,7 +1,7 @@
 package com.bluecone.app.inventory.domain.service;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.inventory.domain.model.InventoryLock;
 import com.bluecone.app.inventory.domain.model.InventoryPolicy;
 import com.bluecone.app.inventory.domain.model.InventoryStock;
@@ -36,13 +36,13 @@ public class StockLockDomainService {
                               String requestId,
                               LocalDateTime expireAt) {
         if (stock == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法锁定");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存不存在，无法锁定");
         }
         if (lockQty <= 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "锁定数量必须大于0");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "锁定数量必须大于0");
         }
         if (!StringUtils.hasText(requestId)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "请求ID不能为空");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "请求ID不能为空");
         }
 
         InventoryLock existing = inventoryLockRepository.findByRequestId(stock.getTenantId(), requestId);
@@ -52,11 +52,11 @@ public class StockLockDomainService {
         }
 
         if (policy != null && !policy.isEnabled()) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "库存策略未启用");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "库存策略未启用");
         }
 
         if (!stock.canLock(lockQty, policy)) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "可用库存不足，无法锁定");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "可用库存不足，无法锁定");
         }
 
         long beforeTotal = nullSafe(stock.getTotalQty());
@@ -64,7 +64,7 @@ public class StockLockDomainService {
 
         boolean updated = inventoryStockRepository.tryIncreaseLocked(stock, lockQty);
         if (!updated) {
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, String.format(
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, String.format(
                     "锁定库存失败，可能并发冲突或库存不足，tenantId=%s,storeId=%s,itemId=%s,lockQty=%s",
                     stock.getTenantId(), stock.getStoreId(), stock.getItemId(), lockQty));
         }

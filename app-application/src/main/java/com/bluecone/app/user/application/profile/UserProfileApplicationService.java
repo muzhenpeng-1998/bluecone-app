@@ -8,7 +8,7 @@ import com.bluecone.app.core.user.domain.profile.UserProfile;
 import com.bluecone.app.core.user.domain.repository.UserIdentityRepository;
 import com.bluecone.app.core.user.domain.repository.UserProfileRepository;
 import com.bluecone.app.core.user.domain.service.UserDomainService;
-import com.bluecone.app.user.application.CurrentUserContext;
+import com.bluecone.app.core.context.CurrentUserContext;
 import com.bluecone.app.user.dto.profile.UpdateUserProfileCommand;
 import com.bluecone.app.user.dto.profile.UserProfileDTO;
 import java.time.LocalDate;

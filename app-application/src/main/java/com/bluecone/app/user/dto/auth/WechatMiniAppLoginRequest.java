@@ -6,13 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 微信小程序登录命令。
+ * 微信小程序登录请求。
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginByWeChatMiniAppCommand {
+public class WechatMiniAppLoginRequest {
 
     /** wx.login 获取的 code */
     private String code;

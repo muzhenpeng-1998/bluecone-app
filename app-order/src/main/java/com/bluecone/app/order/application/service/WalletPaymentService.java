@@ -1,7 +1,7 @@
 package com.bluecone.app.order.application.service;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.order.domain.model.Order;
 import com.bluecone.app.order.domain.repository.OrderRepository;
 import com.bluecone.app.wallet.api.dto.WalletAssetCommand;
@@ -54,7 +54,7 @@ public class WalletPaymentService {
         // 查询订单
         Order order = orderRepository.findById(tenantId, orderId);
         if (order == null) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单不存在");
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "订单不存在");
         }
         
         // 幂等性检查：如果订单已支付，直接返回成功
@@ -67,7 +67,7 @@ public class WalletPaymentService {
         // 状态检查：只允许 WAIT_PAY 状态的订单支付
         if (!com.bluecone.app.order.domain.enums.OrderStatus.WAIT_PAY.equals(order.getStatus())) {
             log.warn("订单状态不允许支付：orderId={}, status={}", orderId, order.getStatus());
-            throw new BizException(CommonErrorCode.BAD_REQUEST, 
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, 
                     "订单状态不允许支付：" + order.getStatus());
         }
         
@@ -92,17 +92,17 @@ public class WalletPaymentService {
             if (!result.isSuccess()) {
                 log.error("提交冻结余额失败：orderId={}, userId={}, error={}", 
                         orderId, userId, result.getErrorMessage());
-                throw new BizException(CommonErrorCode.BAD_REQUEST, 
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, 
                         "钱包支付失败：" + result.getErrorMessage());
             }
             
             log.info("提交冻结余额成功：orderId={}, userId={}, ledgerNo={}, idempotent={}", 
                     orderId, userId, result.getLedgerNo(), result.isIdempotent());
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             log.error("提交冻结余额异常：orderId={}, userId={}", orderId, userId, e);
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "钱包支付失败");
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "钱包支付失败");
         }
         
         // 标记订单为已支付
@@ -183,18 +183,18 @@ public class WalletPaymentService {
             if (!result.isSuccess()) {
                 log.error("回退余额变更失败：orderId={}, userId={}, amount={}, error={}", 
                         orderId, userId, refundAmount, result.getErrorMessage());
-                throw new BizException(CommonErrorCode.BAD_REQUEST, 
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, 
                         "退款失败：" + result.getErrorMessage());
             }
             
             log.info("回退余额变更成功：orderId={}, userId={}, amount={}, ledgerNo={}, idempotent={}", 
                     orderId, userId, refundAmount, result.getLedgerNo(), result.isIdempotent());
-        } catch (BizException e) {
+        } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             log.error("回退余额变更异常：orderId={}, userId={}, amount={}", 
                     orderId, userId, refundAmount, e);
-            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "退款失败");
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "退款失败");
         }
     }
 }

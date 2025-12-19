@@ -1,6 +1,6 @@
 package com.bluecone.app.user.controller;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.user.application.member.MemberApplicationService;
 import com.bluecone.app.user.dto.member.ChangeMemberLevelCommand;
 import com.bluecone.app.user.dto.member.EnrollMemberCommand;

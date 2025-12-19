@@ -6,7 +6,7 @@ import com.bluecone.app.product.dao.entity.BcStoreMenuSnapshot;
 import com.bluecone.app.product.domain.repository.StoreMenuSnapshotRepository;
 import com.bluecone.app.product.domain.service.StoreMenuSnapshotDomainService;
 import com.bluecone.app.product.dto.StoreMenuSnapshotDTO;
-import com.bluecone.app.user.application.CurrentUserContext;
+import com.bluecone.app.core.context.CurrentUserContext;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

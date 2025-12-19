@@ -1,7 +1,7 @@
 package com.bluecone.app.payment.domain.service.impl;
 
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.domain.enums.PaymentEvent;
 import com.bluecone.app.payment.domain.enums.PaymentStatus;
 import com.bluecone.app.payment.domain.service.PaymentStateMachine;
@@ -153,7 +153,7 @@ public class PaymentStateMachineImpl implements PaymentStateMachine {
         if (!canTransit(bizTypeCode, current, event)) {
             String currentName = current == null ? "null" : current.name();
             String eventName = event == null ? "null" : event.name();
-            throw new BizException(
+            throw new BusinessException(
                     CommonErrorCode.BAD_REQUEST,
                     String.format("非法的支付状态流转：current=%s, event=%s, bizType=%s", currentName, eventName, bizTypeCode)
             );

@@ -2,7 +2,7 @@ package com.bluecone.app.tenant.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecone.app.core.error.BizErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.infra.tenant.dataobject.TenantOnboardingSessionDO;
 import com.bluecone.app.infra.tenant.mapper.TenantOnboardingSessionMapper;
 import com.bluecone.app.tenant.service.TenantOnboardingAppService;
@@ -121,7 +121,7 @@ public class TenantOnboardingAppServiceImpl implements TenantOnboardingAppServic
     private TenantOnboardingSessionDO requireSession(String sessionToken) {
         TenantOnboardingSessionDO session = findBySessionToken(sessionToken);
         if (session == null) {
-            throw new BizException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
+            throw new BusinessException(BizErrorCode.RESOURCE_NOT_FOUND, "入驻会话不存在或已失效");
         }
         return session;
     }

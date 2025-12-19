@@ -1,6 +1,6 @@
 package com.bluecone.app.product.controller;
 
-import com.bluecone.app.api.ApiResponse;
+import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.gateway.context.RuntimeContextUtil;

@@ -8,7 +8,7 @@ import com.bluecone.app.store.application.command.CreateStoreCommand;
 import com.bluecone.app.store.application.command.UpdateStoreBaseCommand;
 import com.bluecone.app.store.application.query.StoreDetailQuery;
 import com.bluecone.app.store.application.query.StoreListQuery;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.store.domain.error.StoreErrorCode;
 import com.bluecone.app.store.domain.model.StoreCapabilityModel;
 import com.bluecone.app.store.domain.model.StoreOpeningSchedule;

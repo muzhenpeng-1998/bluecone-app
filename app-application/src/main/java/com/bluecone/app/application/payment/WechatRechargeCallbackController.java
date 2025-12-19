@@ -1,7 +1,8 @@
 package com.bluecone.app.application.payment;
 
+import com.bluecone.app.api.advice.NoApiResponseWrap;
 import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
+import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.wallet.api.facade.WalletRechargeFacade;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +33,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/open-api/wechat/recharge")
 @RequiredArgsConstructor
+@NoApiResponseWrap
 public class WechatRechargeCallbackController {
     
     private final ObjectMapper objectMapper;
@@ -75,7 +77,7 @@ public class WechatRechargeCallbackController {
             
             return buildSuccessResponse();
             
-        } catch (BizException ex) {
+        } catch (BusinessException ex) {
             log.warn("[WechatRechargeCallback] 业务处理失败: {}", ex.getMessage(), ex);
             return buildFailResponse("业务处理失败");
         } catch (Exception ex) {
@@ -151,7 +153,7 @@ public class WechatRechargeCallbackController {
                     .build();
             
         } catch (Exception e) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "非法的微信支付回调报文", e);
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的微信支付回调报文", e);
         }
     }
     
