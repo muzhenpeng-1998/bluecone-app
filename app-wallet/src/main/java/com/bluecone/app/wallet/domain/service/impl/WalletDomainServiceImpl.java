@@ -376,6 +376,83 @@ public class WalletDomainServiceImpl implements WalletDomainService {
     }
     
     /**
+     * 直接增加余额（赠送/活动奖励）
+     * 幂等性：通过唯一约束（idem_key）保证，重复调用返回已赠送结果
+     * 账本化：必须写入 bc_wallet_ledger 流水表
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public WalletLedger credit(Long tenantId, Long userId, BigDecimal amount,
+                              String bizType, Long bizOrderId, String bizOrderNo,
+                              String idempotencyKey, Long operatorId) {
+        // 参数校验
+        if (tenantId == null || userId == null || amount == null || 
+                bizType == null || bizOrderId == null || idempotencyKey == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送参数不能为空");
+        }
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送金额必须大于0");
+        }
+        
+        // 幂等性检查：如果已存在账本流水，直接返回
+        WalletLedger existingLedger = ledgerRepository.findByIdemKey(tenantId, idempotencyKey).orElse(null);
+        if (existingLedger != null) {
+            log.info("赠送操作幂等重放：tenantId={}, userId={}, bizOrderId={}, ledgerNo={}", 
+                    tenantId, userId, bizOrderId, existingLedger.getLedgerNo());
+            return existingLedger;
+        }
+        
+        // 获取或创建账户
+        WalletAccount account = accountRepository.getOrCreate(tenantId, userId);
+        
+        // 增加可用余额（赠送入账）
+        BigDecimal balanceBefore = account.getAvailableBalance();
+        account.credit(amount);
+        BigDecimal balanceAfter = account.getAvailableBalance();
+        
+        // 乐观锁更新账户
+        int updated = accountRepository.updateWithVersion(account);
+        if (updated == 0) {
+            log.warn("账户乐观锁冲突，赠送失败：tenantId={}, userId={}, version={}", 
+                    tenantId, userId, account.getVersion());
+            throw new BizException(CommonErrorCode.CONFLICT, "账户余额变更冲突，请重试");
+        }
+        
+        // 写入账本流水（CAMPAIGN_BONUS/REWARD/COMPENSATION 入账）
+        LocalDateTime now = LocalDateTime.now();
+        String remark = buildCreditRemark(bizType);
+        WalletLedger ledger = WalletLedger.builder()
+                .id(idService.nextLong(IdScope.WALLET_LEDGER))
+                .tenantId(tenantId)
+                .userId(userId)
+                .accountId(account.getId())
+                .ledgerNo(idService.nextPublicId(ResourceType.WALLET_LEDGER))
+                .bizType(bizType)
+                .bizOrderId(bizOrderId)
+                .bizOrderNo(bizOrderNo)
+                .amount(amount) // 入账：正数
+                .balanceBefore(balanceBefore)
+                .balanceAfter(balanceAfter)
+                .currency(account.getCurrency())
+                .remark(remark)
+                .idemKey(idempotencyKey)
+                .createdAt(now)
+                .createdBy(operatorId)
+                .build();
+        
+        try {
+            ledgerRepository.insert(ledger);
+            log.info("赠送余额成功：tenantId={}, userId={}, amount={}, bizType={}, ledgerNo={}, bizOrderId={}", 
+                    tenantId, userId, amount, bizType, ledger.getLedgerNo(), bizOrderId);
+            return ledger;
+        } catch (DuplicateKeyException e) {
+            // 并发情况下，唯一约束冲突，重新查询返回
+            log.info("账本流水唯一约束冲突，重新查询：tenantId={}, idemKey={}", tenantId, idempotencyKey);
+            return ledgerRepository.findByIdemKey(tenantId, idempotencyKey).orElse(null);
+        }
+    }
+    
+    /**
      * 查询或创建钱包账户
      */
     @Override
@@ -406,5 +483,14 @@ public class WalletDomainServiceImpl implements WalletDomainService {
     
     private String buildCommitIdemKey(Long tenantId, Long userId, Long bizOrderId) {
         return String.format("%d:%d:%d:commit", tenantId, userId, bizOrderId);
+    }
+    
+    private String buildCreditRemark(String bizType) {
+        return switch (bizType) {
+            case "CAMPAIGN_BONUS" -> "活动赠送";
+            case "REWARD" -> "任务奖励";
+            case "COMPENSATION" -> "人工补偿";
+            default -> "余额赠送";
+        };
     }
 }

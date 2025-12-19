@@ -105,6 +105,15 @@
         <dependency>
             <groupId>com.bluecone</groupId>
             <artifactId>app-wallet</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-growth</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-campaign</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

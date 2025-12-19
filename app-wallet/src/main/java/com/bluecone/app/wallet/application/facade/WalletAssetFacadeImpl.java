@@ -272,4 +272,70 @@ public class WalletAssetFacadeImpl implements WalletAssetFacade {
             throw new BizException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
         }
     }
+    
+    /**
+     * 直接增加余额（赠送/活动奖励）
+     */
+    @Override
+    public WalletAssetResult credit(WalletAssetCommand command) {
+        try {
+            // 参数校验
+            validateCreditCommand(command);
+            
+            // 调用领域服务赠送余额
+            WalletLedger ledger = walletDomainService.credit(
+                    command.getTenantId(),
+                    command.getUserId(),
+                    command.getAmount(),
+                    command.getBizType(),
+                    command.getBizOrderId(),
+                    command.getBizOrderNo(),
+                    command.getIdempotencyKey(),
+                    command.getOperatorId()
+            );
+            
+            // 查询账户最新余额
+            WalletAccount account = walletDomainService.getAccount(command.getTenantId(), command.getUserId());
+            
+            // 判断是否幂等重放
+            boolean idempotent = ledger.getCreatedAt().isBefore(
+                    java.time.LocalDateTime.now().minusSeconds(1)
+            );
+            
+            return WalletAssetResult.success(
+                    ledger.getAccountId(),
+                    null,
+                    ledger.getLedgerNo(),
+                    account.getAvailableBalance(),
+                    account.getFrozenBalance(),
+                    idempotent
+            );
+        } catch (BizException e) {
+            log.error("赠送余额失败：tenantId={}, userId={}, amount={}, error={}", 
+                    command.getTenantId(), command.getUserId(), command.getAmount(), e.getMessage());
+            return WalletAssetResult.failure(e.getMessage());
+        } catch (Exception e) {
+            log.error("赠送余额异常：tenantId={}, userId={}, amount={}", 
+                    command.getTenantId(), command.getUserId(), command.getAmount(), e);
+            return WalletAssetResult.failure("赠送余额失败：" + e.getMessage());
+        }
+    }
+    
+    private void validateCreditCommand(WalletAssetCommand command) {
+        if (command == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送命令不能为空");
+        }
+        if (command.getTenantId() == null || command.getUserId() == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "租户ID和用户ID不能为空");
+        }
+        if (command.getAmount() == null || command.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "赠送金额必须大于0");
+        }
+        if (command.getBizType() == null || command.getBizOrderId() == null) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "业务类型和业务单ID不能为空");
+        }
+        if (command.getIdempotencyKey() == null || command.getIdempotencyKey().isEmpty()) {
+            throw new BizException(CommonErrorCode.BAD_REQUEST, "幂等键不能为空");
+        }
+    }
 }

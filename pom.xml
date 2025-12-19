@@ -73,6 +73,12 @@
         <module>app-pricing</module>
         <module>app-billing-api</module>
         <module>app-billing</module>
+        <module>app-notify-api</module>
+        <module>app-notify</module>
+        <module>app-growth-api</module>
+        <module>app-growth</module>
+        <module>app-campaign-api</module>
+        <module>app-campaign</module>
         <module>app-order</module>
         <module>app-payment</module>
         <module>app-inventory</module>
@@ -326,6 +332,45 @@
             <dependency>
                 <groupId>com.bluecone</groupId>
                 <artifactId>app-billing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Notification modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-notify-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-notify</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Growth modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-growth-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-growth</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Campaign modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-campaign-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-campaign</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

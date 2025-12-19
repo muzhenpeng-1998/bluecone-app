@@ -112,7 +112,22 @@ public enum IdScope {
     /**
      * 钱包充值单作用域，对应 bc_wallet_recharge_order 表
      */
-    WALLET_RECHARGE;
+    WALLET_RECHARGE,
+    
+    /**
+     * 增长引擎作用域，对应 bc_growth_* 相关表
+     */
+    GROWTH,
+    
+    /**
+     * 活动编排：活动配置
+     */
+    CAMPAIGN,
+    
+    /**
+     * 活动编排：执行日志
+     */
+    CAMPAIGN_EXECUTION_LOG;
     
     /**
      * 返回作用域名称（用于数据库 scope 字段）。

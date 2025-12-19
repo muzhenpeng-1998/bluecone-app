@@ -129,6 +129,37 @@ public interface WalletDomainService {
                        String idempotencyKey, Long operatorId);
     
     /**
+     * 直接增加余额（赠送/活动奖励）
+     * 
+     * <h4>业务规则：</h4>
+     * <ul>
+     *   <li>账户：available 直接增加</li>
+     *   <li>写入账本流水（bc_wallet_ledger）：CAMPAIGN_BONUS/REWARD/COMPENSATION（入账）</li>
+     *   <li>幂等：重复调用返回已赠送结果</li>
+     * </ul>
+     * 
+     * <h4>账本化要求：</h4>
+     * <ul>
+     *   <li>流水类型：CAMPAIGN_BONUS（活动赠送）/ REWARD（奖励）/ COMPENSATION（补偿）</li>
+     *   <li>金额：正数（入账）</li>
+     *   <li>记录变更前后余额</li>
+     * </ul>
+     * 
+     * @param tenantId 租户ID
+     * @param userId 用户ID
+     * @param amount 赠送金额
+     * @param bizType 业务类型（CAMPAIGN_BONUS/REWARD/COMPENSATION）
+     * @param bizOrderId 业务单ID（活动ID/任务ID）
+     * @param bizOrderNo 业务单号（活动编码）
+     * @param idempotencyKey 幂等键
+     * @param operatorId 操作人ID
+     * @return 账本流水
+     */
+    WalletLedger credit(Long tenantId, Long userId, BigDecimal amount,
+                       String bizType, Long bizOrderId, String bizOrderNo,
+                       String idempotencyKey, Long operatorId);
+    
+    /**
      * 查询或创建钱包账户
      * 
      * @param tenantId 租户ID

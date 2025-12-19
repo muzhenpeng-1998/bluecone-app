@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bluecone.app.campaign.infrastructure.persistence.mapper.ExecutionLogMapper">
+    
+    <select id="countUserSuccessExecutions" resultType="int">
+        SELECT COUNT(*)
+        FROM bc_campaign_execution_log
+        WHERE tenant_id = #{tenantId}
+          AND campaign_id = #{campaignId}
+          AND user_id = #{userId}
+          AND execution_status = 'SUCCESS'
+    </select>
+    
+</mapper>

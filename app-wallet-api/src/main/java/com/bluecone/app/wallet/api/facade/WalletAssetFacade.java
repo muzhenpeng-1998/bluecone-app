@@ -130,4 +130,33 @@ public interface WalletAssetFacade {
      * @return 操作结果
      */
     WalletAssetResult revert(WalletAssetCommand command);
+    
+    /**
+     * 直接增加余额（赠送/活动奖励）
+     * 不经过冻结流程，直接增加可用余额
+     * 
+     * <h4>业务场景：</h4>
+     * <ul>
+     *   <li>充值赠送（Campaign Bonus）：活动赠送金额入账</li>
+     *   <li>活动奖励：完成任务后奖励金额入账</li>
+     *   <li>补偿入账：客服手动补偿</li>
+     * </ul>
+     * 
+     * <h4>幂等性保证：</h4>
+     * <ul>
+     *   <li>通过 idempotencyKey 保证相同请求只入账一次</li>
+     *   <li>重复调用返回已入账的结果（idempotent=true）</li>
+     * </ul>
+     * 
+     * <h4>账本化要求：</h4>
+     * <ul>
+     *   <li>必须写入 bc_wallet_ledger 流水表</li>
+     *   <li>流水类型：CAMPAIGN_BONUS（活动赠送）/ REWARD（奖励）/ COMPENSATION（补偿）</li>
+     *   <li>金额为正数（入账）</li>
+     * </ul>
+     * 
+     * @param command 赠送命令（必须包含幂等键）
+     * @return 操作结果
+     */
+    WalletAssetResult credit(WalletAssetCommand command);
 }

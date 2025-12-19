@@ -29,6 +29,11 @@ public class WalletAssetResult implements Serializable {
     private String freezeNo;
     
     /**
+     * 流水ID（commit/revert操作返回）
+     */
+    private Long ledgerId;
+    
+    /**
      * 流水号（commit/revert操作返回）
      */
     private String ledgerNo;
@@ -56,18 +61,26 @@ public class WalletAssetResult implements Serializable {
     public WalletAssetResult() {
     }
     
-    public static WalletAssetResult success(Long accountId, String freezeNo, String ledgerNo,
+    public static WalletAssetResult success(Long accountId, String freezeNo, Long ledgerId, String ledgerNo,
                                            BigDecimal availableBalance, BigDecimal frozenBalance,
                                            boolean idempotent) {
         WalletAssetResult result = new WalletAssetResult();
         result.success = true;
         result.accountId = accountId;
         result.freezeNo = freezeNo;
+        result.ledgerId = ledgerId;
         result.ledgerNo = ledgerNo;
         result.availableBalance = availableBalance;
         result.frozenBalance = frozenBalance;
         result.idempotent = idempotent;
         return result;
+    }
+    
+    // Backward compatibility: ledgerNo only
+    public static WalletAssetResult success(Long accountId, String freezeNo, String ledgerNo,
+                                           BigDecimal availableBalance, BigDecimal frozenBalance,
+                                           boolean idempotent) {
+        return success(accountId, freezeNo, null, ledgerNo, availableBalance, frozenBalance, idempotent);
     }
     
     public static WalletAssetResult failure(String errorMessage) {
@@ -100,6 +113,14 @@ public class WalletAssetResult implements Serializable {
     
     public void setFreezeNo(String freezeNo) {
         this.freezeNo = freezeNo;
+    }
+    
+    public Long getLedgerId() {
+        return ledgerId;
+    }
+    
+    public void setLedgerId(Long ledgerId) {
+        this.ledgerId = ledgerId;
     }
     
     public String getLedgerNo() {
