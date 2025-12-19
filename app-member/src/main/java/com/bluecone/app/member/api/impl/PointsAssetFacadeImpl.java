@@ -37,7 +37,7 @@ public class PointsAssetFacadeImpl implements PointsAssetFacade {
             PointsLedger ledger = pointsApplicationService.freezePoints(
                     command.getTenantId(),
                     command.getMemberId(),
-                    command.getPoints(),
+                    command.getPoints().longValue(),
                     command.getBizType(),
                     command.getBizId(),
                     command.getIdempotencyKey(),
@@ -71,7 +71,7 @@ public class PointsAssetFacadeImpl implements PointsAssetFacade {
             PointsLedger ledger = pointsApplicationService.earnPoints(
                     command.getTenantId(),
                     command.getMemberId(),
-                    command.getPoints(),
+                    command.getPoints().longValue(),
                     command.getBizType(),
                     command.getBizId(),
                     command.getIdempotencyKey(),
@@ -104,7 +104,7 @@ public class PointsAssetFacadeImpl implements PointsAssetFacade {
             PointsLedger ledger = pointsApplicationService.releasePoints(
                     command.getTenantId(),
                     command.getMemberId(),
-                    command.getPoints(),
+                    command.getPoints().longValue(),
                     command.getBizType(),
                     command.getBizId(),
                     command.getIdempotencyKey(),
@@ -137,7 +137,7 @@ public class PointsAssetFacadeImpl implements PointsAssetFacade {
             PointsLedger ledger = pointsApplicationService.revertPoints(
                     command.getTenantId(),
                     command.getMemberId(),
-                    command.getPoints(),
+                    command.getPoints().longValue(),
                     command.getBizType(),
                     command.getBizId(),
                     command.getIdempotencyKey(),
@@ -170,7 +170,7 @@ public class PointsAssetFacadeImpl implements PointsAssetFacade {
             PointsLedger ledger = pointsApplicationService.adjustPoints(
                     command.getTenantId(),
                     command.getMemberId(),
-                    command.getPoints(),
+                    command.getPoints().longValue(),
                     isIncrease,
                     command.getBizType(),
                     command.getBizId(),

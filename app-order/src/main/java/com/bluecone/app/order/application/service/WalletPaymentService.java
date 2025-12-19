@@ -76,17 +76,17 @@ public class WalletPaymentService {
             // 构造幂等键：{tenantId}:{userId}:{orderId}:commit
             String idempotencyKey = String.format("%d:%d:%d:commit", tenantId, userId, orderId);
             
-            WalletAssetCommand commitCommand = new WalletAssetCommand(
-                    tenantId,
-                    userId,
-                    order.getPayableAmount(),
-                    "ORDER_PAY",
-                    orderId,
-                    idempotencyKey
-            );
-            commitCommand.setBizOrderNo(order.getOrderNo());
-            commitCommand.setOperatorId(userId);
-            commitCommand.setRemark("订单支付扣款");
+            WalletAssetCommand commitCommand = WalletAssetCommand.builder()
+                    .tenantId(tenantId)
+                    .userId(userId)
+                    .amount(order.getPayableAmount())
+                    .bizType("ORDER_PAY")
+                    .bizOrderId(orderId)
+                    .bizOrderNo(order.getOrderNo())
+                    .idempotencyKey(idempotencyKey)
+                    .operatorId(userId)
+                    .remark("订单支付扣款")
+                    .build();
             
             WalletAssetResult result = walletAssetFacade.commit(commitCommand);
             if (!result.isSuccess()) {
@@ -167,17 +167,17 @@ public class WalletPaymentService {
             // 构造幂等键：{tenantId}:{userId}:{orderId}:refund
             String idempotencyKey = String.format("%d:%d:%d:refund", tenantId, userId, orderId);
             
-            WalletAssetCommand revertCommand = new WalletAssetCommand(
-                    tenantId,
-                    userId,
-                    refundAmount,
-                    "REFUND",
-                    orderId,
-                    idempotencyKey
-            );
-            revertCommand.setBizOrderNo(orderNo);
-            revertCommand.setOperatorId(userId);
-            revertCommand.setRemark("订单退款返还");
+            WalletAssetCommand revertCommand = WalletAssetCommand.builder()
+                    .tenantId(tenantId)
+                    .userId(userId)
+                    .amount(refundAmount)
+                    .bizType("REFUND")
+                    .bizOrderId(orderId)
+                    .bizOrderNo(orderNo)
+                    .idempotencyKey(idempotencyKey)
+                    .operatorId(userId)
+                    .remark("订单退款返还")
+                    .build();
             
             WalletAssetResult result = walletAssetFacade.revert(revertCommand);
             if (!result.isSuccess()) {

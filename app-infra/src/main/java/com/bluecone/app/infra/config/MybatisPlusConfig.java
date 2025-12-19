@@ -38,6 +38,7 @@ import org.springframework.context.annotation.Configuration;
         "com.bluecone.app.infra.user.query",
         "com.bluecone.app.infra.idempotency",
         "com.bluecone.app.infra.event.consume",
+        "com.bluecone.app.infra.event.outbox",
         "com.bluecone.app.infra.idresolve",
         "com.bluecone.app.infra.cacheinval",
         "com.bluecone.app.infra.wechat.openplatform.mapper",

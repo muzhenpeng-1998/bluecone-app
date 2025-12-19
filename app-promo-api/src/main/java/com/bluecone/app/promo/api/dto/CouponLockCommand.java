@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 public class CouponLockCommand implements Serializable {
     
     private Long tenantId;
+    private Long storeId;
     private Long userId;
     private Long couponId;
     private Long orderId;
@@ -33,6 +34,14 @@ public class CouponLockCommand implements Serializable {
 
     public void setTenantId(Long tenantId) {
         this.tenantId = tenantId;
+    }
+
+    public Long getStoreId() {
+        return storeId;
+    }
+
+    public void setStoreId(Long storeId) {
+        this.storeId = storeId;
     }
 
     public Long getUserId() {

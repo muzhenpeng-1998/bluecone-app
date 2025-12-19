@@ -1,5 +1,10 @@
 package com.bluecone.app.member.api.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
  * 积分操作命令基类
  * 所有积分操作都必须携带幂等键和业务上下文
@@ -7,6 +12,10 @@ package com.bluecone.app.member.api.dto;
  * @author bluecone
  * @since 2025-12-18
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PointsOperationCommand {
     
     /**
@@ -20,9 +29,14 @@ public class PointsOperationCommand {
     private Long memberId;
     
     /**
+     * 用户ID（必填，与 memberId 相同，为了兼容性保留两个字段）
+     */
+    private Long userId;
+    
+    /**
      * 积分变动值（正数，方向由 direction 决定）
      */
-    private Long points;
+    private Integer points;
     
     /**
      * 业务类型（必填）
@@ -48,82 +62,18 @@ public class PointsOperationCommand {
      */
     private String remark;
     
-    // Constructors
-    public PointsOperationCommand() {}
-    
-    public PointsOperationCommand(Long tenantId, Long memberId, Long points, 
-                                  String bizType, String bizId, String idempotencyKey) {
-        this.tenantId = tenantId;
-        this.memberId = memberId;
-        this.points = points;
-        this.bizType = bizType;
-        this.bizId = bizId;
-        this.idempotencyKey = idempotencyKey;
-    }
-    
-    // Getters and Setters
-    public Long getTenantId() {
-        return tenantId;
-    }
-    
-    public void setTenantId(Long tenantId) {
-        this.tenantId = tenantId;
-    }
-    
-    public Long getMemberId() {
-        return memberId;
-    }
-    
-    public void setMemberId(Long memberId) {
-        this.memberId = memberId;
-    }
-    
-    public Long getPoints() {
-        return points;
-    }
-    
-    public void setPoints(Long points) {
-        this.points = points;
-    }
-    
-    public String getBizType() {
-        return bizType;
-    }
-    
-    public void setBizType(String bizType) {
-        this.bizType = bizType;
-    }
-    
-    public String getBizId() {
-        return bizId;
-    }
-    
-    public void setBizId(String bizId) {
-        this.bizId = bizId;
-    }
-    
-    public String getIdempotencyKey() {
-        return idempotencyKey;
-    }
-    
-    public void setIdempotencyKey(String idempotencyKey) {
-        this.idempotencyKey = idempotencyKey;
-    }
-    
-    public String getRemark() {
-        return remark;
-    }
-    
-    public void setRemark(String remark) {
-        this.remark = remark;
-    }
-    
     /**
      * 验证命令参数是否完整
      */
     public void validate() {
         if (tenantId == null || tenantId <= 0) {
             throw new IllegalArgumentException("租户ID不能为空");
+        }
+        // 兼容 userId 和 memberId
+        if (userId != null && memberId == null) {
+            memberId = userId;
+        } else if (memberId != null && userId == null) {
+            userId = memberId;
         }
         if (memberId == null || memberId <= 0) {
             throw new IllegalArgumentException("会员ID不能为空");

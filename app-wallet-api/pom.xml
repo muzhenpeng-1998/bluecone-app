@@ -17,6 +17,11 @@
     <description>Wallet API contracts (no implementations)</description>
 
     <dependencies>
-        <!-- No implementation dependencies to keep the API module lightweight -->
+        <!-- Lombok for reducing boilerplate (compile-time only) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

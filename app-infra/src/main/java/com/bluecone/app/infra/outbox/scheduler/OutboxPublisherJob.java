@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 /**
  * 定时扫描 Outbox，发布待投递事件。
  */
-@Component
+@Component("legacyOutboxPublisherJob")
 public class OutboxPublisherJob {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxPublisherJob.class);

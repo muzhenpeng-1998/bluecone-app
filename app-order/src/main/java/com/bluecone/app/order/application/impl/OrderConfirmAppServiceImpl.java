@@ -193,17 +193,17 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
             String idempotencyKey = String.format("%d:%d:%d:freeze", 
                     order.getTenantId(), userId, order.getId());
             
-            WalletAssetCommand freezeCommand = new WalletAssetCommand(
-                    order.getTenantId(),
-                    userId,
-                    order.getPayableAmount(),
-                    "ORDER_CHECKOUT",
-                    order.getId(),
-                    idempotencyKey
-            );
-            freezeCommand.setBizOrderNo(order.getOrderNo());
-            freezeCommand.setOperatorId(userId);
-            freezeCommand.setRemark("订单下单冻结余额");
+            WalletAssetCommand freezeCommand = WalletAssetCommand.builder()
+                    .tenantId(order.getTenantId())
+                    .userId(userId)
+                    .amount(order.getPayableAmount())
+                    .bizType("ORDER_CHECKOUT")
+                    .bizOrderId(order.getId())
+                    .bizOrderNo(order.getOrderNo())
+                    .idempotencyKey(idempotencyKey)
+                    .operatorId(userId)
+                    .remark("订单下单冻结余额")
+                    .build();
             
             WalletAssetResult result = walletAssetFacade.freeze(freezeCommand);
             if (!result.isSuccess()) {
