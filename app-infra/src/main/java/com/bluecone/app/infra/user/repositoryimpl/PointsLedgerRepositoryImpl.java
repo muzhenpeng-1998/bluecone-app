@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 /**
  * 积分流水仓储实现。
  */
-@Repository
+@Repository("corePointsLedgerRepositoryImpl")
 @RequiredArgsConstructor
 public class PointsLedgerRepositoryImpl implements PointsLedgerRepository {
 

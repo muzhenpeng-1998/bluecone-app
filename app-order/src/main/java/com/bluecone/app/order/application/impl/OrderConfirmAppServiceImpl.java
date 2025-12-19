@@ -16,6 +16,10 @@ import com.bluecone.app.order.domain.model.Order;
 import com.bluecone.app.order.domain.repository.OrderRepository;
 import com.bluecone.app.payment.simple.application.PaymentCreateAppService;
 import com.bluecone.app.payment.simple.application.dto.PaymentOrderDTO;
+import com.bluecone.app.order.application.service.WalletPaymentService;
+import com.bluecone.app.wallet.api.dto.WalletAssetCommand;
+import com.bluecone.app.wallet.api.dto.WalletAssetResult;
+import com.bluecone.app.wallet.api.facade.WalletAssetFacade;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
@@ -33,19 +37,25 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
     private final PaymentCreateAppService paymentCreateAppService;
     private final OrderPricingService orderPricingService;
     private final DomainEventPublisher eventPublisher;
+    private final WalletAssetFacade walletAssetFacade;
+    private final WalletPaymentService walletPaymentService;
 
     public OrderConfirmAppServiceImpl(OrderRepository orderRepository,
                                       OrderIdGenerator orderIdGenerator,
                                       OrderNoGenerator orderNoGenerator,
                                       PaymentCreateAppService paymentCreateAppService,
                                       OrderPricingService orderPricingService,
-                                      DomainEventPublisher eventPublisher) {
+                                      DomainEventPublisher eventPublisher,
+                                      WalletAssetFacade walletAssetFacade,
+                                      WalletPaymentService walletPaymentService) {
         this.orderRepository = orderRepository;
         this.orderIdGenerator = orderIdGenerator;
         this.orderNoGenerator = orderNoGenerator;
         this.paymentCreateAppService = paymentCreateAppService;
         this.orderPricingService = orderPricingService;
         this.eventPublisher = eventPublisher;
+        this.walletAssetFacade = walletAssetFacade;
+        this.walletPaymentService = walletPaymentService;
     }
 
     /**
@@ -89,12 +99,35 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
         log.info("小程序用户订单入库成功，tenantId={}, storeId={}, userId={}, orderId={}",
                 order.getTenantId(), order.getStoreId(), order.getUserId(), order.getId());
 
-        PaymentOrderDTO paymentOrder = paymentCreateAppService.createForOrder(
-                order.getTenantId(),
-                order.getStoreId(),
-                order.getUserId(),
-                order.getId(),
-                toCents(order.getPayableAmount()));
+        // M5：如果使用钱包余额支付，冻结余额并立即完成支付
+        PaymentOrderDTO paymentOrder = null;
+        if (Boolean.TRUE.equals(request.getUseWalletBalance())) {
+            // 1. 冻结余额
+            freezeWalletBalance(order, request.getUserId());
+            
+            // 2. 立即完成钱包支付（提交冻结并标记订单已支付）
+            boolean paySuccess = walletPaymentService.payWithWallet(
+                    order.getTenantId(), 
+                    request.getUserId(), 
+                    order.getId()
+            );
+            
+            if (!paySuccess) {
+                log.error("钱包支付失败：orderId={}, userId={}", order.getId(), request.getUserId());
+                throw new BizException(CommonErrorCode.SYSTEM_ERROR, "钱包支付失败");
+            }
+            
+            log.info("钱包余额支付完成：orderId={}, userId={}, amount={}", 
+                    order.getId(), request.getUserId(), order.getPayableAmount());
+        } else {
+            // 只有非钱包支付才创建支付单
+            paymentOrder = paymentCreateAppService.createForOrder(
+                    order.getTenantId(),
+                    order.getStoreId(),
+                    order.getUserId(),
+                    order.getId(),
+                    toCents(order.getPayableAmount()));
+        }
 
         ConfirmOrderResponse response = toConfirmResponse(order, request.getPayChannel());
         if (paymentOrder != null) {
@@ -147,6 +180,48 @@ public class OrderConfirmAppServiceImpl implements OrderConfirmAppService {
     private void requireTenantId(ConfirmOrderRequest request) {
         if (request.getTenantId() == null) {
             throw new BizException(CommonErrorCode.BAD_REQUEST, "tenantId 不能为空");
+        }
+    }
+    
+    /**
+     * 冻结钱包余额（M5 新增）
+     * 当用户选择钱包余额支付时，在下单时冻结对应金额
+     */
+    private void freezeWalletBalance(Order order, Long userId) {
+        try {
+            // 构造幂等键：{tenantId}:{userId}:{orderId}:freeze
+            String idempotencyKey = String.format("%d:%d:%d:freeze", 
+                    order.getTenantId(), userId, order.getId());
+            
+            WalletAssetCommand freezeCommand = new WalletAssetCommand(
+                    order.getTenantId(),
+                    userId,
+                    order.getPayableAmount(),
+                    "ORDER_CHECKOUT",
+                    order.getId(),
+                    idempotencyKey
+            );
+            freezeCommand.setBizOrderNo(order.getOrderNo());
+            freezeCommand.setOperatorId(userId);
+            freezeCommand.setRemark("订单下单冻结余额");
+            
+            WalletAssetResult result = walletAssetFacade.freeze(freezeCommand);
+            if (!result.isSuccess()) {
+                log.error("冻结钱包余额失败：orderId={}, userId={}, amount={}, error={}", 
+                        order.getId(), userId, order.getPayableAmount(), result.getErrorMessage());
+                throw new BizException(CommonErrorCode.BAD_REQUEST, 
+                        "冻结钱包余额失败：" + result.getErrorMessage());
+            }
+            
+            log.info("冻结钱包余额成功：orderId={}, userId={}, amount={}, freezeNo={}, idempotent={}", 
+                    order.getId(), userId, order.getPayableAmount(), 
+                    result.getFreezeNo(), result.isIdempotent());
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("冻结钱包余额异常：orderId={}, userId={}, amount={}", 
+                    order.getId(), userId, order.getPayableAmount(), e);
+            throw new BizException(CommonErrorCode.SYSTEM_ERROR, "冻结钱包余额失败");
         }
     }
 }

@@ -5,6 +5,10 @@ import com.bluecone.app.order.api.dto.*;
 import com.bluecone.app.order.application.OrderConfirmApplicationService;
 import com.bluecone.app.order.application.OrderPreCheckService;
 import com.bluecone.app.order.domain.error.OrderErrorCode;
+import com.bluecone.app.pricing.api.dto.PricingItem;
+import com.bluecone.app.pricing.api.dto.PricingQuote;
+import com.bluecone.app.pricing.api.dto.PricingRequest;
+import com.bluecone.app.pricing.api.facade.PricingFacade;
 import com.bluecone.app.store.api.StoreFacade;
 import com.bluecone.app.store.api.dto.StoreOrderAcceptResult;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +34,7 @@ public class OrderConfirmApplicationServiceImpl implements OrderConfirmApplicati
 
     private final StoreFacade storeFacade;
     private final OrderPreCheckService orderPreCheckService;
+    private final PricingFacade pricingFacade;
 
     /**
      * 订单确认单（M0）。
@@ -57,32 +62,91 @@ public class OrderConfirmApplicationServiceImpl implements OrderConfirmApplicati
         // TODO: 调用 ProductFacade 校验商品是否存在、是否上架、库存是否充足等
         // 示例：List<SkuSnapshot> skuSnapshots = productFacade.getSkuSnapshots(request.getTenantId(), skuIds);
 
-        // 4. 计算价格（M0不做优惠，直接累加单价*数量）
-        List<OrderConfirmItemResponse> itemResponses = buildItemResponses(request);
-        BigDecimal totalAmount = itemResponses.stream()
-                .map(item -> item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal discountAmount = BigDecimal.ZERO; // M0暂不支持优惠
-        BigDecimal payableAmount = totalAmount.subtract(discountAmount);
+        // 4. 调用统一计价引擎计算价格
+        PricingQuote quote = calculatePrice(request);
+        
+        // 构建订单明细响应
+        List<OrderConfirmItemResponse> itemResponses = buildItemResponsesFromQuote(request, quote);
 
         // 5. 生成 confirmToken 和 priceVersion
-        long priceVersion = System.currentTimeMillis();
-        String confirmToken = generateConfirmToken(request, priceVersion, payableAmount);
+        String priceVersion = quote.getQuoteId(); // 使用 quoteId 作为 priceVersion
+        String confirmToken = generateConfirmToken(request, priceVersion, quote.getPayableAmount());
 
         // 6. 构建响应
         return OrderConfirmResponse.builder()
                 .confirmToken(confirmToken)
-                .priceVersion(priceVersion)
-                .totalAmount(totalAmount)
-                .discountAmount(discountAmount)
-                .payableAmount(payableAmount)
-                .currency("CNY")
+                .priceVersion(Long.parseLong(priceVersion.substring(0, Math.min(13, priceVersion.length())), 16)) // 兼容旧接口
+                .totalAmount(quote.getOriginalAmount())
+                .discountAmount(calculateTotalDiscount(quote))
+                .payableAmount(quote.getPayableAmount())
+                .currency(quote.getCurrency())
                 .items(itemResponses)
                 .storeAcceptable(storeResult.isAcceptable())
                 .storeRejectReasonCode(storeResult.getReasonCode())
                 .storeRejectReasonMessage(storeResult.getReasonMessage())
                 .failureReasons(failureReasons.isEmpty() ? null : failureReasons)
                 .build();
+    }
+    
+    /**
+     * 调用统一计价引擎计算价格
+     */
+    private PricingQuote calculatePrice(OrderConfirmRequest request) {
+        try {
+            // 构建计价请求
+            PricingRequest pricingRequest = new PricingRequest();
+            pricingRequest.setTenantId(request.getTenantId());
+            pricingRequest.setStoreId(request.getStoreId());
+            pricingRequest.setUserId(request.getUserId());
+            pricingRequest.setMemberId(request.getMemberId());
+            pricingRequest.setCouponId(request.getCouponId());
+            pricingRequest.setUsePoints(request.getUsePoints());
+            pricingRequest.setDeliveryMode(request.getDeliveryType());
+            pricingRequest.setDeliveryDistance(request.getDeliveryDistance());
+            pricingRequest.setOrderType(request.getOrderType());
+            pricingRequest.setChannel(request.getChannel());
+            pricingRequest.setEnableRounding(request.getEnableRounding());
+            
+            // 转换商品列表
+            List<PricingItem> pricingItems = request.getItems().stream()
+                    .map(item -> {
+                        PricingItem pricingItem = new PricingItem();
+                        pricingItem.setSkuId(item.getSkuId());
+                        pricingItem.setSkuName("SKU-" + item.getSkuId()); // TODO: 从商品服务获取
+                        pricingItem.setQuantity(item.getQuantity());
+                        pricingItem.setBasePrice(item.getClientUnitPrice() != null ? item.getClientUnitPrice() : BigDecimal.ZERO);
+                        pricingItem.setSpecSurcharge(BigDecimal.ZERO); // TODO: 从商品服务获取规格加价
+                        return pricingItem;
+                    })
+                    .collect(Collectors.toList());
+            pricingRequest.setItems(pricingItems);
+            
+            // 调用计价引擎
+            return pricingFacade.quote(pricingRequest);
+        } catch (Exception e) {
+            log.error("计价失败", e);
+            throw new BizException(OrderErrorCode.ORDER_INVALID, "计价失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 计算总优惠金额
+     */
+    private BigDecimal calculateTotalDiscount(PricingQuote quote) {
+        BigDecimal total = BigDecimal.ZERO;
+        if (quote.getMemberDiscountAmount() != null) {
+            total = total.add(quote.getMemberDiscountAmount());
+        }
+        if (quote.getPromoDiscountAmount() != null) {
+            total = total.add(quote.getPromoDiscountAmount());
+        }
+        if (quote.getCouponDiscountAmount() != null) {
+            total = total.add(quote.getCouponDiscountAmount());
+        }
+        if (quote.getPointsDiscountAmount() != null) {
+            total = total.add(quote.getPointsDiscountAmount());
+        }
+        return total;
     }
 
     /**
@@ -156,26 +220,24 @@ public class OrderConfirmApplicationServiceImpl implements OrderConfirmApplicati
     }
 
     /**
-     * 构建订单明细响应列表。
-     * <p>M0暂时使用客户端传递的价格，后续应从商品服务获取实时价格。</p>
+     * 从计价结果构建订单明细响应列表
      */
-    private List<OrderConfirmItemResponse> buildItemResponses(OrderConfirmRequest request) {
+    private List<OrderConfirmItemResponse> buildItemResponsesFromQuote(OrderConfirmRequest request, PricingQuote quote) {
         return request.getItems().stream()
                 .map(item -> {
-                    // M0暂时使用客户端传递的价格，后续应从商品服务获取实时价格
                     BigDecimal unitPrice = item.getClientUnitPrice() != null
                             ? item.getClientUnitPrice()
                             : BigDecimal.ZERO;
-                    BigDecimal discountAmount = BigDecimal.ZERO; // M0暂不支持优惠
+                    BigDecimal discountAmount = BigDecimal.ZERO; // TODO: 从 quote 的 breakdownLines 中提取单品优惠
                     BigDecimal payableAmount = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()))
                             .subtract(discountAmount);
 
                     return OrderConfirmItemResponse.builder()
                             .skuId(item.getSkuId())
                             .productId(item.getProductId())
-                            .productName("商品名称-" + item.getSkuId()) // M0暂时使用占位符，后续从商品服务获取
-                            .skuName("SKU名称-" + item.getSkuId()) // M0暂时使用占位符
-                            .productCode("CODE-" + item.getSkuId()) // M0暂时使用占位符
+                            .productName("商品名称-" + item.getSkuId()) // TODO: 从商品服务获取
+                            .skuName("SKU名称-" + item.getSkuId()) // TODO: 从商品服务获取
+                            .productCode("CODE-" + item.getSkuId()) // TODO: 从商品服务获取
                             .quantity(item.getQuantity())
                             .unitPrice(unitPrice)
                             .discountAmount(discountAmount)
@@ -189,10 +251,10 @@ public class OrderConfirmApplicationServiceImpl implements OrderConfirmApplicati
 
     /**
      * 生成确认令牌（confirmToken）。
-     * <p>规则：SHA-256(tenantId + storeId + userId + items + priceVersion + payableAmount)</p>
+     * <p>规则：MD5(tenantId + storeId + userId + items + priceVersion + payableAmount)</p>
      * <p>用于后续提交单校验，防止价格篡改。</p>
      */
-    private String generateConfirmToken(OrderConfirmRequest request, long priceVersion, BigDecimal payableAmount) {
+    private String generateConfirmToken(OrderConfirmRequest request, String priceVersion, BigDecimal payableAmount) {
         StringBuilder sb = new StringBuilder();
         sb.append(request.getTenantId()).append("|");
         sb.append(request.getStoreId()).append("|");

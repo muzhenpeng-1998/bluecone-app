@@ -132,7 +132,7 @@ public class ConfirmOrderRequest {
     // === 支付意向 ===
 
     /**
-     * 预期支付渠道：WECHAT_JSAPI/WECHAT_NATIVE/CASH/CARD 等。
+     * 预期支付渠道：WECHAT_JSAPI/WECHAT_NATIVE/CASH/CARD/WALLET 等。
      */
     @Size(max = 32)
     private String payChannel;
@@ -142,6 +142,12 @@ public class ConfirmOrderRequest {
      */
     @Builder.Default
     private Boolean autoCreatePayment = Boolean.TRUE;
+    
+    /**
+     * 是否使用钱包余额支付（M5 新增）
+     */
+    @Builder.Default
+    private Boolean useWalletBalance = Boolean.FALSE;
 
     // === 扩展字段 ===
 

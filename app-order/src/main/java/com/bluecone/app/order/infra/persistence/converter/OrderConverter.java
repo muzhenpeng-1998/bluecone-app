@@ -52,6 +52,7 @@ public class OrderConverter {
                 .discountAmount(orderPO.getDiscountAmount())
                 .payableAmount(orderPO.getPayableAmount())
                 .currency(orderPO.getCurrency())
+                .couponId(orderPO.getCouponId())
                 .status(OrderStatus.fromCode(orderPO.getStatus()))
                 .payStatus(PayStatus.fromCode(orderPO.getPayStatus()))
                 .remark(orderPO.getOrderRemark())
@@ -64,8 +65,24 @@ public class OrderConverter {
                 .updatedBy(orderPO.getUpdatedBy())
                 .acceptOperatorId(orderPO.getAcceptOperatorId())
                 .acceptedAt(orderPO.getAcceptedAt())
+                .rejectReasonCode(orderPO.getRejectReasonCode())
+                .rejectReasonDesc(orderPO.getRejectReasonDesc())
+                .rejectedAt(orderPO.getRejectedAt())
+                .rejectedBy(orderPO.getRejectedBy())
                 .userDeleted(orderPO.getUserDeleted())
                 .userDeletedAt(orderPO.getUserDeletedAt())
+                .closeReason(orderPO.getCloseReason())
+                .closedAt(orderPO.getClosedAt())
+                .startedAt(orderPO.getStartedAt())
+                .readyAt(orderPO.getReadyAt())
+                .completedAt(orderPO.getCompletedAt())
+                .lastStateChangedAt(orderPO.getLastStateChangedAt())
+                .operatorId(orderPO.getOperatorId())
+                .canceledAt(orderPO.getCanceledAt())
+                .cancelReasonCode(orderPO.getCancelReasonCode())
+                .cancelReasonDesc(orderPO.getCancelReasonDesc())
+                .refundedAt(orderPO.getRefundedAt())
+                .refundOrderId(orderPO.getRefundOrderId())
                 .build();
     }
 
@@ -89,6 +106,7 @@ public class OrderConverter {
         po.setDiscountAmount(order.getDiscountAmount());
         po.setPayableAmount(order.getPayableAmount());
         po.setCurrency(order.getCurrency());
+        po.setCouponId(order.getCouponId());
         po.setStatus(order.getStatus() != null ? order.getStatus().getCode() : null);
         po.setPayStatus(order.getPayStatus() != null ? order.getPayStatus().getCode() : null);
         po.setOrderRemark(order.getRemark());
@@ -100,8 +118,24 @@ public class OrderConverter {
         po.setUpdatedBy(order.getUpdatedBy());
         po.setAcceptOperatorId(order.getAcceptOperatorId());
         po.setAcceptedAt(order.getAcceptedAt());
+        po.setRejectReasonCode(order.getRejectReasonCode());
+        po.setRejectReasonDesc(order.getRejectReasonDesc());
+        po.setRejectedAt(order.getRejectedAt());
+        po.setRejectedBy(order.getRejectedBy());
         po.setUserDeleted(order.getUserDeleted());
         po.setUserDeletedAt(order.getUserDeletedAt());
+        po.setCloseReason(order.getCloseReason());
+        po.setClosedAt(order.getClosedAt());
+        po.setStartedAt(order.getStartedAt());
+        po.setReadyAt(order.getReadyAt());
+        po.setCompletedAt(order.getCompletedAt());
+        po.setLastStateChangedAt(order.getLastStateChangedAt());
+        po.setOperatorId(order.getOperatorId());
+        po.setCanceledAt(order.getCanceledAt());
+        po.setCancelReasonCode(order.getCancelReasonCode());
+        po.setCancelReasonDesc(order.getCancelReasonDesc());
+        po.setRefundedAt(order.getRefundedAt());
+        po.setRefundOrderId(order.getRefundOrderId());
         return po;
     }
 

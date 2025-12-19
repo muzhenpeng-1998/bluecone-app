@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -56,4 +57,34 @@ public class OrderConfirmRequest {
      * 用户备注（可选）。
      */
     private String remark;
+    
+    /**
+     * 会员ID（可选）
+     */
+    private Long memberId;
+    
+    /**
+     * 优惠券ID（可选）
+     */
+    private Long couponId;
+    
+    /**
+     * 使用积分数量（可选）
+     */
+    private Integer usePoints;
+    
+    /**
+     * 配送距离（公里，可选）
+     */
+    private BigDecimal deliveryDistance;
+    
+    /**
+     * 订单类型（可选）
+     */
+    private String orderType;
+    
+    /**
+     * 是否启用抹零（可选）
+     */
+    private Boolean enableRounding;
 }

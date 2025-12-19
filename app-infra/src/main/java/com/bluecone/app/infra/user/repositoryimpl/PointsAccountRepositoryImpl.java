@@ -14,7 +14,7 @@ import java.util.Optional;
 /**
  * 积分账户仓储实现，基于表 bc_member_points_account。
  */
-@Repository
+@Repository("corePointsAccountRepositoryImpl")
 @RequiredArgsConstructor
 public class PointsAccountRepositoryImpl implements PointsAccountRepository {
 

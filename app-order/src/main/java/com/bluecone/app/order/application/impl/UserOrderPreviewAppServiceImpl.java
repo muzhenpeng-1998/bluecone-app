@@ -8,18 +8,23 @@ import com.bluecone.app.order.api.dto.ConfirmOrderPreviewResponse;
 import com.bluecone.app.order.application.UserOrderPreviewAppService;
 import com.bluecone.app.order.application.service.OrderPricingService;
 import com.bluecone.app.order.application.service.OrderPricingService.PricingResult;
+import com.bluecone.app.wallet.api.dto.WalletBalanceDTO;
+import com.bluecone.app.wallet.api.facade.WalletQueryFacade;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserOrderPreviewAppServiceImpl implements UserOrderPreviewAppService {
 
     private final OrderPricingService orderPricingService;
+    private final WalletQueryFacade walletQueryFacade;
 
     @Override
     public ConfirmOrderPreviewResponse preview(ConfirmOrderPreviewRequest previewRequest) {
@@ -44,6 +49,46 @@ public class UserOrderPreviewAppServiceImpl implements UserOrderPreviewAppServic
         response.setMessage("当前为小程序 MVP 预览，后续由商品模块提供更多信息");
         response.setSessionVersion(previewRequest.getSessionVersion());
         response.setExt(previewRequest.getExt());
+        
+        // M5：查询钱包余额并判断是否足够
+        try {
+            WalletBalanceDTO walletBalance = walletQueryFacade.getBalance(
+                    previewRequest.getTenantId(), 
+                    previewRequest.getUserId()
+            );
+            if (walletBalance != null) {
+                boolean sufficient = walletBalance.getAvailableBalance() != null 
+                        && walletBalance.getAvailableBalance().compareTo(payableAmount) >= 0;
+                
+                response.setWalletBalance(ConfirmOrderPreviewResponse.WalletBalanceInfo.builder()
+                        .availableBalance(walletBalance.getAvailableBalance())
+                        .frozenBalance(walletBalance.getFrozenBalance())
+                        .totalBalance(walletBalance.getTotalBalance())
+                        .sufficient(sufficient)
+                        .currency(walletBalance.getCurrency())
+                        .build());
+                
+                log.debug("订单预览包含钱包余额：userId={}, available={}, payable={}, sufficient={}", 
+                        previewRequest.getUserId(), 
+                        walletBalance.getAvailableBalance(), 
+                        payableAmount, 
+                        sufficient);
+            } else {
+                // 用户没有钱包账户，余额为0
+                response.setWalletBalance(ConfirmOrderPreviewResponse.WalletBalanceInfo.builder()
+                        .availableBalance(BigDecimal.ZERO)
+                        .frozenBalance(BigDecimal.ZERO)
+                        .totalBalance(BigDecimal.ZERO)
+                        .sufficient(false)
+                        .currency("CNY")
+                        .build());
+            }
+        } catch (Exception e) {
+            log.warn("查询钱包余额失败，预览继续：userId={}, error={}", 
+                    previewRequest.getUserId(), e.getMessage());
+            // 钱包查询失败不影响订单预览
+        }
+        
         return response;
     }
 

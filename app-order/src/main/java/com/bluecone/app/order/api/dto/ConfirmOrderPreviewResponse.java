@@ -34,4 +34,43 @@ public class ConfirmOrderPreviewResponse {
     private Integer sessionVersion;
 
     private String ext;
+    
+    /**
+     * 钱包余额信息（M5 新增）
+     */
+    private WalletBalanceInfo walletBalance;
+    
+    /**
+     * 钱包余额信息
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WalletBalanceInfo {
+        /**
+         * 可用余额
+         */
+        private BigDecimal availableBalance;
+        
+        /**
+         * 冻结余额
+         */
+        private BigDecimal frozenBalance;
+        
+        /**
+         * 总余额（可用+冻结）
+         */
+        private BigDecimal totalBalance;
+        
+        /**
+         * 余额是否足够支付本订单
+         */
+        private Boolean sufficient;
+        
+        /**
+         * 币种
+         */
+        private String currency;
+    }
 }

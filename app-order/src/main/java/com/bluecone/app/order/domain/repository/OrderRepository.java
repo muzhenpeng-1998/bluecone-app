@@ -22,9 +22,11 @@ public interface OrderRepository {
     void save(Order order);
 
     /**
-     * 更新订单。
+     * 更新订单（支持乐观锁）。
+     * 
+     * @return 影响的行数（用于乐观锁检测）
      */
-    void update(Order order);
+    int update(Order order);
 
     /**
      * 用户订单分页查询。

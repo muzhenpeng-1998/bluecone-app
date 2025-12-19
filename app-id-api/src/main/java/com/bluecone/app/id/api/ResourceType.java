@@ -11,7 +11,11 @@ public enum ResourceType {
     USER("usr"),
     PRODUCT("prd"),
     SKU("sku"),
-    PAYMENT("pay");
+    PAYMENT("pay"),
+    WALLET_ACCOUNT("wac"),
+    WALLET_LEDGER("wl"),
+    WALLET_FREEZE("wfz"),
+    WALLET_RECHARGE("wrc");
 
     private final String prefix;
 

@@ -2,10 +2,7 @@ package com.bluecone.app.order.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.bluecone.app.core.error.CommonErrorCode;
-import com.bluecone.app.core.exception.BizException;
 import com.bluecone.app.order.domain.model.Order;
-import com.bluecone.app.order.domain.model.OrderItem;
 import com.bluecone.app.order.domain.repository.OrderRepository;
 import com.bluecone.app.order.infra.persistence.converter.OrderConverter;
 import com.bluecone.app.order.infra.persistence.mapper.OrderItemMapper;
@@ -71,9 +68,9 @@ public class OrderRepositoryImpl implements OrderRepository {
     }
 
     @Override
-    public void update(Order order) {
+    public int update(Order order) {
         if (order == null || order.getId() == null || order.getTenantId() == null) {
-            return;
+            return 0;
         }
         Integer oldVersion = order.getVersion();
         OrderPO po = OrderConverter.toPO(order);
@@ -82,10 +79,10 @@ public class OrderRepositoryImpl implements OrderRepository {
                 .eq(OrderPO::getId, order.getId())
                 .eq(OrderPO::getTenantId, order.getTenantId())
                 .eq(oldVersion != null, OrderPO::getVersion, oldVersion));
-        if (updated == 0) {
-            throw new BizException(CommonErrorCode.BAD_REQUEST, "订单版本冲突，请刷新后重试");
+        if (updated > 0) {
+            order.setVersion(po.getVersion());
         }
-        order.setVersion(po.getVersion());
+        return updated;
     }
 
     @Override

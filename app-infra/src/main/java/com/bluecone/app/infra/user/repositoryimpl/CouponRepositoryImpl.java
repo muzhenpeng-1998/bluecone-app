@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * 优惠券仓储实现，对应表 bc_member_coupon。
  */
-@Repository
+@Repository("coreMemberCouponRepositoryImpl")
 @RequiredArgsConstructor
 public class CouponRepositoryImpl implements CouponRepository {
 

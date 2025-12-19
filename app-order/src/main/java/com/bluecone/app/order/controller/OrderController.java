@@ -69,6 +69,8 @@ public class OrderController {
     private final UserOrderRefundAppService userOrderRefundAppService;
     private final MerchantOrderQueryAppService merchantOrderQueryAppService;
     private final MerchantOrderCommandAppService merchantOrderCommandAppService;
+    private final com.bluecone.app.order.application.MerchantFulfillmentAppService merchantFulfillmentAppService;
+    private final com.bluecone.app.order.application.OrderCancelAppService orderCancelAppService;
 
     @GetMapping("/hello")
     @ApiLog("测试事件日志")
@@ -146,18 +148,31 @@ public class OrderController {
     }
 
     /**
-     * 小程序用户取消订单。
+     * 小程序用户取消订单（M4 版本：支持幂等 + 乐观锁 + 自动退款）。
      */
     @PostMapping("/user/orders/{orderId}/cancel")
     @ApiLog("用户取消订单")
     public ApiResponse<Void> cancelUserOrder(
-            @org.springframework.web.bind.annotation.PathVariable("orderId") Long orderId,
-            @org.springframework.web.bind.annotation.RequestParam(value = "tenantId", required = false) Long tenantId,
-            @org.springframework.web.bind.annotation.RequestParam(value = "userId", required = false) Long userId) {
-        // TODO: tenantId/userId 应从登录态上下文注入，当前阶段允许从请求参数读取。
-        log.info("User cancel order request, tenantId={}, userId={}, orderId={}",
-                tenantId, userId, orderId);
-        userOrderCommandAppService.cancelOrder(tenantId, userId, orderId);
+            @PathVariable("orderId") Long orderId,
+            @jakarta.validation.Valid @RequestBody com.bluecone.app.order.api.dto.UserCancelOrderRequest request) {
+        // TODO: tenantId/userId/storeId 应从登录态上下文注入，当前阶段允许从请求体读取。
+        log.info("User cancel order request (M4), tenantId={}, userId={}, orderId={}, requestId={}, expectedVersion={}, reasonCode={}",
+                request.getTenantId(), request.getUserId(), orderId, 
+                request.getRequestId(), request.getExpectedVersion(), request.getReasonCode());
+        
+        com.bluecone.app.order.application.command.CancelOrderCommand command = 
+                com.bluecone.app.order.application.command.CancelOrderCommand.builder()
+                        .tenantId(request.getTenantId())
+                        .storeId(request.getStoreId())
+                        .userId(request.getUserId())
+                        .orderId(orderId)
+                        .requestId(request.getRequestId())
+                        .expectedVersion(request.getExpectedVersion())
+                        .reasonCode(request.getReasonCode() != null ? request.getReasonCode() : "USER_CANCEL")
+                        .reasonDesc(request.getReasonDesc())
+                        .build();
+        
+        orderCancelAppService.cancelOrder(command);
         return ApiResponse.success();
     }
 
@@ -302,7 +317,7 @@ public class OrderController {
     }
 
     /**
-     * 商户接单接口。
+     * 商户接单接口（M2 版本：支持幂等 + 乐观锁）。
      */
     @PostMapping("/merchant/orders/{orderId}/accept")
     @ApiLog("商户接单")
@@ -310,10 +325,104 @@ public class OrderController {
             @PathVariable("orderId") Long orderId,
             @jakarta.validation.Valid @RequestBody MerchantAcceptOrderRequest request) {
         // TODO: tenantId/storeId/operatorId 后续应从登录态上下文注入。
-        log.info("Merchant accept order request, tenantId={}, storeId={}, operatorId={}, orderId={}",
-                request.getTenantId(), request.getStoreId(), request.getOperatorId(), orderId);
+        log.info("Merchant accept order request, tenantId={}, storeId={}, operatorId={}, orderId={}, requestId={}, expectedVersion={}",
+                request.getTenantId(), request.getStoreId(), request.getOperatorId(), orderId, 
+                request.getRequestId(), request.getExpectedVersion());
         MerchantAcceptOrderCommand command = MerchantAcceptOrderCommand.fromRequest(request, orderId);
         MerchantOrderView view = merchantOrderCommandAppService.acceptOrder(command);
+        return ApiResponse.success(view);
+    }
+
+    /**
+     * 商户拒单接口（M2 新增：支持幂等 + 乐观锁）。
+     */
+    @PostMapping("/merchant/orders/{orderId}/reject")
+    @ApiLog("商户拒单")
+    public ApiResponse<MerchantOrderView> rejectMerchantOrder(
+            @PathVariable("orderId") Long orderId,
+            @jakarta.validation.Valid @RequestBody com.bluecone.app.order.api.dto.MerchantRejectOrderRequest request) {
+        // TODO: tenantId/storeId/operatorId 后续应从登录态上下文注入。
+        log.info("Merchant reject order request, tenantId={}, storeId={}, operatorId={}, orderId={}, requestId={}, reasonCode={}, expectedVersion={}",
+                request.getTenantId(), request.getStoreId(), request.getOperatorId(), orderId, 
+                request.getRequestId(), request.getReasonCode(), request.getExpectedVersion());
+        com.bluecone.app.order.application.command.MerchantRejectOrderCommand command = 
+                com.bluecone.app.order.application.command.MerchantRejectOrderCommand.fromRequest(request, orderId);
+        MerchantOrderView view = merchantOrderCommandAppService.rejectOrder(command);
+        return ApiResponse.success(view);
+    }
+
+    /**
+     * 商户开始制作接口（M3 新增：履约流转 ACCEPTED → IN_PROGRESS）。
+     */
+    @PostMapping("/merchant/orders/{orderId}/start")
+    @ApiLog("商户开始制作")
+    public ApiResponse<MerchantOrderView> startMerchantOrder(
+            @PathVariable("orderId") Long orderId,
+            @jakarta.validation.Valid @RequestBody com.bluecone.app.order.api.dto.MerchantStartOrderRequest request) {
+        // TODO: tenantId/storeId/operatorId 后续应从登录态上下文注入。
+        log.info("Merchant start order request, tenantId={}, storeId={}, operatorId={}, orderId={}, requestId={}, expectedVersion={}",
+                request.getTenantId(), request.getStoreId(), request.getOperatorId(), orderId, 
+                request.getRequestId(), request.getExpectedVersion());
+        com.bluecone.app.order.application.command.StartOrderCommand command = 
+                com.bluecone.app.order.application.command.StartOrderCommand.builder()
+                        .tenantId(request.getTenantId())
+                        .storeId(request.getStoreId())
+                        .operatorId(request.getOperatorId())
+                        .orderId(orderId)
+                        .requestId(request.getRequestId())
+                        .expectedVersion(request.getExpectedVersion())
+                        .build();
+        MerchantOrderView view = merchantFulfillmentAppService.startOrder(command);
+        return ApiResponse.success(view);
+    }
+
+    /**
+     * 商户出餐完成接口（M3 新增：履约流转 IN_PROGRESS → READY）。
+     */
+    @PostMapping("/merchant/orders/{orderId}/ready")
+    @ApiLog("商户出餐完成")
+    public ApiResponse<MerchantOrderView> markMerchantOrderReady(
+            @PathVariable("orderId") Long orderId,
+            @jakarta.validation.Valid @RequestBody com.bluecone.app.order.api.dto.MerchantMarkReadyRequest request) {
+        // TODO: tenantId/storeId/operatorId 后续应从登录态上下文注入。
+        log.info("Merchant mark ready order request, tenantId={}, storeId={}, operatorId={}, orderId={}, requestId={}, expectedVersion={}",
+                request.getTenantId(), request.getStoreId(), request.getOperatorId(), orderId, 
+                request.getRequestId(), request.getExpectedVersion());
+        com.bluecone.app.order.application.command.MarkReadyCommand command = 
+                com.bluecone.app.order.application.command.MarkReadyCommand.builder()
+                        .tenantId(request.getTenantId())
+                        .storeId(request.getStoreId())
+                        .operatorId(request.getOperatorId())
+                        .orderId(orderId)
+                        .requestId(request.getRequestId())
+                        .expectedVersion(request.getExpectedVersion())
+                        .build();
+        MerchantOrderView view = merchantFulfillmentAppService.markReady(command);
+        return ApiResponse.success(view);
+    }
+
+    /**
+     * 商户订单完成接口（M3 新增：履约流转 READY → COMPLETED）。
+     */
+    @PostMapping("/merchant/orders/{orderId}/complete")
+    @ApiLog("商户订单完成")
+    public ApiResponse<MerchantOrderView> completeMerchantOrder(
+            @PathVariable("orderId") Long orderId,
+            @jakarta.validation.Valid @RequestBody com.bluecone.app.order.api.dto.MerchantCompleteOrderRequest request) {
+        // TODO: tenantId/storeId/operatorId 后续应从登录态上下文注入。
+        log.info("Merchant complete order request, tenantId={}, storeId={}, operatorId={}, orderId={}, requestId={}, expectedVersion={}",
+                request.getTenantId(), request.getStoreId(), request.getOperatorId(), orderId, 
+                request.getRequestId(), request.getExpectedVersion());
+        com.bluecone.app.order.application.command.CompleteOrderCommand command = 
+                com.bluecone.app.order.application.command.CompleteOrderCommand.builder()
+                        .tenantId(request.getTenantId())
+                        .storeId(request.getStoreId())
+                        .operatorId(request.getOperatorId())
+                        .orderId(orderId)
+                        .requestId(request.getRequestId())
+                        .expectedVersion(request.getExpectedVersion())
+                        .build();
+        MerchantOrderView view = merchantFulfillmentAppService.completeOrder(command);
         return ApiResponse.success(view);
     }
 }

@@ -61,6 +61,14 @@
         <module>app-tenant</module>
         <module>app-store</module>
         <module>app-product</module>
+        <module>app-member-api</module>
+        <module>app-member</module>
+        <module>app-promo-api</module>
+        <module>app-promo</module>
+        <module>app-wallet-api</module>
+        <module>app-wallet</module>
+        <module>app-pricing-api</module>
+        <module>app-pricing</module>
         <module>app-order</module>
         <module>app-payment</module>
         <module>app-inventory</module>
@@ -219,6 +227,58 @@
             <dependency>
                 <groupId>com.bluecone</groupId>
                 <artifactId>app-platform-archkit</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Member modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-member-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-member</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Promo modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-promo-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-promo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Wallet modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-wallet-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-wallet</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Pricing modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-pricing-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-pricing</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
