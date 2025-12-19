@@ -45,4 +45,21 @@ public interface WalletFreezeMapper extends BaseMapper<WalletFreezePO> {
      */
     @Select("SELECT * FROM bc_wallet_freeze WHERE status = 'FROZEN' AND expires_at < #{now} ORDER BY frozen_at LIMIT #{limit}")
     List<WalletFreezePO> selectExpiredFreezes(@Param("now") LocalDateTime now, @Param("limit") int limit);
+    
+    /**
+     * 查询指定订单的所有钱包冻结记录（用于运维诊断）
+     * 
+     * @param tenantId 租户ID
+     * @param bizOrderId 业务订单ID
+     * @param limit 限制数量
+     * @return 冻结记录列表
+     */
+    @Select("SELECT * FROM bc_wallet_freeze " +
+            "WHERE tenant_id = #{tenantId} " +
+            "AND biz_order_id = #{bizOrderId} " +
+            "ORDER BY created_at ASC " +
+            "LIMIT #{limit}")
+    List<WalletFreezePO> selectByBizOrderIdForForensics(@Param("tenantId") Long tenantId,
+                                                         @Param("bizOrderId") Long bizOrderId,
+                                                         @Param("limit") int limit);
 }

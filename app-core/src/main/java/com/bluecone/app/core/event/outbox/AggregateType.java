@@ -34,7 +34,17 @@ public enum AggregateType {
     /**
      * 积分聚合根
      */
-    POINTS("POINTS");
+    POINTS("POINTS"),
+    
+    /**
+     * 订阅账单聚合根
+     */
+    INVOICE("INVOICE"),
+    
+    /**
+     * 订阅聚合根
+     */
+    SUBSCRIPTION("SUBSCRIPTION");
     
     private final String code;
     

@@ -27,6 +27,7 @@ public class Coupon implements Serializable {
     private Long id;
     private Long tenantId;
     private Long templateId;
+    private Long grantLogId;
     private String couponCode;
     private Long userId;
     private CouponType couponType;

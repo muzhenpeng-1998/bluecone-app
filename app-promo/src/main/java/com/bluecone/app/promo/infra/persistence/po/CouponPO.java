@@ -25,6 +25,8 @@ public class CouponPO implements Serializable {
 
     private Long templateId;
 
+    private Long grantLogId;
+
     private String couponCode;
 
     private Long userId;

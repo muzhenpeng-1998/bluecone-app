@@ -28,6 +28,28 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Business module dependencies for forensics queries -->
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-order</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-member</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-promo</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-wallet</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

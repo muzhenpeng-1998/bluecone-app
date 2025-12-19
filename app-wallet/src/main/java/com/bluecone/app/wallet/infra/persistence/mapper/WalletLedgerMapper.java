@@ -38,4 +38,21 @@ public interface WalletLedgerMapper extends BaseMapper<WalletLedgerPO> {
                                            @Param("accountId") Long accountId,
                                            @Param("offset") int offset, 
                                            @Param("limit") int limit);
+    
+    /**
+     * 查询指定订单的所有钱包流水记录（用于运维诊断）
+     * 
+     * @param tenantId 租户ID
+     * @param bizOrderId 业务订单ID
+     * @param limit 限制数量
+     * @return 流水记录列表
+     */
+    @Select("SELECT * FROM bc_wallet_ledger " +
+            "WHERE tenant_id = #{tenantId} " +
+            "AND biz_order_id = #{bizOrderId} " +
+            "ORDER BY created_at ASC " +
+            "LIMIT #{limit}")
+    List<WalletLedgerPO> selectByBizOrderIdForForensics(@Param("tenantId") Long tenantId,
+                                                         @Param("bizOrderId") Long bizOrderId,
+                                                         @Param("limit") int limit);
 }

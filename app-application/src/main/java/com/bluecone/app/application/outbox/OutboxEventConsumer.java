@@ -2,6 +2,7 @@ package com.bluecone.app.application.outbox;
 
 import com.bluecone.app.infra.event.outbox.OutboxEventDO;
 import com.bluecone.app.infra.event.outbox.OutboxEventRepository;
+import com.bluecone.app.infra.event.outbox.handler.OutboxEventHandler;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

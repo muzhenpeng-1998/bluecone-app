@@ -1,7 +1,10 @@
 package com.bluecone.app.wallet.api.facade;
 
+import com.bluecone.app.wallet.api.dto.RechargeCreateCommand;
+import com.bluecone.app.wallet.api.dto.RechargeCreateResult;
+
 /**
- * 钱包充值门面接口（预留）
+ * 钱包充值门面接口
  * 提供钱包充值、充值回调处理能力
  * 
  * @author bluecone
@@ -10,24 +13,19 @@ package com.bluecone.app.wallet.api.facade;
 public interface WalletRechargeFacade {
     
     /**
-     * 创建充值单（预留，先空实现）
+     * 创建充值单
      * 
-     * @param tenantId 租户ID
-     * @param userId 用户ID
-     * @param rechargeAmount 充值金额
-     * @param idempotencyKey 幂等键
-     * @return 充值单号
+     * @param command 充值命令
+     * @return 充值结果（包含充值单号、支付参数等）
      */
-    String createRechargeOrder(Long tenantId, Long userId, 
-                              java.math.BigDecimal rechargeAmount, 
-                              String idempotencyKey);
+    RechargeCreateResult createRechargeOrder(RechargeCreateCommand command);
     
     /**
-     * 充值支付成功回调（预留，先空实现）
+     * 充值支付成功回调
      * 
-     * @param rechargeId 充值单号
-     * @param payOrderId 支付单ID
-     * @param payNo 第三方支付单号
+     * @param tenantId 租户ID
+     * @param channelTradeNo 渠道交易号
+     * @param paidAt 支付时间
      */
-    void onRechargePaid(String rechargeId, Long payOrderId, String payNo);
+    void onRechargePaid(Long tenantId, String channelTradeNo, java.time.LocalDateTime paidAt);
 }

@@ -4,9 +4,11 @@ import com.bluecone.app.core.event.outbox.AggregateType;
 import com.bluecone.app.core.event.outbox.EventType;
 import com.bluecone.app.core.event.outbox.OutboxEvent;
 import com.bluecone.app.infra.event.outbox.OutboxEventService;
+import com.bluecone.app.infra.observability.metrics.JobMetrics;
 import com.bluecone.app.infra.scheduler.annotation.BlueconeJob;
 import com.bluecone.app.infra.scheduler.core.JobContext;
 import com.bluecone.app.infra.scheduler.core.JobHandler;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,8 +46,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OrderAssetConsistencyJob implements JobHandler {
     
+    private static final String JOB_NAME = "order_asset_consistency";
+    
     private final JdbcTemplate jdbcTemplate;
     private final OutboxEventService outboxEventService;
+    private final JobMetrics jobMetrics;
     
     /**
      * 扫描时间窗口（小时）
@@ -60,6 +65,7 @@ public class OrderAssetConsistencyJob implements JobHandler {
         log.info("[OrderAssetConsistency] Starting consistency check, traceId={}, scanWindowHours={}", 
                 traceId, scanWindowHours);
         
+        Timer.Sample sample = jobMetrics.startExecutionTimer();
         LocalDateTime scanStartTime = LocalDateTime.now().minusHours(scanWindowHours);
         
         try {
@@ -69,6 +75,7 @@ public class OrderAssetConsistencyJob implements JobHandler {
             if (paidOrders.isEmpty()) {
                 log.info("[OrderAssetConsistency] No paid orders found in recent {} hours, traceId={}", 
                         scanWindowHours, traceId);
+                jobMetrics.recordExecutionSuccess(JOB_NAME);
                 return;
             }
             
@@ -111,8 +118,16 @@ public class OrderAssetConsistencyJob implements JobHandler {
                     "total={}, missing={}, repaired={}, traceId={}", 
                     paidOrders.size(), missingCount, repairedCount, traceId);
             
+            // Record metrics
+            jobMetrics.recordConsistencyCheck(JOB_NAME, paidOrders.size(), missingCount, repairedCount);
+            jobMetrics.recordExecutionSuccess(JOB_NAME);
+            
         } catch (Exception e) {
             log.error("[OrderAssetConsistency] Consistency check failed: traceId={}", traceId, e);
+            jobMetrics.recordExecutionFailure(JOB_NAME);
+            throw e;
+        } finally {
+            jobMetrics.stopExecutionTimer(sample, JOB_NAME);
         }
     }
     

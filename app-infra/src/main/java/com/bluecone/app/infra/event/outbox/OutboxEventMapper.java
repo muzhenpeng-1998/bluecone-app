@@ -41,4 +41,22 @@ public interface OutboxEventMapper extends BaseMapper<OutboxEventPO> {
             "ORDER BY created_at ASC")
     List<OutboxEventPO> selectByAggregate(@Param("aggregateType") String aggregateType, 
                                           @Param("aggregateId") String aggregateId);
+    
+    /**
+     * 查询指定订单的所有事件（用于运维诊断）
+     * 
+     * @param tenantId 租户ID
+     * @param orderId 订单ID
+     * @param limit 限制数量
+     * @return 事件列表
+     */
+    @Select("SELECT * FROM bc_outbox_event " +
+            "WHERE tenant_id = #{tenantId} " +
+            "AND aggregate_type = 'ORDER' " +
+            "AND aggregate_id = #{orderId} " +
+            "ORDER BY created_at ASC " +
+            "LIMIT #{limit}")
+    List<OutboxEventPO> selectByOrderId(@Param("tenantId") Long tenantId, 
+                                        @Param("orderId") String orderId,
+                                        @Param("limit") int limit);
 }

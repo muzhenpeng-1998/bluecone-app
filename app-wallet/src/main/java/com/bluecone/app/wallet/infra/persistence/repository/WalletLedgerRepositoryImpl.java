@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -24,9 +25,9 @@ public class WalletLedgerRepositoryImpl implements WalletLedgerRepository {
     private final WalletLedgerMapper ledgerMapper;
     
     @Override
-    public WalletLedger findByIdemKey(Long tenantId, String idemKey) {
+    public Optional<WalletLedger> findByIdemKey(Long tenantId, String idemKey) {
         WalletLedgerPO po = ledgerMapper.selectByIdemKey(tenantId, idemKey);
-        return WalletConverter.toLedgerDomain(po);
+        return Optional.ofNullable(WalletConverter.toLedgerDomain(po));
     }
     
     @Override

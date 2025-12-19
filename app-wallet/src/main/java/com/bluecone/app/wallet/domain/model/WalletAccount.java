@@ -169,4 +169,21 @@ public class WalletAccount implements Serializable {
         }
         this.availableBalance = this.availableBalance.subtract(amount);
     }
+    
+    /**
+     * 充值入账（增加可用余额）
+     */
+    public void credit(BigDecimal amount) {
+        increaseAvailableBalance(amount);
+    }
+    
+    /**
+     * 累加充值金额
+     */
+    public void addTotalRecharged(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("充值金额必须大于0");
+        }
+        this.totalRecharged = this.totalRecharged.add(amount);
+    }
 }

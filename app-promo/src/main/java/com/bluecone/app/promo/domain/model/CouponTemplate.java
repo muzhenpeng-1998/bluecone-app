@@ -39,6 +39,8 @@ public class CouponTemplate implements Serializable {
     private LocalDateTime validEndTime;
     private Integer totalQuantity;
     private Integer perUserLimit;
+    private Integer issuedCount;
+    private Integer version;
     private String status;
     private String description;
     private String termsOfUse;
@@ -46,10 +48,44 @@ public class CouponTemplate implements Serializable {
     private LocalDateTime updatedAt;
 
     /**
-     * 是否激活
+     * 是否在线（可发券）
      */
-    public boolean isActive() {
-        return "ACTIVE".equals(status);
+    public boolean isOnline() {
+        return "ONLINE".equals(status);
+    }
+
+    /**
+     * 是否草稿状态
+     */
+    public boolean isDraft() {
+        return "DRAFT".equals(status);
+    }
+
+    /**
+     * 是否已下线
+     */
+    public boolean isOffline() {
+        return "OFFLINE".equals(status);
+    }
+
+    /**
+     * 检查配额是否充足
+     */
+    public boolean hasQuotaAvailable() {
+        if (totalQuantity == null) {
+            return true; // 不限量
+        }
+        return issuedCount < totalQuantity;
+    }
+
+    /**
+     * 检查用户是否还能领取
+     */
+    public boolean canUserReceive(int userReceivedCount) {
+        if (perUserLimit == null) {
+            return true; // 不限制
+        }
+        return userReceivedCount < perUserLimit;
     }
 
     /**

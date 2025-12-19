@@ -66,7 +66,25 @@ public enum EventType {
      * 触发时机：退款单状态流转到 FAILED
      * 资产操作：记录日志，人工介入
      */
-    REFUND_FAILED("refund.failed");
+    REFUND_FAILED("refund.failed"),
+    
+    // ========== 充值事件 ==========
+    
+    /**
+     * 充值支付成功
+     * 触发时机：充值单支付回调成功，状态流转到 PAID
+     * 资产操作：写入钱包账本流水（CREDIT），增加可用余额
+     */
+    RECHARGE_PAID("recharge.paid"),
+    
+    // ========== 订阅计费事件 ==========
+    
+    /**
+     * 订阅账单支付成功
+     * 触发时机：订阅账单支付回调成功，状态流转到 PAID
+     * 资产操作：更新租户订阅状态，切换套餐和配额
+     */
+    INVOICE_PAID("invoice.paid");
     
     private final String code;
     

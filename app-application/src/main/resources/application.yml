@@ -1,6 +1,42 @@
 server:
   port: 80
 
+# Spring Boot Actuator 配置
+management:
+  endpoints:
+    web:
+      # 自定义 Actuator 端点路径，避免与业务路由冲突
+      base-path: /internal/actuator
+      # 暴露的端点：health（健康检查）、info（应用信息）、prometheus（Prometheus 指标）
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      # 显示详细健康信息（仅内网可见，通过 SecurityConfig 限制）
+      show-details: when-authorized
+      # 健康检查探针配置（K8s liveness/readiness）
+      probes:
+        enabled: true
+    prometheus:
+      # 启用 Prometheus 端点
+      enabled: true
+  # Micrometer 指标配置
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    # 启用 JVM 和系统指标
+    enable:
+      jvm: true
+      process: true
+      system: true
+      tomcat: true
+      logback: true
+    # 指标标签配置
+    tags:
+      application: ${spring.application.name}
+      environment: ${spring.profiles.active:default}
+
 spring:
   application:
     name: bluecone-app

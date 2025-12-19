@@ -1,6 +1,7 @@
 package com.bluecone.app.application.outbox;
 
 import com.bluecone.app.infra.event.outbox.OutboxEventDO;
+import com.bluecone.app.infra.event.outbox.handler.OutboxEventHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;

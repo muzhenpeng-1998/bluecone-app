@@ -23,6 +23,8 @@
         <lombok.version>1.18.38</lombok.version>
         <jjwt.version>0.12.5</jjwt.version>
         <logback.ecs.version>1.6.0</logback.ecs.version>
+        <micrometer.version>1.12.5</micrometer.version>
+        <opentelemetry.version>1.36.0</opentelemetry.version>
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <maven.failsafe.plugin.version>3.2.5</maven.failsafe.plugin.version>
@@ -69,6 +71,8 @@
         <module>app-wallet</module>
         <module>app-pricing-api</module>
         <module>app-pricing</module>
+        <module>app-billing-api</module>
+        <module>app-billing</module>
         <module>app-order</module>
         <module>app-payment</module>
         <module>app-inventory</module>
@@ -129,6 +133,36 @@
                 <artifactId>logback-ecs-encoder</artifactId>
                 <version>${logback.ecs.version}</version>
             </dependency>
+            
+            <!-- Micrometer and Prometheus -->
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-registry-prometheus</artifactId>
+                <version>${micrometer.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-core</artifactId>
+                <version>${micrometer.version}</version>
+            </dependency>
+            
+            <!-- OpenTelemetry (optional SDK approach) -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-api</artifactId>
+                <version>${opentelemetry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-sdk</artifactId>
+                <version>${opentelemetry.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-exporter-otlp</artifactId>
+                <version>${opentelemetry.version}</version>
+            </dependency>
+            
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
@@ -279,6 +313,19 @@
             <dependency>
                 <groupId>com.bluecone</groupId>
                 <artifactId>app-pricing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Billing modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-billing-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-billing</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

@@ -7,9 +7,13 @@
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
             <includeMdcKeyName>requestId</includeMdcKeyName>
             <includeMdcKeyName>tenantId</includeMdcKeyName>
             <includeMdcKeyName>userId</includeMdcKeyName>
+            <includeMdcKeyName>orderId</includeMdcKeyName>
+            <includeMdcKeyName>outboxEventId</includeMdcKeyName>
+            <includeMdcKeyName>idempotencyKey</includeMdcKeyName>
             <customFields>{"app":"${APP_NAME}"}</customFields>
         </encoder>
     </appender>
@@ -19,9 +23,13 @@
         <file>${LOG_HOME}/${APP_NAME}.log</file>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
             <includeMdcKeyName>requestId</includeMdcKeyName>
             <includeMdcKeyName>tenantId</includeMdcKeyName>
             <includeMdcKeyName>userId</includeMdcKeyName>
+            <includeMdcKeyName>orderId</includeMdcKeyName>
+            <includeMdcKeyName>outboxEventId</includeMdcKeyName>
+            <includeMdcKeyName>idempotencyKey</includeMdcKeyName>
             <customFields>{"app":"${APP_NAME}"}</customFields>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -42,9 +50,13 @@
         </filter>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
             <includeMdcKeyName>requestId</includeMdcKeyName>
             <includeMdcKeyName>tenantId</includeMdcKeyName>
             <includeMdcKeyName>userId</includeMdcKeyName>
+            <includeMdcKeyName>orderId</includeMdcKeyName>
+            <includeMdcKeyName>outboxEventId</includeMdcKeyName>
+            <includeMdcKeyName>idempotencyKey</includeMdcKeyName>
             <customFields>{"app":"${APP_NAME}"}</customFields>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">

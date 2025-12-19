@@ -137,7 +137,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         }
         
         // 幂等性检查：如果已存在账本流水，直接返回
-        WalletLedger existingLedger = ledgerRepository.findByIdemKey(tenantId, idempotencyKey);
+        WalletLedger existingLedger = ledgerRepository.findByIdemKey(tenantId, idempotencyKey).orElse(null);
         if (existingLedger != null) {
             log.info("提交操作幂等重放：tenantId={}, userId={}, bizOrderId={}, ledgerNo={}", 
                     tenantId, userId, bizOrderId, existingLedger.getLedgerNo());
@@ -155,7 +155,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
             log.info("冻结记录已提交，查询账本流水：tenantId={}, freezeNo={}", tenantId, freeze.getFreezeNo());
             // 构造冻结时的幂等键，查询账本流水
             String freezeIdemKey = buildCommitIdemKey(tenantId, userId, bizOrderId);
-            WalletLedger ledger = ledgerRepository.findByIdemKey(tenantId, freezeIdemKey);
+            WalletLedger ledger = ledgerRepository.findByIdemKey(tenantId, freezeIdemKey).orElse(null);
             if (ledger != null) {
                 return ledger;
             }
@@ -227,7 +227,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         } catch (DuplicateKeyException e) {
             // 并发情况下，唯一约束冲突，重新查询返回
             log.info("账本流水唯一约束冲突，重新查询：tenantId={}, idemKey={}", tenantId, idempotencyKey);
-            return ledgerRepository.findByIdemKey(tenantId, idempotencyKey);
+            return ledgerRepository.findByIdemKey(tenantId, idempotencyKey).orElse(null);
         }
     }
     
@@ -319,7 +319,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         }
         
         // 幂等性检查：如果已存在账本流水，直接返回
-        WalletLedger existingLedger = ledgerRepository.findByIdemKey(tenantId, idempotencyKey);
+        WalletLedger existingLedger = ledgerRepository.findByIdemKey(tenantId, idempotencyKey).orElse(null);
         if (existingLedger != null) {
             log.info("回退操作幂等重放：tenantId={}, userId={}, bizOrderId={}, ledgerNo={}", 
                     tenantId, userId, bizOrderId, existingLedger.getLedgerNo());
@@ -371,7 +371,7 @@ public class WalletDomainServiceImpl implements WalletDomainService {
         } catch (DuplicateKeyException e) {
             // 并发情况下，唯一约束冲突，重新查询返回
             log.info("账本流水唯一约束冲突，重新查询：tenantId={}, idemKey={}", tenantId, idempotencyKey);
-            return ledgerRepository.findByIdemKey(tenantId, idempotencyKey);
+            return ledgerRepository.findByIdemKey(tenantId, idempotencyKey).orElse(null);
         }
     }
     

@@ -42,6 +42,13 @@
         </dependency>
 
         <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-billing</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>

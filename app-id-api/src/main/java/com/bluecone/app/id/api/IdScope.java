@@ -90,6 +90,11 @@ public enum IdScope {
     COUPON_REDEMPTION,
     
     /**
+     * 优惠券发放日志作用域，对应 bc_coupon_grant_log 表
+     */
+    COUPON_GRANT_LOG,
+    
+    /**
      * 钱包账户作用域，对应 bc_wallet_account 表
      */
     WALLET_ACCOUNT,

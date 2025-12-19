@@ -51,6 +51,10 @@ public class CouponTemplatePO implements Serializable {
 
     private Integer perUserLimit;
 
+    private Integer issuedCount;
+
+    private Integer version;
+
     private String status;
 
     private String description;

@@ -2,12 +2,17 @@ package com.bluecone.app.wallet.infra.persistence.converter;
 
 import com.bluecone.app.wallet.domain.enums.AccountStatus;
 import com.bluecone.app.wallet.domain.enums.FreezeStatus;
+import com.bluecone.app.wallet.domain.enums.RechargeStatus;
+import com.bluecone.app.wallet.domain.model.RechargeOrder;
 import com.bluecone.app.wallet.domain.model.WalletAccount;
 import com.bluecone.app.wallet.domain.model.WalletFreeze;
 import com.bluecone.app.wallet.domain.model.WalletLedger;
+import com.bluecone.app.wallet.infra.persistence.po.RechargeOrderPO;
 import com.bluecone.app.wallet.infra.persistence.po.WalletAccountPO;
 import com.bluecone.app.wallet.infra.persistence.po.WalletFreezePO;
 import com.bluecone.app.wallet.infra.persistence.po.WalletLedgerPO;
+
+import java.math.BigDecimal;
 
 /**
  * 钱包领域模型与PO转换器
@@ -172,6 +177,75 @@ public class WalletConverter {
         po.setIdemKey(domain.getIdemKey());
         po.setCreatedAt(domain.getCreatedAt());
         po.setCreatedBy(domain.getCreatedBy());
+        return po;
+    }
+    
+    // ============ RechargeOrder ============
+    
+    public static RechargeOrder toRechargeOrderDomain(RechargeOrderPO po) {
+        if (po == null) {
+            return null;
+        }
+        return RechargeOrder.builder()
+                .id(po.getId())
+                .tenantId(po.getTenantId())
+                .userId(po.getUserId())
+                .accountId(po.getAccountId())
+                .rechargeNo(po.getRechargeNo())
+                .rechargeAmount(po.getRechargeAmount() != null ? 
+                        po.getRechargeAmount().multiply(BigDecimal.valueOf(100)).longValue() : 0L)
+                .bonusAmount(po.getBonusAmount() != null ? 
+                        po.getBonusAmount().multiply(BigDecimal.valueOf(100)).longValue() : 0L)
+                .totalAmount(po.getTotalAmount() != null ? 
+                        po.getTotalAmount().multiply(BigDecimal.valueOf(100)).longValue() : 0L)
+                .currency(po.getCurrency())
+                .status(RechargeStatus.fromCode(po.getStatus()))
+                .payOrderId(po.getPayOrderId())
+                .payChannel(po.getPayChannel())
+                .channelTradeNo(po.getPayNo())
+                .requestedAt(po.getRechargeRequestedAt())
+                .paidAt(po.getRechargeCompletedAt())
+                .idempotencyKey(po.getIdemKey())
+                .extJson(po.getExtJson())
+                .version(po.getVersion())
+                .createdAt(po.getCreatedAt())
+                .createdBy(po.getCreatedBy())
+                .updatedAt(po.getUpdatedAt())
+                .updatedBy(po.getUpdatedBy())
+                .build();
+    }
+    
+    public static RechargeOrderPO toRechargeOrderPO(RechargeOrder domain) {
+        if (domain == null) {
+            return null;
+        }
+        RechargeOrderPO po = new RechargeOrderPO();
+        po.setId(domain.getId());
+        po.setTenantId(domain.getTenantId());
+        po.setUserId(domain.getUserId());
+        po.setAccountId(domain.getAccountId());
+        po.setRechargeNo(domain.getRechargeNo());
+        // 转换分为元
+        po.setRechargeAmount(domain.getRechargeAmount() != null ? 
+                BigDecimal.valueOf(domain.getRechargeAmount()).divide(BigDecimal.valueOf(100)) : BigDecimal.ZERO);
+        po.setBonusAmount(domain.getBonusAmount() != null ? 
+                BigDecimal.valueOf(domain.getBonusAmount()).divide(BigDecimal.valueOf(100)) : BigDecimal.ZERO);
+        po.setTotalAmount(domain.getTotalAmount() != null ? 
+                BigDecimal.valueOf(domain.getTotalAmount()).divide(BigDecimal.valueOf(100)) : BigDecimal.ZERO);
+        po.setCurrency(domain.getCurrency());
+        po.setStatus(domain.getStatus() != null ? domain.getStatus().getCode() : null);
+        po.setPayOrderId(domain.getPayOrderId());
+        po.setPayChannel(domain.getPayChannel());
+        po.setPayNo(domain.getChannelTradeNo());
+        po.setRechargeRequestedAt(domain.getRequestedAt());
+        po.setRechargeCompletedAt(domain.getPaidAt());
+        po.setIdemKey(domain.getIdempotencyKey());
+        po.setExtJson(domain.getExtJson());
+        po.setVersion(domain.getVersion());
+        po.setCreatedAt(domain.getCreatedAt());
+        po.setCreatedBy(domain.getCreatedBy());
+        po.setUpdatedAt(domain.getUpdatedAt());
+        po.setUpdatedBy(domain.getUpdatedBy());
         return po;
     }
 }

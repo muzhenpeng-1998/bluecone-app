@@ -1,4 +1,4 @@
-package com.bluecone.app.application.outbox;
+package com.bluecone.app.infra.event.outbox.handler;
 
 import com.bluecone.app.infra.event.outbox.OutboxEventDO;
 

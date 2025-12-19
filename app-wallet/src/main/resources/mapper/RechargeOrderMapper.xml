@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bluecone.app.wallet.infra.persistence.mapper.RechargeOrderMapper">
+    
+    <!-- 乐观锁更新充值单 -->
+    <update id="updateWithVersion">
+        UPDATE bc_wallet_recharge_order
+        SET status = #{po.status},
+            pay_order_id = #{po.payOrderId},
+            pay_channel = #{po.payChannel},
+            pay_no = #{po.payNo},
+            recharge_completed_at = #{po.rechargeCompletedAt},
+            version = version + 1,
+            updated_at = NOW(),
+            updated_by = #{po.updatedBy}
+        WHERE id = #{po.id}
+          AND tenant_id = #{po.tenantId}
+          AND version = #{po.version}
+    </update>
+    
+</mapper>

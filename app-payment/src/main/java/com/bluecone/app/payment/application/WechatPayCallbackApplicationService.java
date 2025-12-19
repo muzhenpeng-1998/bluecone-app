@@ -36,15 +36,20 @@ public class WechatPayCallbackApplicationService {
     private final PaymentDomainService paymentDomainService;
     private final DomainEventPublisher domainEventPublisher;
     private final PaymentMetricsRecorder paymentMetricsRecorder;
+    
+    // 订阅计费支付回调服务（可选依赖）
+    private final com.bluecone.app.billing.application.BillingPaymentCallbackService billingPaymentCallbackService;
 
     public WechatPayCallbackApplicationService(PaymentOrderRepository paymentOrderRepository,
                                                PaymentDomainService paymentDomainService,
                                                DomainEventPublisher domainEventPublisher,
-                                               PaymentMetricsRecorder paymentMetricsRecorder) {
+                                               PaymentMetricsRecorder paymentMetricsRecorder,
+                                               com.bluecone.app.billing.application.BillingPaymentCallbackService billingPaymentCallbackService) {
         this.paymentOrderRepository = paymentOrderRepository;
         this.paymentDomainService = paymentDomainService;
         this.domainEventPublisher = domainEventPublisher;
         this.paymentMetricsRecorder = paymentMetricsRecorder;
+        this.billingPaymentCallbackService = billingPaymentCallbackService;
     }
 
     /**
@@ -61,6 +66,14 @@ public class WechatPayCallbackApplicationService {
                 MDC.get("traceId"), command.getOutTradeNo(), command.getTransactionId(), command.getTradeState());
         try {
             validateCommand(command);
+            
+            // 判断是否为订阅账单支付
+            if (billingPaymentCallbackService != null && 
+                billingPaymentCallbackService.isSubscriptionInvoicePayment(command.getOutTradeNo(), command.getAttach())) {
+                log.info("[wechat-callback] 识别为订阅账单支付，outTradeNo={}", command.getOutTradeNo());
+                handleSubscriptionInvoicePayment(command);
+                return;
+            }
 
             Long paymentId = parsePaymentId(command.getOutTradeNo());
             if (paymentId == null) {
@@ -195,5 +208,33 @@ public class WechatPayCallbackApplicationService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+    
+    /**
+     * 处理订阅账单支付回调
+     */
+    private void handleSubscriptionInvoicePayment(WechatPayCallbackCommand command) {
+        if (!"SUCCESS".equalsIgnoreCase(command.getTradeState())) {
+            log.info("[wechat-callback] 订阅账单支付非 SUCCESS 状态，tradeState={}, outTradeNo={}", 
+                    command.getTradeState(), command.getOutTradeNo());
+            return;
+        }
+        
+        Long paidAmountFen = command.getTotalAmount();
+        LocalDateTime paidAt = command.getSuccessTime() == null
+                ? LocalDateTime.now()
+                : LocalDateTime.ofInstant(command.getSuccessTime(), ZoneId.systemDefault());
+        
+        // 尝试从 outTradeNo 解析账单ID
+        Long invoiceId = billingPaymentCallbackService.parseInvoiceIdFromOutTradeNo(command.getOutTradeNo());
+        if (invoiceId != null) {
+            billingPaymentCallbackService.handleInvoicePaid(invoiceId, command.getTransactionId(), paidAmountFen, paidAt);
+        } else {
+            // 如果无法解析账单ID，通过 channelTradeNo 查询
+            billingPaymentCallbackService.handleInvoicePaidByChannelTradeNo(command.getTransactionId(), paidAmountFen, paidAt);
+        }
+        
+        log.info("[wechat-callback] 订阅账单支付回调处理完成，outTradeNo={}, transactionId={}", 
+                command.getOutTradeNo(), command.getTransactionId());
     }
 }

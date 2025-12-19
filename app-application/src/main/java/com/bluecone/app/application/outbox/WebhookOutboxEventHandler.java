@@ -1,6 +1,7 @@
 package com.bluecone.app.application.outbox;
 
 import com.bluecone.app.infra.event.outbox.OutboxEventDO;
+import com.bluecone.app.infra.event.outbox.handler.OutboxEventHandler;
 import com.bluecone.app.infra.webhook.entity.WebhookConfigDO;
 import com.bluecone.app.infra.webhook.repository.WebhookConfigRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
