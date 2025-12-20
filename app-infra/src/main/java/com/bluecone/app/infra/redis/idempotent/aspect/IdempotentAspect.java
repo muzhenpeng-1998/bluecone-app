@@ -6,8 +6,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
-import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.infra.redis.idempotent.IdempotentKeyResolver;
 import com.bluecone.app.infra.redis.idempotent.IdempotentProperties;
 import com.bluecone.app.infra.redis.idempotent.RedisIdempotentExecutor;
@@ -54,7 +54,7 @@ public class IdempotentAspect {
                 : properties.getDefaultExpireSeconds();
         boolean entered = executor.tryEnter(bizKey, idempotent.scene(), expireSeconds);
         if (!entered) {
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR.getCode(),
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
                     "Duplicate request detected for key: " + bizKey);
         }
         Object result = joinPoint.proceed();

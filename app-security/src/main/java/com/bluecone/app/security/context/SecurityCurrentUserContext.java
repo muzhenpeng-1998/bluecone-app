@@ -5,8 +5,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import com.bluecone.app.core.context.CurrentUserContext;
+import com.bluecone.app.core.error.AuthErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
-import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.security.core.SecurityUserPrincipal;
 
 /**
@@ -46,22 +46,19 @@ public class SecurityCurrentUserContext implements CurrentUserContext {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw BusinessException.of(ErrorCode.AUTH_REQUIRED.getCode(), 
-                    ErrorCode.AUTH_REQUIRED.getMessage());
+            throw new BusinessException(AuthErrorCode.AUTH_REQUIRED);
         }
         
         Object principal = authentication.getPrincipal();
         
         // 检查是否为匿名用户
         if (principal == null || "anonymousUser".equals(principal)) {
-            throw BusinessException.of(ErrorCode.AUTH_REQUIRED.getCode(), 
-                    ErrorCode.AUTH_REQUIRED.getMessage());
+            throw new BusinessException(AuthErrorCode.AUTH_REQUIRED);
         }
         
         // 检查 principal 类型
         if (!(principal instanceof SecurityUserPrincipal)) {
-            throw BusinessException.of(ErrorCode.AUTH_REQUIRED.getCode(), 
-                    ErrorCode.AUTH_REQUIRED.getMessage());
+            throw new BusinessException(AuthErrorCode.AUTH_REQUIRED);
         }
         
         return (SecurityUserPrincipal) principal;

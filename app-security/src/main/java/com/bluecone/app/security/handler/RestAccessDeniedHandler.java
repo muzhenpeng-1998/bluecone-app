@@ -8,8 +8,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
-import com.bluecone.app.core.exception.ApiErrorResponse;
-import com.bluecone.app.core.exception.ErrorCode;
+import com.bluecone.app.core.api.ApiResponse;
+import com.bluecone.app.core.error.AuthErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;
@@ -29,10 +29,9 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException, ServletException {
-        ApiErrorResponse body = ApiErrorResponse.of(
-                ErrorCode.PERMISSION_DENIED.getCode(),
-                ErrorCode.PERMISSION_DENIED.getMessage(),
-                request.getRequestURI());
+        ApiResponse<Void> body = ApiResponse.fail(
+                AuthErrorCode.PERMISSION_DENIED.getCode(),
+                AuthErrorCode.PERMISSION_DENIED.getMessage());
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), body);

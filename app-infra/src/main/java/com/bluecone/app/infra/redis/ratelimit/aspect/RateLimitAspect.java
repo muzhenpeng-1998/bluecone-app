@@ -6,8 +6,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
-import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.infra.redis.ratelimit.RateLimitKeyResolver;
 import com.bluecone.app.infra.redis.ratelimit.RateLimitProperties;
 import com.bluecone.app.infra.redis.ratelimit.RateLimitStrategy;
@@ -63,7 +63,7 @@ public class RateLimitAspect {
         return switch (strategy) {
             case SILENT_DROP -> null;
             case FALLBACK -> throw new IllegalStateException("Fallback strategy not implemented for key: " + bizKey);
-            case REJECT -> throw new BusinessException(ErrorCode.INTERNAL_ERROR.getCode(),
+            case REJECT -> throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
                     "Too many requests for key: " + bizKey);
         };
     }

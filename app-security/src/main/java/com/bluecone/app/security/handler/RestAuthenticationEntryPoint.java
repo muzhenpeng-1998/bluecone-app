@@ -8,8 +8,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
-import com.bluecone.app.core.exception.ApiErrorResponse;
-import com.bluecone.app.core.exception.ErrorCode;
+import com.bluecone.app.core.api.ApiResponse;
+import com.bluecone.app.core.error.AuthErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.ServletException;
@@ -29,10 +29,9 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException, ServletException {
-        ApiErrorResponse body = ApiErrorResponse.of(
-                ErrorCode.AUTH_TOKEN_INVALID.getCode(),
-                ErrorCode.AUTH_TOKEN_INVALID.getMessage(),
-                request.getRequestURI());
+        ApiResponse<Void> body = ApiResponse.fail(
+                AuthErrorCode.TOKEN_INVALID.getCode(),
+                AuthErrorCode.TOKEN_INVALID.getMessage());
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(response.getOutputStream(), body);

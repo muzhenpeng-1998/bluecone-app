@@ -1,5 +1,21 @@
 package com.bluecone.app.core.exception;
 
+/**
+ * 老版错误码枚举（已废弃）。
+ * 
+ * @deprecated 请使用新版错误码体系：
+ * <ul>
+ *   <li>{@link com.bluecone.app.core.error.AuthErrorCode} - 认证/授权错误</li>
+ *   <li>{@link com.bluecone.app.core.error.ParamErrorCode} - 参数错误</li>
+ *   <li>{@link com.bluecone.app.core.error.CommonErrorCode} - 系统通用错误</li>
+ *   <li>{@link com.bluecone.app.core.error.UserErrorCode} - 用户模块错误</li>
+ *   <li>{@link com.bluecone.app.core.error.TenantErrorCode} - 租户模块错误</li>
+ * </ul>
+ * 
+ * 新版错误码统一实现 {@link com.bluecone.app.core.error.ErrorCode} 接口，
+ * 支持按领域拆分，便于维护与扩展。
+ */
+@Deprecated
 public enum ErrorCode {
 
     INVALID_PARAM("INVALID_PARAM", "参数非法"),

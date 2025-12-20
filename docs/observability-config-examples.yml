@@ -1,0 +1,479 @@
+# Observability Configuration Examples
+# 可观测性配置示例
+
+# ============================================================================
+# 1. Prometheus 抓取配置
+# ============================================================================
+
+# prometheus.yml
+scrape_configs:
+  - job_name: 'bluecone-app'
+    metrics_path: '/internal/actuator/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ['bluecone-app:80']
+        labels:
+          environment: 'production'
+          application: 'bluecone-app'
+          region: 'ap-guangzhou'
+
+# ============================================================================
+# 2. Prometheus 告警规则
+# ============================================================================
+
+# alerts.yml
+groups:
+  - name: bluecone-app-alerts
+    interval: 30s
+    rules:
+      # 1. 应用健康检查失败
+      - alert: ApplicationHealthCheckFailed
+        expr: up{job="bluecone-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "应用健康检查失败"
+          description: "应用 {{ $labels.instance }} 健康检查失败，持续时间超过 1 分钟"
+          runbook_url: "https://wiki.example.com/runbooks/app-health-check-failed"
+
+      # 2. Outbox 事件发布失败率过高
+      - alert: OutboxPublishFailureRateHigh
+        expr: |
+          (
+            rate(outbox_events_published_total{status="failure"}[5m])
+            /
+            rate(outbox_events_published_total[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Outbox 事件发布失败率过高"
+          description: "Outbox 事件发布失败率超过 10%，当前值：{{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/outbox-failure-rate-high"
+
+      # 3. Outbox 待处理事件堆积
+      - alert: OutboxPendingEventsHigh
+        expr: outbox_events_pending_count > 1000
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Outbox 待处理事件堆积"
+          description: "Outbox 待处理事件数量超过 1000，当前值：{{ $value }}"
+          runbook_url: "https://wiki.example.com/runbooks/outbox-pending-events-high"
+
+      # 4. 任务执行失败率过高
+      - alert: JobExecutionFailureRateHigh
+        expr: |
+          (
+            rate(job_executions_total{status="failure"}[10m])
+            /
+            rate(job_executions_total[10m])
+          ) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "任务执行失败率过高"
+          description: "任务 {{ $labels.job_name }} 执行失败率超过 20%，当前值：{{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/job-failure-rate-high"
+
+      # 5. 一致性修复数量异常
+      - alert: ConsistencyRepairCountHigh
+        expr: increase(job_consistency_repaired_total[1h]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "一致性修复数量异常"
+          description: "过去 1 小时内一致性修复数量超过 10，当前值：{{ $value }}"
+          runbook_url: "https://wiki.example.com/runbooks/consistency-repair-count-high"
+
+      # 6. JVM 内存使用率过高
+      - alert: JvmMemoryUsageHigh
+        expr: |
+          (
+            jvm_memory_used_bytes{area="heap"}
+            /
+            jvm_memory_max_bytes{area="heap"}
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "JVM 堆内存使用率过高"
+          description: "JVM 堆内存使用率超过 85%，当前值：{{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/jvm-memory-usage-high"
+
+# ============================================================================
+# 3. Grafana 仪表板配置（JSON 片段）
+# ============================================================================
+
+# dashboard.json (部分)
+{
+  "dashboard": {
+    "title": "BlueCone App - Observability",
+    "panels": [
+      {
+        "title": "Outbox Events Published",
+        "targets": [
+          {
+            "expr": "rate(outbox_events_published_total{status=\"success\"}[1m])",
+            "legendFormat": "Success"
+          },
+          {
+            "expr": "rate(outbox_events_published_total{status=\"failure\"}[1m])",
+            "legendFormat": "Failure"
+          }
+        ]
+      },
+      {
+        "title": "Outbox Pending Events",
+        "targets": [
+          {
+            "expr": "outbox_events_pending_count",
+            "legendFormat": "Pending"
+          }
+        ]
+      },
+      {
+        "title": "Job Execution Success Rate",
+        "targets": [
+          {
+            "expr": "rate(job_executions_total{status=\"success\"}[5m]) / rate(job_executions_total[5m])",
+            "legendFormat": "{{ job_name }}"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+# ============================================================================
+# 4. Kubernetes 部署配置（带 OpenTelemetry）
+# ============================================================================
+
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bluecone-app
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bluecone-app
+  template:
+    metadata:
+      labels:
+        app: bluecone-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/internal/actuator/prometheus"
+        prometheus.io/port: "80"
+    spec:
+      initContainers:
+        # 下载 OpenTelemetry Javaagent
+        - name: download-otel-agent
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              wget -O /otel/opentelemetry-javaagent.jar \
+                https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.36.0/opentelemetry-javaagent.jar
+          volumeMounts:
+            - name: otel-agent
+              mountPath: /otel
+
+      containers:
+        - name: bluecone-app
+          image: bluecone-app:latest
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            # 数据库配置
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: bluecone-app-secrets
+                  key: db-url
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bluecone-app-secrets
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bluecone-app-secrets
+                  key: db-password
+
+            # Redis 配置
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bluecone-app-config
+                  key: redis-host
+            - name: REDIS_PORT
+              value: "6379"
+
+            # OpenTelemetry 配置
+            - name: JAVA_TOOL_OPTIONS
+              value: >-
+                -javaagent:/otel/opentelemetry-javaagent.jar
+                -Dotel.service.name=bluecone-app
+                -Dotel.traces.exporter=otlp
+                -Dotel.metrics.exporter=none
+                -Dotel.logs.exporter=none
+                -Dotel.exporter.otlp.endpoint=http://otel-collector:4318
+                -Dotel.exporter.otlp.protocol=http/protobuf
+                -Dotel.resource.attributes=service.version=1.0.0,deployment.environment=production
+
+            # 可观测性配置
+            - name: BLUECONE_OBSERVABILITY_ALLOWED_NETWORKS
+              value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
+          volumeMounts:
+            - name: otel-agent
+              mountPath: /otel
+
+          # 健康检查
+          livenessProbe:
+            httpGet:
+              path: /internal/actuator/health/liveness
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /internal/actuator/health/readiness
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          # 资源限制
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1000m"
+            limits:
+              memory: "4Gi"
+              cpu: "2000m"
+
+      volumes:
+        - name: otel-agent
+          emptyDir: {}
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: bluecone-app
+  namespace: production
+spec:
+  selector:
+    app: bluecone-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+# ServiceMonitor (for Prometheus Operator)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: bluecone-app
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: bluecone-app
+  endpoints:
+    - port: http
+      path: /internal/actuator/prometheus
+      interval: 15s
+
+# ============================================================================
+# 5. Docker Compose 配置（本地开发）
+# ============================================================================
+
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # BlueCone App
+  bluecone-app:
+    image: bluecone-app:latest
+    ports:
+      - "80:80"
+    environment:
+      - DB_URL=jdbc:mysql://mysql:3306/bluecone?useSSL=false
+      - DB_USERNAME=root
+      - DB_PASSWORD=password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OTEL_SERVICE_NAME=bluecone-app
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+    volumes:
+      - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar
+    command: >
+      java -javaagent:/app/opentelemetry-javaagent.jar
+      -jar /app/bluecone-app.jar
+    depends_on:
+      - mysql
+      - redis
+      - jaeger
+
+  # MySQL
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=bluecone
+    ports:
+      - "3306:3306"
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts.yml:/etc/prometheus/alerts.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+  # Jaeger (All-in-One)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4318:4318"    # OTLP HTTP receiver
+
+volumes:
+  grafana-storage:
+
+# ============================================================================
+# 6. 环境变量配置示例
+# ============================================================================
+
+# .env (生产环境)
+# 数据库配置
+DB_URL=jdbc:mysql://mysql.prod.example.com:3306/bluecone?useSSL=true
+DB_USERNAME=bluecone_user
+DB_PASSWORD=<strong-password>
+
+# Redis 配置
+REDIS_HOST=redis.prod.example.com
+REDIS_PORT=6379
+REDIS_PASSWORD=<redis-password>
+
+# OpenTelemetry 配置
+OTEL_SERVICE_NAME=bluecone-app
+OTEL_TRACES_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_ENDPOINT=https://apm-receiver.ap-guangzhou.tencentcs.com:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_HEADERS=Authentication=Bearer <your-token>
+OTEL_RESOURCE_ATTRIBUTES=service.version=1.0.0,deployment.environment=production
+
+# 可观测性配置
+BLUECONE_OBSERVABILITY_ALLOWED_NETWORKS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+
+# ============================================================================
+# 7. 日志查询示例（使用 jq）
+# ============================================================================
+
+# 查询所有错误日志
+cat logs/bluecone-app.log | jq 'select(.level == "ERROR")'
+
+# 按订单 ID 查询
+cat logs/bluecone-app.log | jq 'select(.orderId == "789012")'
+
+# 按 traceId 查询完整链路
+cat logs/bluecone-app.log | jq 'select(.traceId == "0af7651916cd43dd8448eb211c80319c")'
+
+# 查询 Outbox 相关日志
+cat logs/bluecone-app.log | jq 'select(.logger_name | contains("Outbox"))'
+
+# 统计错误日志数量（按小时）
+cat logs/bluecone-app.log | jq -r 'select(.level == "ERROR") | .["@timestamp"]' | cut -d'T' -f2 | cut -d':' -f1 | sort | uniq -c
+
+# 查询最近 10 条错误日志
+tail -n 1000 logs/bluecone-app.log | jq 'select(.level == "ERROR")' | tail -n 10
+
+# ============================================================================
+# 8. Prometheus 查询示例（PromQL）
+# ============================================================================
+
+# Outbox 事件发布成功率
+rate(outbox_events_published_total{status="success"}[1m]) / rate(outbox_events_published_total[1m])
+
+# Outbox 事件发布失败率
+rate(outbox_events_published_total{status="failure"}[1m]) / rate(outbox_events_published_total[1m])
+
+# Outbox 待处理事件数量
+outbox_events_pending_count
+
+# Outbox 平均分发耗时
+rate(outbox_dispatch_duration_seconds_sum[1m]) / rate(outbox_dispatch_duration_seconds_count[1m])
+
+# Outbox P95 分发耗时
+histogram_quantile(0.95, rate(outbox_dispatch_duration_seconds_bucket[5m]))
+
+# 任务执行成功率
+rate(job_executions_total{status="success"}[5m]) / rate(job_executions_total[5m])
+
+# 一致性修复数量（最近 1 小时）
+increase(job_consistency_repaired_total[1h])
+
+# JVM 堆内存使用率
+jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}
+
+# HTTP 请求 QPS
+rate(http_server_requests_seconds_count[1m])
+
+# HTTP 请求 P95 延迟
+histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))
+
+# HTTP 错误率（5xx）
+rate(http_server_requests_seconds_count{status=~"5.."}[1m]) / rate(http_server_requests_seconds_count[1m])

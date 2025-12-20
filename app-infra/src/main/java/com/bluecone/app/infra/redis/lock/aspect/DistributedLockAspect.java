@@ -9,8 +9,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
-import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.infra.redis.lock.DistributedLock;
 import com.bluecone.app.infra.redis.lock.LockProperties;
 import com.bluecone.app.infra.redis.lock.annotation.DistributedLock.FailStrategy;
@@ -77,7 +77,7 @@ public class DistributedLockAspect {
         return switch (strategy) {
             case SKIP -> null;
             case CUSTOM_CODE -> throw new IllegalStateException("Custom fail strategy not implemented for key: " + bizKey);
-            case THROW -> throw new BusinessException(ErrorCode.INTERNAL_ERROR.getCode(),
+            case THROW -> throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
                     DEFAULT_LOCK_ERROR_MESSAGE + ": " + bizKey);
         };
     }

@@ -12,9 +12,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 
-import com.bluecone.app.core.context.CurrentUserContext;
+import com.bluecone.app.core.error.AuthErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
-import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.security.core.SecurityUserPrincipal;
 
 /**
@@ -44,7 +43,7 @@ class SecurityCurrentUserContextTest {
         // when & then: 抛出 AUTH_REQUIRED 异常
         BusinessException exception = assertThrows(BusinessException.class, 
                 () -> currentUserContext.getCurrentUserId());
-        assertEquals(ErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
+        assertEquals(AuthErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
     }
 
     @Test
@@ -59,7 +58,7 @@ class SecurityCurrentUserContextTest {
         // when & then: 抛出 AUTH_REQUIRED 异常
         BusinessException exception = assertThrows(BusinessException.class, 
                 () -> currentUserContext.getCurrentUserId());
-        assertEquals(ErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
+        assertEquals(AuthErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
     }
 
     @Test
@@ -74,7 +73,7 @@ class SecurityCurrentUserContextTest {
         // when & then: 抛出 AUTH_REQUIRED 异常
         BusinessException exception = assertThrows(BusinessException.class, 
                 () -> currentUserContext.getCurrentUserId());
-        assertEquals(ErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
+        assertEquals(AuthErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
     }
 
     @Test
@@ -89,7 +88,7 @@ class SecurityCurrentUserContextTest {
         // when & then: 抛出 AUTH_REQUIRED 异常
         BusinessException exception = assertThrows(BusinessException.class, 
                 () -> currentUserContext.getCurrentUserId());
-        assertEquals(ErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
+        assertEquals(AuthErrorCode.AUTH_REQUIRED.getCode(), exception.getCode());
     }
 
     @Test
