@@ -12,9 +12,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
@@ -32,8 +35,14 @@ import org.springframework.context.annotation.Bean;
  *
  * <p>设计原则：app-id 模块不实现 repository，只做装配与拼装；
  * repository 的 JDBC 实现由 app-infra 提供。</p>
+ * 
+ * <p><b>装配优先级：</b>
+ * 此配置类通过 @AutoConfigureBefore 确保在 IdAutoConfiguration 之前执行，
+ * 从而优先装配 EnhancedIdService，避免被默认的 UlidIdService 覆盖。</p>
  */
 @AutoConfiguration
+@AutoConfigureAfter(DataSourceAutoConfiguration.class)
+@AutoConfigureBefore(IdAutoConfiguration.class)
 @EnableConfigurationProperties(BlueconeIdProperties.class)
 @ConditionalOnProperty(prefix = "bluecone.id.long", name = "strategy", havingValue = "SEGMENT", matchIfMissing = true)
 @ConditionalOnBean(IdSegmentRepository.class)

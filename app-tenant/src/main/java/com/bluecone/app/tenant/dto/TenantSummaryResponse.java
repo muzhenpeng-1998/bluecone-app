@@ -8,6 +8,7 @@ import lombok.Value;
 @Builder
 public class TenantSummaryResponse {
     Long tenantId;
+    String publicId;
     String tenantCode;
     String tenantName;
     Integer status;

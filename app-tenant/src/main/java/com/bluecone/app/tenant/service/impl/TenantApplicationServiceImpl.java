@@ -4,6 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
+import com.bluecone.app.id.api.IdScope;
+import com.bluecone.app.id.api.IdService;
+import com.bluecone.app.id.api.ResourceType;
+import com.bluecone.app.id.core.Ulid128;
 import com.bluecone.app.tenant.dao.entity.Tenant;
 import com.bluecone.app.tenant.dao.entity.TenantAuditLog;
 import com.bluecone.app.tenant.dao.entity.TenantBilling;
@@ -74,12 +78,19 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
     private final ITenantBillingService tenantBillingService;
     private final ITenantMediaService tenantMediaService;
     private final ITenantAuditLogService tenantAuditLogService;
+    private final IdService idService;
 
     @Override
     @Transactional
     public Long createTenant(CreateTenantCommand command) {
         // 1. 构建租户基础信息实体
         Tenant tenant = new Tenant();
+        // 生成内部 ULID 和对外 Public ID
+//        Ulid128 ulid = idService.nextUlid();
+//        String publicId = idService.nextPublicId(ResourceType.TENANT);
+//        tenant.setInternalId(ulid);
+//        tenant.setPublicId(publicId);
+        
         // 生成全局唯一的租户编码（时间戳 + 随机数）
         tenant.setTenantCode(generateTenantCode());
         // 设置租户名称
@@ -292,6 +303,7 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
 
         return TenantDetail.builder()
                 .tenantId(tenant.getId())
+                .publicId(tenant.getPublicId())
                 .tenantCode(tenant.getTenantCode())
                 .tenantName(tenant.getTenantName())
                 .status(tenant.getStatus())
@@ -331,6 +343,7 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
             TenantPlanInfo planInfo = planInfoByTenant.get(t.getId());
             return TenantSummary.builder()
                     .tenantId(t.getId())
+                    .publicId(t.getPublicId())
                     .tenantCode(t.getTenantCode())
                     .tenantName(t.getTenantName())
                     .status(t.getStatus())

@@ -16,6 +16,7 @@ import lombok.Value;
 @Builder
 public class TenantDetail {
     Long tenantId;
+    String publicId;
     String tenantCode;
     String tenantName;
     Integer status;

@@ -43,7 +43,9 @@ import org.springframework.context.annotation.Configuration;
         "com.bluecone.app.infra.cacheinval",
         "com.bluecone.app.infra.wechat.openplatform.mapper",
         // 支付模块 Mapper（位于 infrastructure.persistence 包下）
-        "com.bluecone.app.payment.infrastructure.persistence"
+        "com.bluecone.app.payment.infrastructure.persistence",
+        // 通知模块 Mapper（位于 infrastructure.dao 包下）
+        "com.bluecone.app.notify.infrastructure.dao"
 })
 @ConditionalOnClass(MybatisPlusInterceptor.class)
 @ConditionalOnProperty(name = "mybatis-plus.enabled", havingValue = "true", matchIfMissing = false)

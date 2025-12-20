@@ -24,6 +24,9 @@ import com.bluecone.app.tenant.dao.service.ITenantPlatformAccountService;
 import com.bluecone.app.tenant.dao.service.ITenantProfileService;
 import com.bluecone.app.tenant.dao.service.ITenantService;
 import com.bluecone.app.tenant.dao.service.ITenantSettingsService;
+import com.bluecone.app.id.api.IdService;
+import com.bluecone.app.id.api.ResourceType;
+import com.bluecone.app.id.core.Ulid128;
 import com.bluecone.app.tenant.model.TenantDetail;
 import com.bluecone.app.tenant.model.command.CreateTenantCommand;
 import com.bluecone.app.tenant.model.command.UpdateTenantBasicInfoCommand;
@@ -57,12 +60,19 @@ class TenantApplicationServiceTest {
     private ITenantMediaService tenantMediaService;
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private ITenantAuditLogService tenantAuditLogService;
+    @Mock
+    private IdService idService;
 
     @InjectMocks
     private TenantApplicationServiceImpl tenantApplicationService;
 
     @Test
     void createTenant_success() {
+        // Mock ID generation
+        Ulid128 mockUlid = new Ulid128(123456789L, 987654321L);
+        when(idService.nextUlid()).thenReturn(mockUlid);
+        when(idService.nextPublicId(ResourceType.TENANT)).thenReturn("tnt_01HN8X5K9G3QRST2VW4XYZ");
+        
         when(tenantService.save(any(Tenant.class))).thenAnswer(invocation -> {
             Tenant tenant = invocation.getArgument(0);
             tenant.setId(1L);
@@ -113,6 +123,7 @@ class TenantApplicationServiceTest {
     void getTenantDetail_returnsAggregatedView() {
         Tenant tenant = new Tenant();
         tenant.setId(3L);
+        tenant.setPublicId("tnt_01HN8X5K9G3QRST2VW4XYZ");
         tenant.setTenantCode("TEN001");
         tenant.setTenantName("Tenant Detail");
         tenant.setStatus(1);
@@ -166,6 +177,7 @@ class TenantApplicationServiceTest {
         TenantDetail detail = tenantApplicationService.getTenantDetail(3L);
 
         assertThat(detail.getTenantId()).isEqualTo(3L);
+        assertThat(detail.getPublicId()).isEqualTo("tnt_01HN8X5K9G3QRST2VW4XYZ");
         assertThat(detail.getPlanInfo()).isNotNull();
         assertThat(detail.getPlatformAccounts()).hasSize(1);
     }

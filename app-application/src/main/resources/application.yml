@@ -93,6 +93,21 @@ mybatis-plus:
 
 # BlueCone 应用自定义配置
 bluecone:
+  # ============================================================================
+  # ID 生成配置（支持 ULID + Segment Long ID + Public ID）
+  # ============================================================================
+  id:
+    enabled: true
+    long:
+      enabled: true
+      strategy: SEGMENT  # 使用号段模式（推荐），避免 Snowflake 的时钟回拨问题
+    segment:
+      enabled: true
+      step: 1000  # 每次分配 1000 个 ID
+    public-id:
+      enabled: true
+      separator: "_"  # Public ID 分隔符，格式：tnt_01HN8X5K9G3QRST2VW4XYZ
+  
   # 安全配置：JWT Token 和 Gateway 签名密钥
   security:
     token:
@@ -175,11 +190,6 @@ bluecone:
 
   log:
     enabled: false
-
-  id:
-    long:
-      enabled: true
-      node-id: 1
 
 logging:
   level:

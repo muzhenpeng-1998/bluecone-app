@@ -19,6 +19,7 @@ public final class SecurityConstants {
             "/api/auth/**",
             "/api/gw/auth/**",
             "/api/user/auth/wechat-miniapp/**",
+            "/api/tenants",  // 租户创建接口（注册）
             "/actuator/health",
             "/error"
     };

@@ -1,8 +1,9 @@
 # BlueCone Platform Core AutoConfigurations
 # ID Generation
-com.bluecone.app.id.autoconfigure.IdAutoConfiguration
-com.bluecone.app.id.autoconfigure.IdMybatisAutoConfiguration
-com.bluecone.app.id.autoconfigure.IdJacksonAutoConfiguration
+com.bluecone.app.id.internal.autoconfigure.IdAutoConfiguration
+com.bluecone.app.id.internal.autoconfigure.IdSegmentAutoConfiguration
+com.bluecone.app.id.internal.autoconfigure.IdMybatisAutoConfiguration
+com.bluecone.app.id.internal.autoconfigure.IdJacksonAutoConfiguration
 
 # Public ID Resolution
 com.bluecone.app.config.IdResolveConfiguration

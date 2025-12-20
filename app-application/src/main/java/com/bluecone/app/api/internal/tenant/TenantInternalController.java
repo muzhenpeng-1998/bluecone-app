@@ -394,6 +394,7 @@ public class TenantInternalController {
     private TenantSummaryResponse toSummaryResponse(TenantSummary summary) {
         return TenantSummaryResponse.builder()
                 .tenantId(summary.getTenantId())
+                .publicId(summary.getPublicId())
                 .tenantCode(summary.getTenantCode())
                 .tenantName(summary.getTenantName())
                 .status(summary.getStatus())
@@ -436,6 +437,7 @@ public class TenantInternalController {
                 : detail.getMediaList().stream().map(this::toMediaResponse).toList();
         return TenantDetailResponse.builder()
                 .tenantId(detail.getTenantId())
+                .publicId(detail.getPublicId())
                 .tenantCode(detail.getTenantCode())
                 .tenantName(detail.getTenantName())
                 .status(detail.getStatus())

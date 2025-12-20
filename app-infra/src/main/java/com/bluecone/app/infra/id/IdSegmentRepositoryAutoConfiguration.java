@@ -4,8 +4,11 @@ import com.bluecone.app.id.segment.IdSegmentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -15,10 +18,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * <p>职责：仅提供 IdSegmentRepository 的 JDBC 实现 Bean，
  * 不涉及任何 ID 生成器或 IdService 的装配（由 app-id 模块负责）。
  *
- * <p>启用条件：存在 JdbcTemplate Bean（Spring Boot JDBC 自动装配）。
+ * <p>启用条件：类路径中存在 JdbcTemplate 类（Spring Boot JDBC 自动装配）。
  */
 @AutoConfiguration
-@ConditionalOnBean(JdbcTemplate.class)
+@AutoConfigureAfter({DataSourceAutoConfiguration.class, JdbcTemplateAutoConfiguration.class})
+@ConditionalOnClass(JdbcTemplate.class)
 public class IdSegmentRepositoryAutoConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(IdSegmentRepositoryAutoConfiguration.class);

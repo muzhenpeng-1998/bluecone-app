@@ -2,6 +2,7 @@ package com.bluecone.app.tenant.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.bluecone.app.id.core.Ulid128;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -27,6 +28,14 @@ public class Tenant implements Serializable {
     @Schema(description = "主键ID")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    // 内部主键 ULID128，对应列 internal_id (BINARY(16))
+    @Schema(description = "内部主键 ULID128")
+    private Ulid128 internalId;
+
+    // 对外租户 ID，对应列 public_id
+    @Schema(description = "对外租户 ID")
+    private String publicId;
 
     // 租户编码（业务唯一键）
     @Schema(description = "租户编码")
