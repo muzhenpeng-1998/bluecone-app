@@ -10,8 +10,8 @@ import com.bluecone.app.core.event.outbox.EventType;
 import com.bluecone.app.infra.event.outbox.handler.OutboxEventHandler;
 import com.bluecone.app.infra.event.outbox.OutboxEventDO;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -22,13 +22,22 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class BillingEventConsumer implements OutboxEventHandler {
     
     private final BillingDomainService billingDomainService;
     private final BillingInvoiceMapper invoiceMapper;
     private final PlanSkuMapper planSkuMapper;
     private final ObjectMapper objectMapper;
+
+    public BillingEventConsumer(BillingDomainService billingDomainService,
+                               BillingInvoiceMapper invoiceMapper,
+                               PlanSkuMapper planSkuMapper,
+                               @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.billingDomainService = billingDomainService;
+        this.invoiceMapper = invoiceMapper;
+        this.planSkuMapper = planSkuMapper;
+        this.objectMapper = objectMapper;
+    }
     
     @Override
     public boolean supports(OutboxEventDO event) {

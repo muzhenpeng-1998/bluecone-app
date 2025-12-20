@@ -33,6 +33,7 @@
         <mockito.version>5.11.0</mockito.version>
         <testcontainers.version>1.19.4</testcontainers.version>
         <archunit.version>1.2.1</archunit.version>
+        <springdoc.version>2.6.0</springdoc.version>
         <skip.it.tests>true</skip.it.tests>
         <testcontainers.enabled>false</testcontainers.enabled>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -219,6 +220,13 @@
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>
                 <version>${archunit.version}</version>
+            </dependency>
+
+            <!-- Springdoc OpenAPI (Spring Boot 3 compatible) -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
 
             <!-- Platform modules -->

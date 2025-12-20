@@ -13,8 +13,8 @@ import com.bluecone.app.campaign.infrastructure.persistence.po.CampaignPO;
 import com.bluecone.app.campaign.infrastructure.persistence.po.ExecutionLogPO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,10 +22,13 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class CampaignConverter {
     
     private final ObjectMapper objectMapper;
+
+    public CampaignConverter(@Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * PO -> Domain

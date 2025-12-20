@@ -6,8 +6,8 @@ import com.bluecone.app.core.event.EventMetadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,11 +20,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j 
 @Component("legacyOutboxEventPublisher")
 @Profile({"dev", "test"})
-@RequiredArgsConstructor
 public class TransactionalOutboxEventPublisher implements DomainEventPublisher {
 
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+
+    public TransactionalOutboxEventPublisher(OutboxEventRepository outboxEventRepository,
+                                            @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.outboxEventRepository = outboxEventRepository;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     @Transactional

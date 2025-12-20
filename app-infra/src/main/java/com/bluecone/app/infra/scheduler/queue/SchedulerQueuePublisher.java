@@ -4,6 +4,7 @@ import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import com.bluecone.app.infra.redis.core.RedisOps;
@@ -20,7 +21,7 @@ public class SchedulerQueuePublisher {
     private final RedisOps redisOps;
     private final ObjectMapper objectMapper;
 
-    public SchedulerQueuePublisher(RedisOps redisOps, ObjectMapper objectMapper) {
+    public SchedulerQueuePublisher(RedisOps redisOps, @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
         this.redisOps = redisOps;
         this.objectMapper = objectMapper;
     }

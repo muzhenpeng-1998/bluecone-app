@@ -31,10 +31,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -46,7 +46,6 @@ import org.springframework.util.StringUtils;
  * - 写：DB 成功后刷新缓存或驱逐。
  */
 @Service
-@RequiredArgsConstructor
 public class OrderDraftApplicationService implements OrderDraftFacade {
 
     private static final Logger log = LoggerFactory.getLogger(OrderDraftApplicationService.class);
@@ -58,7 +57,21 @@ public class OrderDraftApplicationService implements OrderDraftFacade {
     private final OrderDraftCacheService orderDraftCacheService;
     private final DistributedLock distributedLock;
     private final LockProperties lockProperties;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    public OrderDraftApplicationService(OrderDraftRepository orderDraftRepository,
+                                       CartDomainService cartDomainService,
+                                       OrderDraftCacheService orderDraftCacheService,
+                                       DistributedLock distributedLock,
+                                       LockProperties lockProperties,
+                                       @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.orderDraftRepository = orderDraftRepository;
+        this.cartDomainService = cartDomainService;
+        this.orderDraftCacheService = orderDraftCacheService;
+        this.distributedLock = distributedLock;
+        this.lockProperties = lockProperties;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     @Transactional(readOnly = true)

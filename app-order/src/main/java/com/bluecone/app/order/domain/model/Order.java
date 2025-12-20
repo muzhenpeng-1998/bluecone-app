@@ -25,6 +25,74 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
+/**
+ * 订单聚合根
+ * 
+ * <p>订单是系统的核心业务实体，代表用户的一次购买行为。
+ * 作为DDD聚合根，Order负责维护订单的完整性和业务规则。
+ * 
+ * <h3>聚合边界</h3>
+ * <p>Order聚合包含以下实体和值对象：</p>
+ * <ul>
+ *   <li>{@link OrderItem} - 订单明细项（聚合内实体）</li>
+ *   <li>{@link OrderStatus} - 订单状态（值对象）</li>
+ *   <li>{@link PayStatus} - 支付状态（值对象）</li>
+ *   <li>{@link BizType} - 业务类型（值对象）</li>
+ *   <li>{@link OrderSource} - 订单来源（值对象）</li>
+ * </ul>
+ * 
+ * <h3>核心业务能力</h3>
+ * <ul>
+ *   <li><b>订单创建</b>：从草稿转正式订单、从购物车创建订单</li>
+ *   <li><b>金额计算</b>：根据明细项自动计算总额、优惠额、应付额</li>
+ *   <li><b>状态流转</b>：支付、接单、制作、出餐、完成、取消、退款等</li>
+ *   <li><b>业务规则校验</b>：状态前置条件、金额校验、并发控制</li>
+ *   <li><b>会话管理</b>：支持购物车会话、防止重复提交</li>
+ * </ul>
+ * 
+ * <h3>状态机</h3>
+ * <p>订单的生命周期遵循以下状态流转：</p>
+ * <pre>
+ * WAIT_PAY（待支付）
+ *   ↓ 支付成功
+ * WAIT_ACCEPT（待接单）
+ *   ↓ 商户接单
+ * ACCEPTED（已接单）
+ *   ↓ 开始制作
+ * IN_PROGRESS（制作中）
+ *   ↓ 制作完成
+ * READY（已出餐）
+ *   ↓ 用户取货
+ * COMPLETED（已完成）
+ * 
+ * 任意非终态 → CANCELED（已取消）
+ * 已完成 → REFUNDED（已退款）
+ * 超时/异常 → CLOSED（已关闭）
+ * </pre>
+ * 
+ * <h3>多租户隔离</h3>
+ * <p>所有订单操作都基于tenantId进行数据隔离，确保租户间数据安全。</p>
+ * 
+ * <h3>并发控制</h3>
+ * <p>使用version字段实现乐观锁，防止并发更新导致的数据不一致。</p>
+ * 
+ * <h3>审计追踪</h3>
+ * <p>记录订单的完整操作历史，包括：</p>
+ * <ul>
+ *   <li>创建人、创建时间</li>
+ *   <li>更新人、更新时间</li>
+ *   <li>接单人、接单时间</li>
+ *   <li>拒单人、拒单原因、拒单时间</li>
+ *   <li>取消人、取消原因、取消时间</li>
+ *   <li>各状态流转时间点</li>
+ * </ul>
+ * 
+ * @author BlueCone
+ * @since 1.0.0
+ * @see OrderItem
+ * @see OrderStatus
+ * @see PayStatus
+ */
 @Slf4j
 @Data
 @Builder
@@ -33,156 +101,362 @@ import org.springframework.util.StringUtils;
 public class Order implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    
+    /**
+     * 订单确认时的金额容差（0.01元）
+     * 用于处理浮点数计算精度问题，当计算金额与预期金额差异在容差范围内时视为一致
+     */
     private static final BigDecimal CONFIRM_TOLERANCE = new BigDecimal("0.01");
 
-    // 标识与多租户
+    // ========== 标识与多租户 ==========
+    
+    /**
+     * 订单ID（主键）
+     * 使用ULID生成，具有时间有序性和全局唯一性
+     */
     private Long id;
 
+    /**
+     * 租户ID
+     * 用于多租户数据隔离，所有订单操作都基于租户上下文
+     */
     private Long tenantId;
 
+    /**
+     * 门店ID
+     * 订单归属的门店，用于门店维度的订单管理和统计
+     */
     private Long storeId;
 
-    // 用户 & 会话信息
+    // ========== 用户 & 会话信息 ==========
+    
+    /**
+     * 用户ID
+     * 下单用户的唯一标识
+     */
     private Long userId;
 
+    /**
+     * 会话ID
+     * 用于关联购物车会话，防止重复提交和会话冲突
+     */
     private String sessionId;
 
+    /**
+     * 会话版本号
+     * 用于购物车会话的乐观锁控制，防止并发修改
+     */
     @Builder.Default
     private Integer sessionVersion = 0;
 
+    /**
+     * 订单编号
+     * 系统生成的唯一订单号，用于对外展示和查询
+     * 格式：yyyyMMddHHmmss + 随机数
+     */
     private String orderNo;
 
+    /**
+     * 客户端订单号
+     * 客户端生成的幂等键，用于防止重复下单
+     */
     private String clientOrderNo;
 
-    // 业务维度
+    // ========== 业务维度 ==========
+    
+    /**
+     * 业务类型
+     * 区分不同的业务场景，如堂食、外卖、自提等
+     * @see BizType
+     */
     private BizType bizType;
 
+    /**
+     * 订单来源
+     * 标识订单的来源渠道，如小程序、H5、APP等
+     * @see OrderSource
+     */
     private OrderSource orderSource;
 
+    /**
+     * 渠道标识
+     * 更细粒度的渠道标识，如具体的小程序AppId
+     */
     private String channel;
 
-    // 金额
+    // ========== 金额 ==========
+    
+    /**
+     * 订单总金额
+     * 所有订单明细的原价总和（未扣除优惠）
+     * 计算公式：∑(item.unitPrice * item.quantity)
+     */
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
+    /**
+     * 优惠金额
+     * 所有优惠的总和，包括优惠券、活动折扣、会员折扣等
+     * 计算公式：totalAmount - payableAmount
+     */
     @Builder.Default
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    /**
+     * 应付金额
+     * 用户实际需要支付的金额
+     * 计算公式：totalAmount - discountAmount
+     */
     @Builder.Default
     private BigDecimal payableAmount = BigDecimal.ZERO;
 
+    /**
+     * 货币类型
+     * 默认为人民币（CNY），支持多币种扩展
+     */
     @Builder.Default
     private String currency = "CNY";
 
-    // 优惠券
+    // ========== 优惠券 ==========
+    
+    /**
+     * 优惠券ID
+     * 用户使用的优惠券ID，用于关联优惠券使用记录
+     */
     private Long couponId;
 
-    // 状态
+    // ========== 状态 ==========
+    
+    /**
+     * 订单主状态
+     * 订单的核心状态，决定订单的生命周期流转
+     * @see OrderStatus
+     */
     private OrderStatus status;
 
+    /**
+     * 支付状态
+     * 独立的支付状态，与订单主状态解耦
+     * @see PayStatus
+     */
     private PayStatus payStatus;
 
-    // 备注 & 扩展
+    // ========== 备注 & 扩展 ==========
+    
+    /**
+     * 订单备注
+     * 用户填写的订单备注信息，如口味要求、配送要求等
+     */
     private String remark;
 
+    /**
+     * 扩展字段
+     * 用于存储业务特定的扩展信息，以JSON格式存储
+     * 避免频繁修改表结构，提高系统扩展性
+     */
     @Builder.Default
     private Map<String, Object> ext = Collections.emptyMap();
 
-    // 聚合内明细
+    // ========== 聚合内明细 ==========
+    
+    /**
+     * 订单明细列表
+     * 订单包含的商品明细项，作为聚合内实体
+     * @see OrderItem
+     */
     @Builder.Default
     private List<OrderItem> items = Collections.emptyList();
 
-    // 版本和审计字段
+    // ========== 版本和审计字段 ==========
+    
+    /**
+     * 版本号
+     * 用于乐观锁并发控制，每次更新递增
+     */
     @Builder.Default
     private Integer version = 0;
 
+    /**
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 
+    /**
+     * 创建人ID
+     */
     private Long createdBy;
 
+    /**
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 
+    /**
+     * 更新人ID
+     */
     private Long updatedBy;
 
+    /**
+     * 用户删除标记
+     * 用户端软删除标记，用户删除后订单对用户不可见，但系统仍保留
+     */
     private Boolean userDeleted;
 
+    /**
+     * 用户删除时间
+     */
     private LocalDateTime userDeletedAt;
 
+    // ========== 商户接单记录 ==========
+    
     /**
-     * 商户接单记录：操作人和接单时间。
+     * 接单操作人ID
+     * 商户端接单操作的员工ID，用于追踪接单责任人
      */
     private Long acceptOperatorId;
 
+    /**
+     * 接单时间
+     * 商户确认接单的时间点，用于计算接单时效
+     */
     private LocalDateTime acceptedAt;
 
+    // ========== 商户拒单记录 ==========
+    
     /**
-     * 商户拒单记录：拒单原因、拒单时间、拒单操作人。
+     * 拒单原因码
+     * 标准化的拒单原因代码，如：
+     * <ul>
+     *   <li>OUT_OF_STOCK - 商品缺货</li>
+     *   <li>STORE_BUSY - 门店繁忙</li>
+     *   <li>INVALID_ADDRESS - 配送地址无效</li>
+     *   <li>OTHER - 其他原因</li>
+     * </ul>
      */
     private String rejectReasonCode;
 
+    /**
+     * 拒单原因描述
+     * 商户填写的具体拒单原因，用于向用户解释
+     */
     private String rejectReasonDesc;
 
+    /**
+     * 拒单时间
+     * 商户拒绝接单的时间点
+     */
     private LocalDateTime rejectedAt;
 
+    /**
+     * 拒单操作人ID
+     * 执行拒单操作的员工ID
+     */
     private Long rejectedBy;
 
+    // ========== 关单记录 ==========
+    
     /**
-     * 关单原因：PAY_TIMEOUT（支付超时）、USER_CANCEL（用户取消）、MERCHANT_CANCEL（商户取消）等。
+     * 关单原因
+     * 订单关闭的原因代码，如：
+     * <ul>
+     *   <li>PAY_TIMEOUT - 支付超时自动关闭</li>
+     *   <li>USER_CANCEL - 用户主动取消</li>
+     *   <li>MERCHANT_CANCEL - 商户取消</li>
+     *   <li>SYSTEM_CANCEL - 系统异常关闭</li>
+     * </ul>
      */
     private String closeReason;
 
     /**
-     * 关单时间。
+     * 关单时间
+     * 订单关闭的时间点
      */
     private LocalDateTime closedAt;
 
+    // ========== 订单履约时间点 ==========
+    
     /**
-     * 开始制作时间（ACCEPTED → IN_PROGRESS）。
+     * 开始制作时间
+     * 状态从ACCEPTED流转到IN_PROGRESS的时间点
+     * 用于计算制作时效和预计完成时间
      */
     private LocalDateTime startedAt;
 
     /**
-     * 出餐/可取时间（IN_PROGRESS → READY）。
+     * 出餐时间
+     * 状态从IN_PROGRESS流转到READY的时间点
+     * 表示商品已制作完成，可以取货或配送
      */
     private LocalDateTime readyAt;
 
     /**
-     * 完成时间（READY → COMPLETED）。
+     * 完成时间
+     * 状态流转到COMPLETED的时间点
+     * 表示订单履约完成，用户已取货或已送达
      */
     private LocalDateTime completedAt;
 
     /**
-     * 最近一次状态变化时间（用于SLA统计和超时判断）。
+     * 最近一次状态变化时间
+     * 记录订单状态最后一次变更的时间
+     * 用途：
+     * <ul>
+     *   <li>SLA统计：计算各环节耗时</li>
+     *   <li>超时判断：判断订单是否超时</li>
+     *   <li>异常监控：识别长时间未流转的订单</li>
+     * </ul>
      */
     private LocalDateTime lastStateChangedAt;
 
     /**
-     * 最近操作人ID（接单/开始/出餐/完成等操作的操作人）。
+     * 最近操作人ID
+     * 最后一次操作订单的人员ID
+     * 包括接单、开始制作、出餐、完成等操作
      */
     private Long operatorId;
 
+    // ========== 取消记录 ==========
+    
     /**
-     * 取消时间（用户取消或商户拒单时填充）。
+     * 取消时间
+     * 订单被取消的时间点
+     * 适用于用户取消、商户拒单等场景
      */
     private LocalDateTime canceledAt;
 
     /**
-     * 取消原因码（USER_CANCEL、MERCHANT_REJECT、PAY_TIMEOUT等）。
+     * 取消原因码
+     * 标准化的取消原因代码，如：
+     * <ul>
+     *   <li>USER_CANCEL - 用户主动取消</li>
+     *   <li>MERCHANT_REJECT - 商户拒单</li>
+     *   <li>PAY_TIMEOUT - 支付超时</li>
+     *   <li>DUPLICATE_ORDER - 重复下单</li>
+     *   <li>OTHER - 其他原因</li>
+     * </ul>
      */
     private String cancelReasonCode;
 
     /**
-     * 取消原因描述（用户或商户填写的具体原因）。
+     * 取消原因描述
+     * 用户或商户填写的具体取消原因
+     * 用于客服分析和用户反馈
      */
     private String cancelReasonDesc;
 
+    // ========== 退款记录 ==========
+    
     /**
-     * 退款时间（退款成功时填充）。
+     * 退款时间
+     * 退款成功的时间点
+     * 仅在订单发生退款时填充
      */
     private LocalDateTime refundedAt;
 
     /**
-     * 退款单ID（关联bc_refund_order.id，可选）。
+     * 退款单ID
+     * 关联的退款单主键（bc_refund_order.id）
+     * 用于追溯退款详情和退款流水
      */
     private Long refundOrderId;
 

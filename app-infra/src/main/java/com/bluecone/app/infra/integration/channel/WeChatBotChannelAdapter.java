@@ -8,6 +8,7 @@ import com.bluecone.app.infra.notify.channel.wechat.WeChatBotClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
@@ -24,7 +25,7 @@ public class WeChatBotChannelAdapter implements IntegrationChannel {
     private final ObjectMapper objectMapper;
 
     public WeChatBotChannelAdapter(final WeChatBotClient weChatBotClient,
-                                   final ObjectMapper objectMapper) {
+                                   @Qualifier("redisObjectMapper") final ObjectMapper objectMapper) {
         this.weChatBotClient = Objects.requireNonNull(weChatBotClient, "weChatBotClient must not be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
     }

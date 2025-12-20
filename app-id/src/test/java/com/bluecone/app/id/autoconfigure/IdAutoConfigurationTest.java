@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import com.bluecone.app.id.api.IdService;
-import com.bluecone.app.id.core.UlidIdGenerator;
+import com.bluecone.app.id.internal.core.UlidIdGenerator;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
 
 import io.micrometer.core.instrument.MeterRegistry;

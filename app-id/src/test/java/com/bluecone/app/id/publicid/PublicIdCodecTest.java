@@ -8,14 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.bluecone.app.id.api.IdService;
-import com.bluecone.app.id.config.BlueconeIdProperties;
+import com.bluecone.app.id.internal.config.BlueconeIdProperties;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.id.core.UlidIdGenerator;
-import com.bluecone.app.id.core.UlidIdService;
+import com.bluecone.app.id.internal.core.UlidIdGenerator;
+import com.bluecone.app.id.internal.core.UlidIdService;
 import com.bluecone.app.id.publicid.api.DecodedPublicId;
 import com.bluecone.app.id.publicid.api.PublicId;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
-import com.bluecone.app.id.publicid.core.DefaultPublicIdCodec;
+import com.bluecone.app.id.internal.publicid.DefaultPublicIdCodec;
 
 /**
  * PublicIdCodec 编解码与校验逻辑测试。

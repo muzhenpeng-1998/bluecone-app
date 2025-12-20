@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -31,7 +32,7 @@ public class RedisOps {
 
     public RedisOps(RedisTemplate<String, Object> redisTemplate,
                     StringRedisTemplate stringRedisTemplate,
-                    ObjectMapper redisObjectMapper) {
+                    @Qualifier("redisObjectMapper") ObjectMapper redisObjectMapper) {
         this.redisTemplate = redisTemplate;
         this.stringRedisTemplate = stringRedisTemplate;
         this.redisObjectMapper = redisObjectMapper;

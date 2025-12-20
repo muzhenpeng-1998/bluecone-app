@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecone.app.core.event.outbox.OutboxEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +19,16 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OutboxEventService {
     
     private final OutboxEventMapper outboxEventMapper;
     private final ObjectMapper objectMapper;
+
+    public OutboxEventService(OutboxEventMapper outboxEventMapper,
+                             @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.outboxEventMapper = outboxEventMapper;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 写入 Outbox 事件（同事务）

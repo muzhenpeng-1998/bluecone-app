@@ -16,8 +16,8 @@ import com.bluecone.app.order.domain.repository.OrderRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,12 +49,19 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MerchantFulfillmentAppServiceImpl implements MerchantFulfillmentAppService {
 
     private final OrderRepository orderRepository;
     private final OrderActionLogRepository actionLogRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    public MerchantFulfillmentAppServiceImpl(OrderRepository orderRepository,
+                                            OrderActionLogRepository actionLogRepository,
+                                            @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.orderRepository = orderRepository;
+        this.actionLogRepository = actionLogRepository;
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * 商户开始制作订单（M3 版本：支持幂等 + 乐观锁）。

@@ -2,8 +2,8 @@ package com.bluecone.app.infra.event.consume;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,11 +15,16 @@ import java.time.LocalDateTime;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EventConsumeLogService {
     
     private final EventConsumeLogMapper consumeLogMapper;
     private final ObjectMapper objectMapper;
+
+    public EventConsumeLogService(EventConsumeLogMapper consumeLogMapper,
+                                 @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.consumeLogMapper = consumeLogMapper;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 检查事件是否已被消费（幂等性检查）

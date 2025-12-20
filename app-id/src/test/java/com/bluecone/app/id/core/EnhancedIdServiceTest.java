@@ -3,9 +3,9 @@ package com.bluecone.app.id.core;
 import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.ResourceType;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
-import com.bluecone.app.id.publicid.core.DefaultPublicIdCodec;
+import com.bluecone.app.id.internal.publicid.DefaultPublicIdCodec;
 import com.bluecone.app.id.segment.IdSegmentRepository;
-import com.bluecone.app.id.segment.SegmentLongIdGenerator;
+import com.bluecone.app.id.internal.segment.SegmentLongIdGenerator;
 import com.bluecone.app.id.segment.SegmentRange;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,17 +32,17 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("EnhancedIdService 功能测试")
 class EnhancedIdServiceTest {
     
-    private EnhancedIdService idService;
+    private com.bluecone.app.id.internal.core.EnhancedIdService idService;
     
     @BeforeEach
     void setUp() {
-        UlidIdGenerator ulidIdGenerator = UlidIdGenerator.create(1);
+        com.bluecone.app.id.internal.core.UlidIdGenerator ulidIdGenerator = com.bluecone.app.id.internal.core.UlidIdGenerator.create(1);
         IdSegmentRepository repository = new InMemoryIdSegmentRepository();
         SegmentLongIdGenerator segmentLongIdGenerator = new SegmentLongIdGenerator(repository, 1000);
         PublicIdCodec codec = new DefaultPublicIdCodec(null);
-        PublicIdFactory publicIdFactory = new PublicIdFactory(codec);
+        com.bluecone.app.id.internal.core.PublicIdFactory publicIdFactory = new com.bluecone.app.id.internal.core.PublicIdFactory(codec);
         
-        idService = new EnhancedIdService(ulidIdGenerator, segmentLongIdGenerator, publicIdFactory);
+        idService = new com.bluecone.app.id.internal.core.EnhancedIdService(ulidIdGenerator, segmentLongIdGenerator, publicIdFactory);
     }
     
     @Test

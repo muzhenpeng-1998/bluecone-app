@@ -11,8 +11,8 @@ import com.bluecone.app.core.config.Feature;
 import com.bluecone.app.core.config.domain.TenantPlanConfig;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,12 +25,19 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SubscriptionPlanService {
     
     private final TenantSubscriptionMapper subscriptionMapper;
     private final PlanSkuMapper planSkuMapper;
     private final ObjectMapper objectMapper;
+
+    public SubscriptionPlanService(TenantSubscriptionMapper subscriptionMapper,
+                                  PlanSkuMapper planSkuMapper,
+                                  @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.subscriptionMapper = subscriptionMapper;
+        this.planSkuMapper = planSkuMapper;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 获取租户的套餐配置

@@ -218,6 +218,21 @@ class DefaultIdempotentCreateTemplateTest {
             public byte[] nextUlidBytes() {
                 return new byte[16];
             }
+
+            @Override
+            public long nextLong(com.bluecone.app.id.api.IdScope scope) {
+                return counter.incrementAndGet();
+            }
+
+            @Override
+            public String nextPublicId(com.bluecone.app.id.api.ResourceType type) {
+                return type.prefix() + "_" + nextUlidString();
+            }
+
+            @Override
+            public void validatePublicId(com.bluecone.app.id.api.ResourceType expectedType, String publicId) {
+                // Stub implementation - no validation
+            }
         };
     }
 

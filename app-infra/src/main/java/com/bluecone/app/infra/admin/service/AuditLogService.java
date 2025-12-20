@@ -5,8 +5,8 @@ import com.bluecone.app.infra.admin.mapper.AdminAuditLogMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -26,11 +26,16 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuditLogService {
     
     private final AdminAuditLogMapper auditLogMapper;
     private final ObjectMapper objectMapper;
+
+    public AuditLogService(AdminAuditLogMapper auditLogMapper, 
+                          @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.auditLogMapper = auditLogMapper;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 记录审计日志（异步）

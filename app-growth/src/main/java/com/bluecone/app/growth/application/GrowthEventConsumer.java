@@ -4,8 +4,8 @@ import com.bluecone.app.core.event.outbox.EventType;
 import com.bluecone.app.infra.event.outbox.OutboxEventDO;
 import com.bluecone.app.infra.event.outbox.handler.OutboxEventHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -16,11 +16,16 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class GrowthEventConsumer implements OutboxEventHandler {
     
     private final GrowthApplicationService growthApplicationService;
     private final ObjectMapper objectMapper;
+
+    public GrowthEventConsumer(GrowthApplicationService growthApplicationService,
+                              @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.growthApplicationService = growthApplicationService;
+        this.objectMapper = objectMapper;
+    }
     
     @Override
     public boolean supports(OutboxEventDO event) {

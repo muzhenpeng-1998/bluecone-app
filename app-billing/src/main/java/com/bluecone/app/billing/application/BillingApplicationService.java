@@ -10,8 +10,8 @@ import com.bluecone.app.billing.dao.mapper.BillingInvoiceMapper;
 import com.bluecone.app.billing.domain.service.BillingDomainService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -26,12 +26,19 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class BillingApplicationService {
     
     private final BillingDomainService billingDomainService;
     private final BillingInvoiceMapper invoiceMapper;
     private final ObjectMapper objectMapper;
+
+    public BillingApplicationService(BillingDomainService billingDomainService,
+                                    BillingInvoiceMapper invoiceMapper,
+                                    @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.billingDomainService = billingDomainService;
+        this.invoiceMapper = invoiceMapper;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 获取所有可用的套餐 SKU

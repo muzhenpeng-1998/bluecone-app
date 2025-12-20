@@ -36,6 +36,13 @@
             <version>${project.version}</version>
         </dependency>
         
+        <!-- Security module for auth session -->
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
         <!-- ID service API only -->
         <dependency>
             <groupId>com.bluecone</groupId>

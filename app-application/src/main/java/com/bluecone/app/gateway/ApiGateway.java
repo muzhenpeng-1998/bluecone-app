@@ -36,13 +36,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.bluecone.app.gateway.context.ApiContextHolder;
 
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 /**
  * Central gateway dispatcher: route resolution + middleware orchestration.
  */
 @Component
-@RequiredArgsConstructor
 public class ApiGateway {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
@@ -61,6 +60,34 @@ public class ApiGateway {
     private final SignatureMiddleware signatureMiddleware;
     private final ErrorHandlingMiddleware errorHandlingMiddleware;
     private final ResponseWrapperMiddleware responseWrapperMiddleware;
+
+    public ApiGateway(ApiRouteRegistry routeRegistry,
+                     ApplicationContext applicationContext,
+                     @Qualifier("redisObjectMapper") ObjectMapper objectMapper,
+                     LoggingMiddleware loggingMiddleware,
+                     VersionMiddleware versionMiddleware,
+                     AuthMiddleware authMiddleware,
+                     TenantMiddleware tenantMiddleware,
+                     StoreMiddleware storeMiddleware,
+                     RateLimitMiddleware rateLimitMiddleware,
+                     IdempotentMiddleware idempotentMiddleware,
+                     SignatureMiddleware signatureMiddleware,
+                     ErrorHandlingMiddleware errorHandlingMiddleware,
+                     ResponseWrapperMiddleware responseWrapperMiddleware) {
+        this.routeRegistry = routeRegistry;
+        this.applicationContext = applicationContext;
+        this.objectMapper = objectMapper;
+        this.loggingMiddleware = loggingMiddleware;
+        this.versionMiddleware = versionMiddleware;
+        this.authMiddleware = authMiddleware;
+        this.tenantMiddleware = tenantMiddleware;
+        this.storeMiddleware = storeMiddleware;
+        this.rateLimitMiddleware = rateLimitMiddleware;
+        this.idempotentMiddleware = idempotentMiddleware;
+        this.signatureMiddleware = signatureMiddleware;
+        this.errorHandlingMiddleware = errorHandlingMiddleware;
+        this.responseWrapperMiddleware = responseWrapperMiddleware;
+    }
 
     public Object handle(HttpServletRequest request) {
         HttpMethod method = resolveHttpMethod(request.getMethod());

@@ -7,8 +7,8 @@ import com.bluecone.app.wallet.api.dto.WalletAssetCommand;
 import com.bluecone.app.wallet.api.dto.WalletAssetResult;
 import com.bluecone.app.wallet.api.facade.WalletAssetFacade;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -20,12 +20,19 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class WalletRewardIssuerImpl implements WalletRewardIssuer {
     
     private final IdService idService;
     private final ObjectMapper objectMapper;
     private final WalletAssetFacade walletAssetFacade;
+
+    public WalletRewardIssuerImpl(IdService idService,
+                                 @Qualifier("redisObjectMapper") ObjectMapper objectMapper,
+                                 WalletAssetFacade walletAssetFacade) {
+        this.idService = idService;
+        this.objectMapper = objectMapper;
+        this.walletAssetFacade = walletAssetFacade;
+    }
     
     @Override
     public String issue(Long tenantId, Long userId, String amountStr, String idempotencyKey) {

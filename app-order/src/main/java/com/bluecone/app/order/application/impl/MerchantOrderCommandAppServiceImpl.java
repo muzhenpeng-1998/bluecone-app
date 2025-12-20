@@ -21,9 +21,9 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
@@ -60,13 +60,22 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MerchantOrderCommandAppServiceImpl implements MerchantOrderCommandAppService {
 
     private final OrderRepository orderRepository;
     private final OrderActionLogRepository actionLogRepository;
     private final DomainEventPublisher eventPublisher;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    public MerchantOrderCommandAppServiceImpl(OrderRepository orderRepository,
+                                             OrderActionLogRepository actionLogRepository,
+                                             DomainEventPublisher eventPublisher,
+                                             @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.orderRepository = orderRepository;
+        this.actionLogRepository = actionLogRepository;
+        this.eventPublisher = eventPublisher;
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * 商户接单（M2 版本：支持幂等 + 乐观锁）。

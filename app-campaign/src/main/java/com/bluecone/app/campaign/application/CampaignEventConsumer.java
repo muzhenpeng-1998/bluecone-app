@@ -9,8 +9,8 @@ import com.bluecone.app.core.event.outbox.EventType;
 import com.bluecone.app.infra.event.outbox.OutboxEventDO;
 import com.bluecone.app.infra.event.outbox.handler.OutboxEventHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -23,12 +23,19 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class CampaignEventConsumer implements OutboxEventHandler {
     
     private final CampaignQueryService campaignQueryService;
     private final CampaignExecutionService campaignExecutionService;
     private final ObjectMapper objectMapper;
+
+    public CampaignEventConsumer(CampaignQueryService campaignQueryService,
+                                 CampaignExecutionService campaignExecutionService,
+                                 @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.campaignQueryService = campaignQueryService;
+        this.campaignExecutionService = campaignExecutionService;
+        this.objectMapper = objectMapper;
+    }
     
     @Override
     public boolean supports(OutboxEventDO event) {

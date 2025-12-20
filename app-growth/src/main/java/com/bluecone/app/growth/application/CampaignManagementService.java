@@ -12,8 +12,8 @@ import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,12 +26,19 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service("growthCampaignManagementService")
-@RequiredArgsConstructor
 public class CampaignManagementService {
     
     private final GrowthCampaignRepository campaignRepository;
     private final IdService idService;
     private final ObjectMapper objectMapper;
+
+    public CampaignManagementService(GrowthCampaignRepository campaignRepository,
+                                    IdService idService,
+                                    @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.campaignRepository = campaignRepository;
+        this.idService = idService;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 创建活动

@@ -1,5 +1,6 @@
 package com.bluecone.app.infra.scheduler.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -54,7 +55,7 @@ public class SchedulerConfiguration {
     public SchedulerQueueWorker schedulerQueueWorker(RedisOps redisOps,
                                                      SchedulerExecutor schedulerExecutor,
                                                      SchedulerProperties properties,
-                                                     ObjectMapper objectMapper) {
+                                                     @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
         return new SchedulerQueueWorker(redisOps, schedulerExecutor, properties, objectMapper);
     }
 

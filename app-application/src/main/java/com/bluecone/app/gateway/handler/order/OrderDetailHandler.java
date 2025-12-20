@@ -1,12 +1,12 @@
 package com.bluecone.app.gateway.handler.order;
 
-import com.bluecone.app.core.domain.Order;
+import com.bluecone.app.order.domain.model.Order;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
 import com.bluecone.app.dto.order.v1.OrderDetailResponseV1;
 import com.bluecone.app.gateway.ApiContext;
 import com.bluecone.app.gateway.ApiHandler;
-import com.bluecone.app.service.OrderService;
+import com.bluecone.app.order.service.OrderService;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -32,7 +32,7 @@ public class OrderDetailHandler implements ApiHandler<Void, OrderDetailResponseV
         Order order = orderService.findById(orderId);
         return OrderDetailResponseV1.builder()
                 .orderId(order.getId())
-                .amount(order.getAmount())
+                .amount(order.getPayableAmount())
                 .build();
     }
 }

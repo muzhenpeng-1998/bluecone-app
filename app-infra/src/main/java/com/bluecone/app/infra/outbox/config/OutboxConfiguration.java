@@ -9,6 +9,7 @@ import com.bluecone.app.infra.outbox.core.RedisEventConsumptionTracker;
 import com.bluecone.app.infra.outbox.core.RetryPolicy;
 import com.bluecone.app.infra.outbox.core.SimpleExponentialBackoffRetryPolicy;
 import com.bluecone.app.infra.outbox.core.TransactionalOutboxEventPublisher;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +28,7 @@ public class OutboxConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(EventSerializer.class)
-    public EventSerializer eventSerializer(final ObjectMapper objectMapper) {
+    public EventSerializer eventSerializer(@Qualifier("redisObjectMapper") final ObjectMapper objectMapper) {
         return new DefaultEventSerializer(objectMapper);
     }
 

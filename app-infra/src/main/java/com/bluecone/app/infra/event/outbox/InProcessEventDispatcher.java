@@ -2,8 +2,8 @@ package com.bluecone.app.infra.event.outbox;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
@@ -16,11 +16,16 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class InProcessEventDispatcher {
     
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+
+    public InProcessEventDispatcher(ApplicationEventPublisher eventPublisher,
+                                   @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.eventPublisher = eventPublisher;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 分发事件到消费者

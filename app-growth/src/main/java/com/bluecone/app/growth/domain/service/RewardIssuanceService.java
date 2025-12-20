@@ -10,8 +10,8 @@ import com.bluecone.app.growth.domain.repository.RewardIssueLogRepository;
 import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,13 +25,22 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RewardIssuanceService {
     
     private final RewardIssueLogRepository rewardIssueLogRepository;
     private final IdService idService;
     private final ObjectMapper objectMapper;
     private final GrowthMetrics metrics;
+
+    public RewardIssuanceService(RewardIssueLogRepository rewardIssueLogRepository,
+                                IdService idService,
+                                @Qualifier("redisObjectMapper") ObjectMapper objectMapper,
+                                GrowthMetrics metrics) {
+        this.rewardIssueLogRepository = rewardIssueLogRepository;
+        this.idService = idService;
+        this.objectMapper = objectMapper;
+        this.metrics = metrics;
+    }
     
     // 具体的奖励发放器将在后续注入
     private CouponRewardIssuer couponRewardIssuer;

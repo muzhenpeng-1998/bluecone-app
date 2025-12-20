@@ -6,7 +6,7 @@ import com.bluecone.app.promo.domain.model.CouponTemplate;
 import com.bluecone.app.promo.infra.persistence.po.CouponTemplatePO;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -17,10 +17,13 @@ import java.util.List;
  * 优惠券模板转换器
  */
 @Component
-@RequiredArgsConstructor
 public class CouponTemplateConverter {
 
     private final ObjectMapper objectMapper;
+
+    public CouponTemplateConverter(@Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     public CouponTemplatePO toPO(CouponTemplate domain) {
         if (domain == null) {

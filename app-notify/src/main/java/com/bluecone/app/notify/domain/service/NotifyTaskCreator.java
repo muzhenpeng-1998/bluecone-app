@@ -10,8 +10,8 @@ import com.bluecone.app.notify.domain.repository.NotifyTaskRepository;
 import com.bluecone.app.notify.domain.repository.NotifyTemplateRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,13 +26,22 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NotifyTaskCreator {
     
     private final NotificationPolicyRegistry policyRegistry;
     private final NotifyTemplateRepository templateRepository;
     private final NotifyTaskRepository taskRepository;
     private final ObjectMapper objectMapper;
+
+    public NotifyTaskCreator(NotificationPolicyRegistry policyRegistry,
+                            NotifyTemplateRepository templateRepository,
+                            NotifyTaskRepository taskRepository,
+                            @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.policyRegistry = policyRegistry;
+        this.templateRepository = templateRepository;
+        this.taskRepository = taskRepository;
+        this.objectMapper = objectMapper;
+    }
     
     /**
      * 根据业务事件创建通知任务

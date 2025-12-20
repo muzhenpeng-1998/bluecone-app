@@ -1,7 +1,9 @@
 package com.bluecone.app.infra.redis.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
@@ -22,6 +24,7 @@ public class RedisSerializerConfig {
      * 专用于 Redis 的 ObjectMapper，支持 Java 时间类型且忽略未知字段，便于调试读取。
      */
     @Bean
+    @Primary
     public ObjectMapper redisObjectMapper() {
         return JsonMapper.builder()
                 .addModule(new JavaTimeModule())
@@ -42,7 +45,7 @@ public class RedisSerializerConfig {
      * Redis value 的 Jackson JSON 序列化器。
      */
     @Bean
-    public RedisSerializer<Object> jacksonRedisSerializer(ObjectMapper redisObjectMapper) {
+    public RedisSerializer<Object> jacksonRedisSerializer(@Qualifier("redisObjectMapper") ObjectMapper redisObjectMapper) {
         Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(Object.class);
         serializer.setObjectMapper(redisObjectMapper);
         return serializer;

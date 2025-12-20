@@ -11,9 +11,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import com.bluecone.app.id.config.BlueconeIdProperties;
-import com.bluecone.app.id.config.BlueconeIdProperties.Ulid.Rollback;
-import com.bluecone.app.id.metrics.UlidMetrics;
+import com.bluecone.app.id.internal.config.BlueconeIdProperties;
+import com.bluecone.app.id.internal.config.BlueconeIdProperties.Ulid.Rollback;
+import com.bluecone.app.id.internal.metrics.UlidMetrics;
 
 import de.huxhorn.sulky.ulid.ULID;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -82,7 +82,7 @@ class UlidClockRollbackPolicyTest {
                 BlueconeIdProperties.Mode.STRICT
         );
 
-        UlidIdGenerator generator = UlidIdGenerator.create(1, clock, rollback, metrics);
+        com.bluecone.app.id.internal.core.UlidIdGenerator generator = com.bluecone.app.id.internal.core.UlidIdGenerator.create(1, clock, rollback, metrics);
 
         ULID.Value first = generator.nextValue();
         long ts1 = extractTimestamp(first);
@@ -115,7 +115,7 @@ class UlidClockRollbackPolicyTest {
         rollback.setPolicy(BlueconeIdProperties.Ulid.Policy.FAIL_FAST);
         rollback.setFailFastThresholdMs(10L);
 
-        UlidIdGenerator generator = UlidIdGenerator.create(
+        com.bluecone.app.id.internal.core.UlidIdGenerator generator = com.bluecone.app.id.internal.core.UlidIdGenerator.create(
                 1,
                 clock,
                 rollback,
@@ -149,7 +149,7 @@ class UlidClockRollbackPolicyTest {
                 BlueconeIdProperties.Mode.STRICT
         );
 
-        UlidIdGenerator generator = UlidIdGenerator.create(
+        com.bluecone.app.id.internal.core.UlidIdGenerator generator = com.bluecone.app.id.internal.core.UlidIdGenerator.create(
                 1,
                 clock,
                 rollback,

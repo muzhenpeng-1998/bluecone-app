@@ -6,8 +6,8 @@ import com.bluecone.app.id.api.IdService;
 import com.bluecone.app.member.domain.model.PointsLedger;
 import com.bluecone.app.member.domain.service.PointsDomainService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -17,12 +17,19 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class PointsRewardIssuerImpl implements PointsRewardIssuer {
     
     private final PointsDomainService pointsDomainService;
     private final IdService idService;
     private final ObjectMapper objectMapper;
+
+    public PointsRewardIssuerImpl(PointsDomainService pointsDomainService,
+                                 IdService idService,
+                                 @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.pointsDomainService = pointsDomainService;
+        this.idService = idService;
+        this.objectMapper = objectMapper;
+    }
     
     @Override
     public String issue(Long tenantId, Long userId, String pointsStr, String idempotencyKey) {

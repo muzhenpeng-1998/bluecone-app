@@ -17,8 +17,8 @@ import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +32,6 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class GrowthApplicationService {
     
     private final GrowthCampaignRepository campaignRepository;
@@ -43,6 +42,24 @@ public class GrowthApplicationService {
     private final IdService idService;
     private final ObjectMapper objectMapper;
     private final GrowthMetrics metrics;
+
+    public GrowthApplicationService(GrowthCampaignRepository campaignRepository,
+                                   InviteCodeRepository inviteCodeRepository,
+                                   AttributionRepository attributionRepository,
+                                   RewardIssuanceService rewardIssuanceService,
+                                   InviteCodeGenerator inviteCodeGenerator,
+                                   IdService idService,
+                                   @Qualifier("redisObjectMapper") ObjectMapper objectMapper,
+                                   GrowthMetrics metrics) {
+        this.campaignRepository = campaignRepository;
+        this.inviteCodeRepository = inviteCodeRepository;
+        this.attributionRepository = attributionRepository;
+        this.rewardIssuanceService = rewardIssuanceService;
+        this.inviteCodeGenerator = inviteCodeGenerator;
+        this.idService = idService;
+        this.objectMapper = objectMapper;
+        this.metrics = metrics;
+    }
     
     /**
      * 获取或创建邀请码

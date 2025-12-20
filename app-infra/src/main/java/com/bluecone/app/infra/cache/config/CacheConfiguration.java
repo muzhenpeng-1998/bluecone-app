@@ -32,7 +32,7 @@ public class CacheConfiguration {
 
     @ConditionalOnProperty(value = "bluecone.cache.l2.enabled", havingValue = "true", matchIfMissing = true)
     @Bean(name = "l2CacheStoreBean")
-    public L2CacheStore l2CacheStore(StringRedisTemplate stringRedisTemplate, ObjectMapper objectMapper) {
+    public L2CacheStore l2CacheStore(StringRedisTemplate stringRedisTemplate, @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
         return new L2CacheStore(stringRedisTemplate, objectMapper);
     }
 
@@ -44,7 +44,7 @@ public class CacheConfiguration {
 
     @Bean
     @ConditionalOnProperty(value = "bluecone.cache.consistency.redis.enabled", havingValue = "true", matchIfMissing = true)
-    public ConsistencyBus consistencyBus(StringRedisTemplate stringRedisTemplate, ObjectMapper objectMapper) {
+    public ConsistencyBus consistencyBus(StringRedisTemplate stringRedisTemplate, @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
         return new RedisConsistencyBus(stringRedisTemplate, objectMapper);
     }
 

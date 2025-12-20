@@ -8,16 +8,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 import com.bluecone.app.id.api.IdService;
-import com.bluecone.app.id.config.BlueconeIdProperties;
+import com.bluecone.app.id.internal.config.BlueconeIdProperties;
 import com.bluecone.app.id.core.Ulid128;
-import com.bluecone.app.id.core.UlidIdGenerator;
-import com.bluecone.app.id.core.UlidIdService;
+import com.bluecone.app.id.internal.core.UlidIdGenerator;
+import com.bluecone.app.id.internal.core.UlidIdService;
 import com.bluecone.app.id.publicid.api.DecodedPublicId;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
-import com.bluecone.app.id.publicid.core.DefaultPublicIdCodec;
+import com.bluecone.app.id.internal.publicid.DefaultPublicIdCodec;
 import com.bluecone.app.id.typed.api.OrderId;
 import com.bluecone.app.id.typed.api.StoreId;
-import com.bluecone.app.id.typed.core.TypedIds;
+import com.bluecone.app.id.internal.typed.TypedIds;
 
 /**
  * TypedId 基础行为测试。

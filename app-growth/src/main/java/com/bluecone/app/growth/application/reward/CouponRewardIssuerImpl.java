@@ -5,8 +5,8 @@ import com.bluecone.app.promo.api.enums.GrantSource;
 import com.bluecone.app.promo.domain.model.Coupon;
 import com.bluecone.app.promo.domain.service.CouponGrantService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -16,11 +16,16 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class CouponRewardIssuerImpl implements CouponRewardIssuer {
     
     private final CouponGrantService couponGrantService;
     private final ObjectMapper objectMapper;
+
+    public CouponRewardIssuerImpl(CouponGrantService couponGrantService,
+                                 @Qualifier("redisObjectMapper") ObjectMapper objectMapper) {
+        this.couponGrantService = couponGrantService;
+        this.objectMapper = objectMapper;
+    }
     
     @Override
     public String issue(Long tenantId, Long userId, String templateIdStr, String idempotencyKey) {
