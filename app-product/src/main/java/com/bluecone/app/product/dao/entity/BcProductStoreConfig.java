@@ -3,6 +3,7 @@ package com.bluecone.app.product.dao.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -111,6 +112,28 @@ public class BcProductStoreConfig implements Serializable {
      */
     @TableField("sort_order")
     private Integer sortOrder;
+
+    /**
+     * 展示开始时间，可空。
+     * 对应表字段：display_start_at。
+     */
+    @TableField("display_start_at")
+    private LocalDateTime displayStartAt;
+
+    /**
+     * 展示结束时间，可空。
+     * 对应表字段：display_end_at。
+     */
+    @TableField("display_end_at")
+    private LocalDateTime displayEndAt;
+
+    /**
+     * 逻辑删除标识：0未删除，1已删除。
+     * 对应表字段：deleted。
+     */
+    @TableLogic
+    @TableField("deleted")
+    private Integer deleted;
 
     /**
      * 创建时间。

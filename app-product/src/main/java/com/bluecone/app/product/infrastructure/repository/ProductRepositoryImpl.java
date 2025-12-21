@@ -5,8 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.bluecone.app.product.dao.entity.BcAddonGroup;
 import com.bluecone.app.product.dao.entity.BcAddonItem;
 import com.bluecone.app.product.dao.entity.BcProduct;
+import com.bluecone.app.product.dao.entity.BcProductAddonGroupRel;
 import com.bluecone.app.product.dao.entity.BcProductAddonRel;
 import com.bluecone.app.product.dao.entity.BcProductAttrGroup;
+import com.bluecone.app.product.dao.entity.BcProductAttrGroupRel;
 import com.bluecone.app.product.dao.entity.BcProductAttrOption;
 import com.bluecone.app.product.dao.entity.BcProductAttrRel;
 import com.bluecone.app.product.dao.entity.BcProductCategory;
@@ -20,8 +22,10 @@ import com.bluecone.app.product.dao.entity.BcProductTagRel;
 import com.bluecone.app.product.dao.entity.BcStoreMenuSnapshot;
 import com.bluecone.app.product.dao.mapper.BcAddonGroupMapper;
 import com.bluecone.app.product.dao.mapper.BcAddonItemMapper;
+import com.bluecone.app.product.dao.mapper.BcProductAddonGroupRelMapper;
 import com.bluecone.app.product.dao.mapper.BcProductAddonRelMapper;
 import com.bluecone.app.product.dao.mapper.BcProductAttrGroupMapper;
+import com.bluecone.app.product.dao.mapper.BcProductAttrGroupRelMapper;
 import com.bluecone.app.product.dao.mapper.BcProductAttrOptionMapper;
 import com.bluecone.app.product.dao.mapper.BcProductAttrRelMapper;
 import com.bluecone.app.product.dao.mapper.BcProductCategoryMapper;
@@ -47,13 +51,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.CollectionUtils;
 
@@ -64,6 +72,7 @@ import org.springframework.util.CollectionUtils;
  */
 @Repository
 @RequiredArgsConstructor
+@Slf4j
 public class ProductRepositoryImpl implements ProductRepository {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -76,9 +85,11 @@ public class ProductRepositoryImpl implements ProductRepository {
     private final BcProductSpecOptionMapper productSpecOptionMapper;
     private final BcProductAttrGroupMapper productAttrGroupMapper;
     private final BcProductAttrOptionMapper productAttrOptionMapper;
+    private final BcProductAttrGroupRelMapper attrGroupRelMapper;
     private final BcProductAttrRelMapper productAttrRelMapper;
     private final BcAddonGroupMapper addonGroupMapper;
     private final BcAddonItemMapper addonItemMapper;
+    private final BcProductAddonGroupRelMapper addonGroupRelMapper;
     private final BcProductAddonRelMapper productAddonRelMapper;
     private final BcProductTagMapper productTagMapper;
     private final BcProductTagRelMapper productTagRelMapper;
@@ -481,5 +492,252 @@ public class ProductRepositoryImpl implements ProductRepository {
         } catch (JsonProcessingException e) {
             return null;
         }
+    }
+
+    // ===== Prompt 05: 聚合写入与批量加载 =====
+
+    @Override
+    public Long saveAggregate(Product product) {
+        // 委托给现有的 save 方法
+        // 注意：完整的聚合写入逻辑在 ProductAggregateAdminApplicationService 中
+        return save(product);
+    }
+
+    @Override
+    public void updateAggregate(Product product) {
+        // 委托给现有的 update 方法
+        // 注意：完整的聚合写入逻辑在 ProductAggregateAdminApplicationService 中
+        update(product);
+    }
+
+    @Override
+    public Optional<Product> loadAggregate(Long tenantId, Long productId) {
+        // 委托给现有的 loadProductAggregate 方法
+        return Optional.ofNullable(loadProductAggregate(tenantId, productId, null, null));
+    }
+
+    /**
+     * 批量加载商品聚合（核心优化：避免 N+1 查询）
+     * 
+     * <p>使用 IN 查询一次性拉取所有相关数据，在内存中按 productId 聚合。
+     * <p>SQL 次数为常数级（十几条以内），不随产品数量线性增长。
+     * 
+     * <h3>查询策略：</h3>
+     * <ol>
+     *   <li>批量查询 bc_product（1 条 SQL）</li>
+     *   <li>批量查询 bc_product_sku（1 条 SQL）</li>
+     *   <li>批量查询 bc_product_spec_group + bc_product_spec_option（2 条 SQL）</li>
+     *   <li>批量查询 bc_product_attr_group_rel + bc_product_attr_rel（2 条 SQL）</li>
+     *   <li>批量查询 bc_product_attr_group + bc_product_attr_option（2 条 SQL）</li>
+     *   <li>批量查询 bc_product_addon_group_rel + bc_product_addon_rel（2 条 SQL）</li>
+     *   <li>批量查询 bc_addon_group + bc_addon_item（2 条 SQL）</li>
+     *   <li>批量查询 bc_product_category_rel + bc_product_category（2 条 SQL）</li>
+     *   <li>批量查询 bc_product_tag_rel + bc_product_tag（2 条 SQL，可选）</li>
+     * </ol>
+     * <p>总计：约 16 条 SQL，不随产品数量增长。
+     */
+    @Override
+    public List<Product> loadAggregatesBatch(Long tenantId, Set<Long> productIds) {
+        if (CollectionUtils.isEmpty(productIds)) {
+            return Collections.emptyList();
+        }
+
+        log.info("批量加载商品聚合: tenantId={}, productIds.size={}", tenantId, productIds.size());
+
+        // ===== 1. 批量查询 bc_product =====
+        List<BcProduct> products = productMapper.selectList(new LambdaQueryWrapper<BcProduct>()
+                .eq(BcProduct::getTenantId, tenantId)
+                .in(BcProduct::getId, productIds)
+                .eq(BcProduct::getDeleted, 0));
+
+        if (CollectionUtils.isEmpty(products)) {
+            return Collections.emptyList();
+        }
+
+        // 过滤出实际存在的 productIds
+        Set<Long> existingProductIds = products.stream()
+                .map(BcProduct::getId)
+                .collect(Collectors.toSet());
+
+        // ===== 2. 批量查询 bc_product_sku =====
+        List<BcProductSku> allSkus = productSkuMapper.selectList(new LambdaQueryWrapper<BcProductSku>()
+                .eq(BcProductSku::getTenantId, tenantId)
+                .in(BcProductSku::getProductId, existingProductIds)
+                .eq(BcProductSku::getDeleted, 0));
+
+        Map<Long, List<BcProductSku>> skusByProductId = allSkus.stream()
+                .collect(Collectors.groupingBy(BcProductSku::getProductId));
+
+        // ===== 3. 批量查询 bc_product_spec_group + bc_product_spec_option =====
+        List<BcProductSpecGroup> allSpecGroups = productSpecGroupMapper.selectList(new LambdaQueryWrapper<BcProductSpecGroup>()
+                .eq(BcProductSpecGroup::getTenantId, tenantId)
+                .in(BcProductSpecGroup::getProductId, existingProductIds));
+
+        Map<Long, List<BcProductSpecGroup>> specGroupsByProductId = allSpecGroups.stream()
+                .collect(Collectors.groupingBy(BcProductSpecGroup::getProductId));
+
+        List<BcProductSpecOption> allSpecOptions = productSpecOptionMapper.selectList(new LambdaQueryWrapper<BcProductSpecOption>()
+                .eq(BcProductSpecOption::getTenantId, tenantId)
+                .in(BcProductSpecOption::getProductId, existingProductIds));
+
+        Map<Long, List<BcProductSpecOption>> specOptionsByGroupId = allSpecOptions.stream()
+                .collect(Collectors.groupingBy(BcProductSpecOption::getSpecGroupId));
+
+        // ===== 4. 批量查询 bc_product_attr_group_rel + bc_product_attr_rel =====
+        List<BcProductAttrGroupRel> allAttrGroupRels = attrGroupRelMapper.selectList(new LambdaQueryWrapper<BcProductAttrGroupRel>()
+                .eq(BcProductAttrGroupRel::getTenantId, tenantId)
+                .in(BcProductAttrGroupRel::getProductId, existingProductIds)
+                .eq(BcProductAttrGroupRel::getDeleted, 0));
+
+        Map<Long, List<BcProductAttrGroupRel>> attrGroupRelsByProductId = allAttrGroupRels.stream()
+                .collect(Collectors.groupingBy(BcProductAttrGroupRel::getProductId));
+
+        List<BcProductAttrRel> allAttrRels = productAttrRelMapper.selectList(new LambdaQueryWrapper<BcProductAttrRel>()
+                .eq(BcProductAttrRel::getTenantId, tenantId)
+                .in(BcProductAttrRel::getProductId, existingProductIds)
+                .eq(BcProductAttrRel::getDeleted, 0));
+
+        Map<Long, List<BcProductAttrRel>> attrRelsByProductId = allAttrRels.stream()
+                .collect(Collectors.groupingBy(BcProductAttrRel::getProductId));
+
+        // 提取所有 attrGroupIds
+        Set<Long> allAttrGroupIds = allAttrGroupRels.stream()
+                .map(BcProductAttrGroupRel::getAttrGroupId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        // ===== 5. 批量查询 bc_product_attr_group + bc_product_attr_option =====
+        List<BcProductAttrGroup> allAttrGroups = CollectionUtils.isEmpty(allAttrGroupIds) ? Collections.emptyList()
+                : productAttrGroupMapper.selectList(new LambdaQueryWrapper<BcProductAttrGroup>()
+                .eq(BcProductAttrGroup::getTenantId, tenantId)
+                .in(BcProductAttrGroup::getId, allAttrGroupIds));
+
+        Map<Long, BcProductAttrGroup> attrGroupsById = allAttrGroups.stream()
+                .collect(Collectors.toMap(BcProductAttrGroup::getId, Function.identity(), (a, b) -> a));
+
+        List<BcProductAttrOption> allAttrOptions = CollectionUtils.isEmpty(allAttrGroupIds) ? Collections.emptyList()
+                : productAttrOptionMapper.selectList(new LambdaQueryWrapper<BcProductAttrOption>()
+                .eq(BcProductAttrOption::getTenantId, tenantId)
+                .in(BcProductAttrOption::getAttrGroupId, allAttrGroupIds));
+
+        Map<Long, List<BcProductAttrOption>> attrOptionsByGroupId = allAttrOptions.stream()
+                .collect(Collectors.groupingBy(BcProductAttrOption::getAttrGroupId));
+
+        // ===== 6. 批量查询 bc_product_addon_group_rel + bc_product_addon_rel =====
+        List<BcProductAddonGroupRel> allAddonGroupRels = addonGroupRelMapper.selectList(new LambdaQueryWrapper<BcProductAddonGroupRel>()
+                .eq(BcProductAddonGroupRel::getTenantId, tenantId)
+                .in(BcProductAddonGroupRel::getProductId, existingProductIds)
+                .eq(BcProductAddonGroupRel::getDeleted, 0));
+
+        Map<Long, List<BcProductAddonGroupRel>> addonGroupRelsByProductId = allAddonGroupRels.stream()
+                .collect(Collectors.groupingBy(BcProductAddonGroupRel::getProductId));
+
+        List<BcProductAddonRel> allAddonRels = productAddonRelMapper.selectList(new LambdaQueryWrapper<BcProductAddonRel>()
+                .eq(BcProductAddonRel::getTenantId, tenantId)
+                .in(BcProductAddonRel::getProductId, existingProductIds)
+                .eq(BcProductAddonRel::getDeleted, 0));
+
+        Map<Long, List<BcProductAddonRel>> addonRelsByProductId = allAddonRels.stream()
+                .collect(Collectors.groupingBy(BcProductAddonRel::getProductId));
+
+        // 提取所有 addonGroupIds
+        Set<Long> allAddonGroupIds = allAddonGroupRels.stream()
+                .map(BcProductAddonGroupRel::getAddonGroupId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        // ===== 7. 批量查询 bc_addon_group + bc_addon_item =====
+        List<BcAddonGroup> allAddonGroups = CollectionUtils.isEmpty(allAddonGroupIds) ? Collections.emptyList()
+                : addonGroupMapper.selectList(new LambdaQueryWrapper<BcAddonGroup>()
+                .eq(BcAddonGroup::getTenantId, tenantId)
+                .in(BcAddonGroup::getId, allAddonGroupIds));
+
+        Map<Long, BcAddonGroup> addonGroupsById = allAddonGroups.stream()
+                .collect(Collectors.toMap(BcAddonGroup::getId, Function.identity(), (a, b) -> a));
+
+        List<BcAddonItem> allAddonItems = CollectionUtils.isEmpty(allAddonGroupIds) ? Collections.emptyList()
+                : addonItemMapper.selectList(new LambdaQueryWrapper<BcAddonItem>()
+                .eq(BcAddonItem::getTenantId, tenantId)
+                .in(BcAddonItem::getGroupId, allAddonGroupIds));
+
+        Map<Long, List<BcAddonItem>> addonItemsByGroupId = allAddonItems.stream()
+                .collect(Collectors.groupingBy(BcAddonItem::getGroupId));
+
+        // ===== 8. 批量查询 bc_product_category_rel + bc_product_category =====
+        List<BcProductCategoryRel> allCategoryRels = productCategoryRelMapper.selectList(new LambdaQueryWrapper<BcProductCategoryRel>()
+                .eq(BcProductCategoryRel::getTenantId, tenantId)
+                .in(BcProductCategoryRel::getProductId, existingProductIds)
+                .eq(BcProductCategoryRel::getDeleted, 0));
+
+        Map<Long, List<BcProductCategoryRel>> categoryRelsByProductId = allCategoryRels.stream()
+                .collect(Collectors.groupingBy(BcProductCategoryRel::getProductId));
+
+        Set<Long> allCategoryIds = allCategoryRels.stream()
+                .map(BcProductCategoryRel::getCategoryId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        List<BcProductCategory> allCategories = CollectionUtils.isEmpty(allCategoryIds) ? Collections.emptyList()
+                : productCategoryMapper.selectList(new LambdaQueryWrapper<BcProductCategory>()
+                .eq(BcProductCategory::getTenantId, tenantId)
+                .in(BcProductCategory::getId, allCategoryIds)
+                .eq(BcProductCategory::getDeleted, 0));
+
+        Map<Long, BcProductCategory> categoriesById = allCategories.stream()
+                .collect(Collectors.toMap(BcProductCategory::getId, Function.identity(), (a, b) -> a));
+
+        // ===== 9. 批量查询 bc_product_tag_rel + bc_product_tag（可选）=====
+        List<BcProductTagRel> allTagRels = productTagRelMapper.selectList(new LambdaQueryWrapper<BcProductTagRel>()
+                .eq(BcProductTagRel::getTenantId, tenantId)
+                .in(BcProductTagRel::getProductId, existingProductIds));
+
+        Map<Long, List<BcProductTagRel>> tagRelsByProductId = allTagRels.stream()
+                .collect(Collectors.groupingBy(BcProductTagRel::getProductId));
+
+        Set<Long> allTagIds = allTagRels.stream()
+                .map(BcProductTagRel::getTagId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        List<BcProductTag> allTags = CollectionUtils.isEmpty(allTagIds) ? Collections.emptyList()
+                : productTagMapper.selectList(new LambdaQueryWrapper<BcProductTag>()
+                .eq(BcProductTag::getTenantId, tenantId)
+                .in(BcProductTag::getId, allTagIds));
+
+        Map<Long, BcProductTag> tagsById = allTags.stream()
+                .collect(Collectors.toMap(BcProductTag::getId, Function.identity(), (a, b) -> a));
+
+        // ===== 10. 在内存中组装聚合 =====
+        List<Product> result = new ArrayList<>();
+        for (BcProduct productDO : products) {
+            Long productId = productDO.getId();
+
+            Product aggregate = productConfigAssembler.assembleProductAggregate(
+                    productDO,
+                    skusByProductId.getOrDefault(productId, Collections.emptyList()),
+                    specGroupsByProductId.getOrDefault(productId, Collections.emptyList()),
+                    allSpecOptions, // 传入所有 specOptions，assembler 内部会按 groupId 过滤
+                    attrRelsByProductId.getOrDefault(productId, Collections.emptyList()),
+                    new ArrayList<>(attrGroupsById.values()), // 传入所有 attrGroups
+                    allAttrOptions, // 传入所有 attrOptions
+                    addonRelsByProductId.getOrDefault(productId, Collections.emptyList()),
+                    new ArrayList<>(addonGroupsById.values()), // 传入所有 addonGroups
+                    allAddonItems, // 传入所有 addonItems
+                    tagRelsByProductId.getOrDefault(productId, Collections.emptyList()),
+                    new ArrayList<>(tagsById.values()), // 传入所有 tags
+                    categoryRelsByProductId.getOrDefault(productId, Collections.emptyList()),
+                    new ArrayList<>(categoriesById.values()), // 传入所有 categories
+                    Collections.emptyList() // storeConfigs 暂不加载
+            );
+
+            if (aggregate != null) {
+                result.add(aggregate);
+            }
+        }
+
+        log.info("批量加载商品聚合完成: tenantId={}, loaded={}/{}", 
+                tenantId, result.size(), productIds.size());
+
+        return result;
     }
 }

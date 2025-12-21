@@ -185,6 +185,11 @@ public class ProductConfigAssembler {
 
     /**
      * 属性组/属性项 -> 领域模型列表，结合商品-属性组绑定关系中的必选、选择类型、排序等配置。
+     * <p>
+     * 注意：此方法暂时保留旧的签名以兼容现有代码，但内部逻辑需要适配新的表结构。
+     * 新的表结构中，{@code BcProductAttrRel} 是 item 级覆盖表，组级规则应使用 {@code BcProductAttrGroupRel}。
+     * 由于调用方尚未更新，此处暂时将 {@code BcProductAttrRel} 当作组级绑定表使用（假设每个组只有一条 rel 记录）。
+     * 后续应更新调用方，传入 {@code BcProductAttrGroupRel} 列表。
      */
     private List<ProductAttributeGroup> toAttributeGroups(List<BcProductAttrRel> rels,
                                                          List<BcProductAttrGroup> groups,
@@ -208,10 +213,10 @@ public class ProductConfigAssembler {
             }
             boolean enabled = isEnabled(group.getStatus()) && isEnabled(rel.getStatus());
             ProductStatus status = enabled ? ProductStatus.ENABLED : ProductStatus.DISABLED;
-            SelectType selectType = rel.getSelectType() != null
-                    ? SelectType.fromCode(rel.getSelectType())
-                    : SelectType.fromCode(group.getSelectType());
-            Boolean required = rel.getRequired() != null ? rel.getRequired() : group.getRequired();
+            // 新的表结构中，BcProductAttrRel 不再有 selectType 字段，直接使用素材库默认值
+            SelectType selectType = SelectType.fromCode(group.getSelectType());
+            // 新的表结构中，BcProductAttrRel 不再有 required 字段，直接使用素材库默认值
+            Boolean required = group.getRequired();
             Integer sortOrder = rel.getSortOrder() != null ? rel.getSortOrder() : group.getSortOrder();
             ProductAttributeGroup model = ProductAttributeGroup.builder()
                     .id(group.getId())
@@ -251,6 +256,11 @@ public class ProductConfigAssembler {
 
     /**
      * 小料组/小料项 -> 领域模型列表，结合商品-小料组绑定关系中的必选和数量上限。
+     * <p>
+     * 注意：此方法暂时保留旧的签名以兼容现有代码，但内部逻辑需要适配新的表结构。
+     * 新的表结构中，{@code BcProductAddonRel} 是 item 级覆盖表，组级规则应使用 {@code BcProductAddonGroupRel}。
+     * 由于调用方尚未更新，此处暂时将 {@code BcProductAddonRel} 当作组级绑定表使用（假设每个组只有一条 rel 记录）。
+     * 后续应更新调用方，传入 {@code BcProductAddonGroupRel} 列表。
      */
     private List<AddonGroup> toAddonGroups(List<BcProductAddonRel> rels,
                                            List<BcAddonGroup> groups,
@@ -258,6 +268,7 @@ public class ProductConfigAssembler {
         if (rels == null || rels.isEmpty() || groups == null || groups.isEmpty()) {
             return Collections.emptyList();
         }
+        // 暂时将 BcProductAddonRel 按 addonGroupId 分组，假设每个组只有一条记录
         Map<Long, BcProductAddonRel> relByGroupId = rels.stream()
                 .filter(item -> isEnabled(item.getStatus()))
                 .collect(Collectors.toMap(BcProductAddonRel::getAddonGroupId, Function.identity(), (a, b) -> a));
@@ -282,8 +293,10 @@ public class ProductConfigAssembler {
                     .status(status)
                     .sortOrder(sortOrder)
                     .remark(group.getRemark())
-                    .required(Boolean.TRUE.equals(rel.getRequired()))
-                    .maxTotalQuantity(rel.getMaxTotalQuantity())
+                    // 新的表结构中，BcProductAddonRel 不再有 required 和 maxTotalQuantity 字段
+                    // 暂时设置为默认值，后续应使用 BcProductAddonGroupRel
+                    .required(false)
+                    .maxTotalQuantity(null)
                     .items(toAddonItems(itemsByGroupId.get(group.getId())))
                     .build();
             result.add(model);

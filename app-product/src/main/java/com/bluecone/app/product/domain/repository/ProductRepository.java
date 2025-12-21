@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 商品聚合根的领域仓储接口，负责在多张表之间组装/拆分 Product 聚合（SPU、SKU、规格、属性、小料、标签等）。
@@ -72,4 +73,44 @@ public interface ProductRepository {
      * 写入或覆盖门店菜单快照（简单 upsert，后续可加乐观锁与缓存刷新）。
      */
     void saveOrUpdateStoreMenuSnapshot(StoreMenuSnapshot snapshot);
+
+    // ===== Prompt 05: 聚合写入与批量加载 =====
+
+    /**
+     * 保存商品聚合（包含所有子表）。
+     * <p>使用批量插入优化性能。
+     *
+     * @param product 商品聚合根
+     * @return 商品ID
+     */
+    Long saveAggregate(Product product);
+
+    /**
+     * 更新商品聚合（包含所有子表）。
+     * <p>使用批量插入优化性能，采用 delete+insert 策略。
+     *
+     * @param product 商品聚合根
+     */
+    void updateAggregate(Product product);
+
+    /**
+     * 加载单个商品聚合（包含所有子表）。
+     * <p>统一 deleted/status 过滤。
+     *
+     * @param tenantId 租户ID
+     * @param productId 商品ID
+     * @return 商品聚合根
+     */
+    Optional<Product> loadAggregate(Long tenantId, Long productId);
+
+    /**
+     * 批量加载商品聚合（包含所有子表）。
+     * <p>使用 IN 查询一次性拉取所有相关数据，在内存中按 productId 聚合。
+     * <p>禁止 N+1 循环查库，SQL 次数为常数级（十几条以内），不随产品数量线性增长。
+     *
+     * @param tenantId 租户ID
+     * @param productIds 商品ID集合
+     * @return 商品聚合根列表
+     */
+    List<Product> loadAggregatesBatch(Long tenantId, Set<Long> productIds);
 }

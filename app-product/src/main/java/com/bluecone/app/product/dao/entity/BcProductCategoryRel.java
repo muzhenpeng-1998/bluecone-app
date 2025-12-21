@@ -3,6 +3,7 @@ package com.bluecone.app.product.dao.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -60,6 +61,14 @@ public class BcProductCategoryRel implements Serializable {
      */
     @TableField("status")
     private Integer status;
+
+    /**
+     * 逻辑删除：0未删除，1已删除。
+     * 对应表字段：deleted。
+     */
+    @TableField("deleted")
+    @TableLogic(value = "0", delval = "1")
+    private Integer deleted;
 
     /**
      * 创建时间。

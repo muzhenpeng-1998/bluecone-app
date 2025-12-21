@@ -1,5 +1,6 @@
 package com.bluecone.app.product.domain.model.menu;
 
+import com.bluecone.app.product.dto.view.unified.OptionGroupView;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,9 @@ import lombok.NoArgsConstructor;
 
 /**
  * 菜单商品视图，承载前端需要展示的核心字段（SPU 级别）。
+ * <p>
+ * Prompt 07: 使用统一的 {@link OptionGroupView} 替代原有的 specGroups/attrGroups/addonGroups，
+ * 提供一致的前端渲染结构。
  */
 @Data
 @Builder
@@ -27,7 +31,16 @@ public class StoreMenuProductView implements Serializable {
     private Map<String, Object> productMeta;
 
     private List<StoreMenuSkuView> skus;
-    private List<StoreMenuSpecGroupView> specGroups;
-    private List<StoreMenuAttrGroupView> attrGroups;
-    private List<StoreMenuAddonGroupView> addonGroups;
+    
+    /**
+     * 统一选项组列表（包含 SPEC/ATTR/ADDON 三种类型）。
+     * <p>
+     * 使用 {@link OptionGroupView} 统一表示，kind 字段区分类型：
+     * <ul>
+     *   <li>SPEC - 规格组</li>
+     *   <li>ATTR - 属性组</li>
+     *   <li>ADDON - 小料组</li>
+     * </ul>
+     */
+    private List<OptionGroupView> optionGroups;
 }

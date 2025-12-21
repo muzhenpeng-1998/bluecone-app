@@ -3,6 +3,7 @@ package com.bluecone.app.product.dao.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -119,6 +120,28 @@ public class BcProduct implements Serializable {
      */
     @TableField("product_meta")
     private String productMeta;
+
+    /**
+     * 展示开始时间，NULL 表示立即生效。
+     * 对应表字段：display_start_at。
+     */
+    @TableField("display_start_at")
+    private LocalDateTime displayStartAt;
+
+    /**
+     * 展示结束时间，NULL 表示永久有效。
+     * 对应表字段：display_end_at。
+     */
+    @TableField("display_end_at")
+    private LocalDateTime displayEndAt;
+
+    /**
+     * 逻辑删除：0未删除，1已删除。
+     * 对应表字段：deleted。
+     */
+    @TableField("deleted")
+    @TableLogic(value = "0", delval = "1")
+    private Integer deleted;
 
     /**
      * 创建时间，记录商品创建的时间戳。
