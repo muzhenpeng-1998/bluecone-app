@@ -69,8 +69,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <!-- app-id 模块不使用 Lombok，关闭注解处理以规避 JDK 与 Lombok 的兼容性问题 -->
-                    <proc>none</proc>
+                    <!-- app-id 模块不使用 Lombok，移除注解处理器路径 -->
+                    <annotationProcessorPaths combine.self="override"/>
                 </configuration>
             </plugin>
         </plugins>

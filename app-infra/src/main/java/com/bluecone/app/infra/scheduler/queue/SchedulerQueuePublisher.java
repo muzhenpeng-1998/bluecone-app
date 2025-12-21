@@ -31,7 +31,7 @@ public class SchedulerQueuePublisher {
             String json = objectMapper.writeValueAsString(payload);
             redisOps.rPush(queueKey, json);
             redisOps.expire(queueKey, Duration.ofDays(7));
-            log.info("[Scheduler] queued job code={} traceId={}", payload.getCode(), payload.getTraceId());
+//            log.info("[Scheduler] queued job code={} traceId={}", payload.getCode(), payload.getTraceId());
         } catch (Exception ex) {
             throw new IllegalStateException("Failed to publish job to queue: " + payload.getCode(), ex);
         }

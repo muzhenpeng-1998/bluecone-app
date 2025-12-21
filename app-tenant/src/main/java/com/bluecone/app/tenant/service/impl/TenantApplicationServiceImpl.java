@@ -85,12 +85,6 @@ public class TenantApplicationServiceImpl implements TenantApplicationService {
     public Long createTenant(CreateTenantCommand command) {
         // 1. 构建租户基础信息实体
         Tenant tenant = new Tenant();
-        // 生成内部 ULID 和对外 Public ID
-//        Ulid128 ulid = idService.nextUlid();
-//        String publicId = idService.nextPublicId(ResourceType.TENANT);
-//        tenant.setInternalId(ulid);
-//        tenant.setPublicId(publicId);
-        
         // 生成全局唯一的租户编码（时间戳 + 随机数）
         tenant.setTenantCode(generateTenantCode());
         // 设置租户名称

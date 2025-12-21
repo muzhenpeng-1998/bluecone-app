@@ -53,7 +53,7 @@ public class PaymentHealthCheckJob implements JobHandler {
             alertService.sendPaymentAlarm(title, content);
             log.warn("[payment-health] high failure rate created={} succeeded={} failed={} rate={}", created, succeeded, failed, failRate);
         } else {
-            log.info("[payment-health] window10m created={} succeeded={} failed={} rate={}", created, succeeded, failed, failRate);
+//            log.info("[payment-health] window10m created={} succeeded={} failed={} rate={}", created, succeeded, failed, failRate);
         }
 
         long stuck = paymentOrderRepository.countStuckPayments(stuckBefore, List.of(PaymentStatus.PENDING, PaymentStatus.INIT));

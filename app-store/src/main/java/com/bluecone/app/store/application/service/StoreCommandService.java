@@ -1,6 +1,7 @@
 package com.bluecone.app.store.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.store.application.command.ChangeStoreStatusCommand;
 import com.bluecone.app.store.application.command.CreateStoreCommand;
 import com.bluecone.app.store.application.command.ToggleOpenForOrdersCommand;
@@ -180,7 +181,7 @@ public class StoreCommandService {
         String publicId = publicIdCodec.encode("sto", internalId).asString();
         Long storeNo;
         try {
-            storeNo = idService.nextLong(com.bluecone.app.id.api.IdScope.STORE);
+            storeNo = idService.nextLong(IdScope.STORE);
         } catch (UnsupportedOperationException ex) {
             // ID 生成服务不支持 STORE scope 时，storeNo 为 null（不影响主流程）
             storeNo = null;

@@ -1,9 +1,11 @@
 package com.bluecone.app.store.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.bluecone.app.core.domain.IndustryType;
 import com.bluecone.app.id.core.Ulid128;
+import com.bluecone.app.id.mybatis.Ulid128BinaryTypeHandler;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,6 +29,7 @@ public class BcStore implements Serializable {
     /**
      * 内部主键 ULID128，对应列 internal_id (BINARY(16))。
      */
+    @TableField(typeHandler = Ulid128BinaryTypeHandler.class)
     private Ulid128 internalId;
 
     /**

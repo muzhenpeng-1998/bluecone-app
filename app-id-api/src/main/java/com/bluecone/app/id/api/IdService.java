@@ -36,18 +36,21 @@ public interface IdService {
     byte[] nextUlidBytes();
 
     /**
-     * 生成下一个基于号段（Segment）的 long 型 ID。
+     * 生成下一个 long 型 ID。
      * 
-     * <p>号段模式特点：
+     * <p>支持两种策略（通过配置 {@code bluecone.id.long.strategy} 选择）：
      * <ul>
-     *   <li>全局唯一：同一 scope 内单调递增</li>
-     *   <li>高性能：本地缓存号段，减少数据库访问</li>
-     *   <li>无时钟依赖：避免 Snowflake 的时钟回拨问题</li>
+     *   <li><b>SNOWFLAKE</b>（默认）：基于时间戳的分布式 ID，需要配置 nodeId，零配置可用</li>
+     *   <li><b>SEGMENT</b>：号段模式，高性能、无时钟依赖，需要数据库表支持</li>
      * </ul>
+     * 
+     * <p>在 SNOWFLAKE 策略下，scope 参数被忽略（但保留以兼容 API）；
+     * 在 SEGMENT 策略下，scope 用于区分不同的号段序列。
      *
-     * @param scope ID 作用域，对应不同的业务表或领域
+     * @param scope ID 作用域，对应不同的业务表或领域（SNOWFLAKE 策略下忽略）
      * @return 下一个 long 型 ID
-     * @throws IllegalStateException 如果号段分配失败
+     * @throws UnsupportedOperationException 如果未启用 long ID 生成能力
+     * @throws IllegalStateException 如果号段分配失败（仅 SEGMENT 策略）
      */
     long nextLong(IdScope scope);
 

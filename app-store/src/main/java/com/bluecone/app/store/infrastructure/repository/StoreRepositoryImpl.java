@@ -30,6 +30,7 @@ import com.bluecone.app.store.infrastructure.assembler.StoreConfigAssembler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -174,6 +175,8 @@ public class StoreRepositoryImpl implements StoreRepository {
                 }
                 BcStoreOpeningHours entity = new BcStoreOpeningHours();
                 entity.setTenantId(tenantId);
+                entity.setCreatedAt(LocalDateTime.now());
+                entity.setUpdatedAt(LocalDateTime.now());
                 entity.setStoreId(storeId);
                 entity.setWeekday((byte) item.getWeekday());
                 entity.setStartTime(item.getStartTime());
@@ -229,6 +232,8 @@ public class StoreRepositoryImpl implements StoreRepository {
                 }
                 BcStoreCapability entity = new BcStoreCapability();
                 entity.setTenantId(tenantId);
+                entity.setCreatedAt(LocalDateTime.now());
+                entity.setUpdatedAt(LocalDateTime.now());
                 entity.setStoreId(storeId);
                 entity.setCapability(item.getCapability());
                 entity.setEnabled(Boolean.TRUE.equals(item.getEnabled()));

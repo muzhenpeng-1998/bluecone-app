@@ -3,9 +3,11 @@ package com.bluecone.app.infra.idresolve;
 import java.time.LocalDateTime;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.bluecone.app.id.core.Ulid128;
+import com.bluecone.app.id.mybatis.Ulid128BinaryTypeHandler;
 import lombok.Data;
 
 /**
@@ -27,6 +29,7 @@ public class PublicIdMapDO {
     /**
      * 内部 ULID128，对应列 internal_id (BINARY(16))。
      */
+    @TableField(typeHandler = Ulid128BinaryTypeHandler.class)
     private Ulid128 internalId;
 
     /**

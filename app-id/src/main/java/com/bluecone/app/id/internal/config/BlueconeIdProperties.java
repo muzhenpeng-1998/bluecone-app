@@ -371,38 +371,42 @@ public class BlueconeIdProperties {
 
         /**
          * 是否启用 long 型 ID 生成。
+         * 
+         * <p>默认为 true，零配置即可使用 SNOWFLAKE 策略生成 long ID。
          */
-        private boolean enabled = false;
+        private boolean enabled = true;
         
         /**
-         * Long ID 生成策略，默认使用 SEGMENT（号段模式）。
+         * Long ID 生成策略，默认使用 SNOWFLAKE（零配置可用）。
          * 
          * <p>可选值：
          * <ul>
-         *   <li>SEGMENT：号段模式，高性能、无时钟依赖，需要 IdSegmentRepository Bean</li>
-         *   <li>SNOWFLAKE：Snowflake 算法，需要配置 nodeId</li>
+         *   <li><b>SNOWFLAKE</b>（默认）：基于时间戳的分布式 ID，需要配置 nodeId，零配置可用</li>
+         *   <li><b>SEGMENT</b>：号段模式，高性能、无时钟依赖，需要显式开启并提供 IdSegmentRepository Bean</li>
          * </ul>
          */
-        private LongIdStrategy strategy = LongIdStrategy.SEGMENT;
+        private LongIdStrategy strategy = LongIdStrategy.SNOWFLAKE;
 
         /**
          * 节点 ID，范围 [0, 1023]。
          *
-         * <p>当 {@code bluecone.id.long.enabled=true} 且 strategy=SNOWFLAKE 时，必须为当前实例提供唯一的 nodeId：</p>
+         * <p>当 strategy=SNOWFLAKE 时，为当前实例提供唯一的 nodeId：</p>
          * <ul>
          *     <li>推荐通过配置属性 {@code bluecone.id.long.node-id} 明确配置；</li>
          *     <li>也可以省略该属性，改为在运行环境中注入 {@code BLUECONE_NODE_ID}
-         *     （兼容 {@code BLUECONE_ID_NODE_ID}），由 {@link InstanceNodeIdProvider} 解析。</li>
+         *     （兼容 {@code BLUECONE_ID_NODE_ID}），由 {@link InstanceNodeIdProvider} 解析；</li>
+         *     <li>若都未配置，则自动派生一个 nodeId（基于主机名/环境变量/进程信息），
+         *     适用于单实例或少量实例场景，多实例扩容时必须显式配置以避免撞号。</li>
          * </ul>
-         *
-         * <p>若启用了 long ID 但既未配置属性、也未提供环境变量，则应用启动会失败，以避免隐性 nodeId 撞号。</p>
          */
         private Long nodeId;
 
         /**
-         * 自定义纪元毫秒。
+         * 自定义纪元毫秒，默认使用 2024-01-01T00:00:00Z (1704067200000L)。
+         * 
+         * <p>使用较新的 epoch 可以延长时间位的有效期（41 位可用约 69 年）。
          */
-        private long epochMillis = 0L;
+        private long epochMillis = 1704067200000L;
 
         public boolean isEnabled() {
             return enabled;
@@ -460,8 +464,16 @@ public class BlueconeIdProperties {
         
         /**
          * 是否启用号段模式 long ID 生成。
+         * 
+         * <p>默认为 false，必须显式开启才会装配号段生成器。
+         * 启用条件：
+         * <ul>
+         *   <li>bluecone.id.long.strategy=SEGMENT</li>
+         *   <li>bluecone.id.segment.enabled=true</li>
+         *   <li>容器中存在 IdSegmentRepository Bean</li>
+         * </ul>
          */
-        private boolean enabled = true;
+        private boolean enabled = false;
         
         /**
          * 号段步长，即每次从数据库分配的 ID 数量。

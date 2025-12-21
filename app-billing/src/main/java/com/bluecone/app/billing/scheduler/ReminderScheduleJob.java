@@ -36,7 +36,7 @@ public class ReminderScheduleJob {
      */
     @Scheduled(cron = "0 0 * * * ?")
     public void scheduleReminders() {
-        log.info("[reminder-schedule-job] 开始扫描需要生成提醒任务的订阅");
+//        log.info("[reminder-schedule-job] 开始扫描需要生成提醒任务的订阅");
         
         try {
             LocalDateTime now = LocalDateTime.now();

@@ -93,19 +93,35 @@ public class IdAutoConfiguration {
     }
 
     /**
-     * 装配 Snowflake long ID 生成器（仅当 strategy=SNOWFLAKE 时）。
+     * 装配 Snowflake long ID 生成器（默认策略）。
+     * 
+     * <p>装配条件：
+     * <ul>
+     *   <li>bluecone.id.long.enabled=true（默认为 true）</li>
+     *   <li>bluecone.id.long.strategy=SNOWFLAKE（默认为 SNOWFLAKE）</li>
+     * </ul>
+     * 
+     * <p>零配置下会使用默认值：enabled=true, strategy=SNOWFLAKE, epochMillis=2024-01-01
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "bluecone.id.long", name = "strategy", havingValue = "SNOWFLAKE")
-    public SnowflakeLongIdGenerator snowflakeLongIdGenerator(BlueconeIdProperties props,
+    @ConditionalOnProperty(prefix = "bluecone.id.long", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public SnowflakeLongIdGenerator snowflakeLongIdGenerator(ObjectProvider<BlueconeIdProperties> propsProvider,
                                                              Environment environment) {
-        if (props == null || props.getLong() == null) {
-            throw new IllegalStateException("bluecone.id.long 配置缺失");
-        }
+        // 获取配置，如果没有则使用默认值
+        BlueconeIdProperties props = propsProvider.getIfAvailable(BlueconeIdProperties::new);
         BlueconeIdProperties.LongId longProps = props.getLong();
+        
+        // 检查策略，只有 SNOWFLAKE 才装配（默认就是 SNOWFLAKE）
+        if (longProps.getStrategy() != BlueconeIdProperties.LongIdStrategy.SNOWFLAKE) {
+            // 策略不是 SNOWFLAKE，不装配
+            return null;
+        }
+        
         long nodeId = InstanceNodeIdProvider.resolveNodeId(longProps, environment);
-        return new SnowflakeLongIdGenerator(longProps.getEpochMillis(), nodeId);
+        long epochMillis = longProps.getEpochMillis();
+        
+        return new SnowflakeLongIdGenerator(epochMillis, nodeId);
     }
 
     /**

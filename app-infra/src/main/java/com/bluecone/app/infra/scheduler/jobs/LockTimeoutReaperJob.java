@@ -47,8 +47,8 @@ public class LockTimeoutReaperJob implements JobHandler {
     @Override
     public void handle(JobContext context) {
         String traceId = context.getTraceId();
-        log.info("[LockTimeoutReaper] Starting lock timeout cleanup, traceId={}, timeoutMinutes={}", 
-                traceId, lockTimeoutMinutes);
+//        log.info("[LockTimeoutReaper] Starting lock timeout cleanup, traceId={}, timeoutMinutes={}",
+//                traceId, lockTimeoutMinutes);
         
         LocalDateTime timeoutThreshold = LocalDateTime.now().minusMinutes(lockTimeoutMinutes);
         
@@ -62,9 +62,9 @@ public class LockTimeoutReaperJob implements JobHandler {
             // 3. 释放超时的积分冻结
             int pointsReleased = releasePointsFreezes(timeoutThreshold);
             
-            log.info("[LockTimeoutReaper] Lock timeout cleanup completed: " +
-                    "coupon={}, wallet={}, points={}, traceId={}", 
-                    couponReleased, walletReleased, pointsReleased, traceId);
+//            log.info("[LockTimeoutReaper] Lock timeout cleanup completed: " +
+//                    "coupon={}, wallet={}, points={}, traceId={}",
+//                    couponReleased, walletReleased, pointsReleased, traceId);
             
         } catch (Exception e) {
             log.error("[LockTimeoutReaper] Lock timeout cleanup failed: traceId={}", traceId, e);

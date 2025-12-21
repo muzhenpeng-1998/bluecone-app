@@ -94,15 +94,17 @@ mybatis-plus:
 # BlueCone 应用自定义配置
 bluecone:
   # ============================================================================
-  # ID 生成配置（支持 ULID + Segment Long ID + Public ID）
+  # ID 生成配置（支持 ULID + Long ID + Public ID）
   # ============================================================================
   id:
     enabled: true
     long:
       enabled: true
-      strategy: SEGMENT  # 使用号段模式（推荐），避免 Snowflake 的时钟回拨问题
+      strategy: SNOWFLAKE  # 使用 Snowflake 模式（零配置可用）
+      # node-id 会自动派生，多实例部署时需要显式配置
+      epoch-millis: 1704067200000  # 2024-01-01T00:00:00Z
     segment:
-      enabled: true
+      enabled: false  # 号段模式需要数据库表支持，默认关闭
       step: 1000  # 每次分配 1000 个 ID
     public-id:
       enabled: true

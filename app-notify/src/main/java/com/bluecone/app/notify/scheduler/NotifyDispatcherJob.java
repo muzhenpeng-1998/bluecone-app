@@ -36,10 +36,10 @@ public class NotifyDispatcherJob {
      */
     @Scheduled(cron = "0 * * * * ?")
     public void dispatchPendingTasks() {
-        log.info("Start dispatching pending tasks");
+//        log.info("Start dispatching pending tasks");
         
         List<NotifyTask> tasks = taskRepository.findPendingTasks(BATCH_SIZE);
-        log.info("Found {} pending tasks", tasks.size());
+//        log.info("Found {} pending tasks", tasks.size());
         
         for (NotifyTask task : tasks) {
             try {
@@ -49,7 +49,7 @@ public class NotifyDispatcherJob {
             }
         }
         
-        log.info("Finished dispatching pending tasks");
+//        log.info("Finished dispatching pending tasks");
     }
     
     /**
@@ -57,10 +57,10 @@ public class NotifyDispatcherJob {
      */
     @Scheduled(cron = "0 */5 * * * ?")
     public void dispatchRetryTasks() {
-        log.info("Start dispatching retry tasks");
+//        log.info("Start dispatching retry tasks");
         
         List<NotifyTask> tasks = taskRepository.findTasksForRetry(BATCH_SIZE);
-        log.info("Found {} tasks for retry", tasks.size());
+//        log.info("Found {} tasks for retry", tasks.size());
         
         for (NotifyTask task : tasks) {
             try {
@@ -70,7 +70,7 @@ public class NotifyDispatcherJob {
             }
         }
         
-        log.info("Finished dispatching retry tasks");
+//        log.info("Finished dispatching retry tasks");
     }
     
     /**
@@ -130,8 +130,8 @@ public class NotifyDispatcherJob {
         sendLogRepository.save(sendLog);
         taskRepository.update(task);
         
-        log.info("Task {} dispatched: success={}, durationMs={}", 
-                task.getId(), result.isSuccess(), result.getDurationMs());
+//        log.info("Task {} dispatched: success={}, durationMs={}",
+//                task.getId(), result.isSuccess(), result.getDurationMs());
     }
     
     /**

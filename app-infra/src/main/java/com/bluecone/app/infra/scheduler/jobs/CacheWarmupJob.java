@@ -34,6 +34,6 @@ public class CacheWarmupJob implements JobHandler {
     public void handle(JobContext context) {
         String key = redisKeyBuilder.buildForGlobal(RedisKeyNamespace.CACHE, "scheduler", "warmup");
         redisOps.setString(key, "ok", Duration.ofMinutes(10));
-        log.info("[Scheduler] cache warmup heartbeat traceId={}", context.getTraceId());
+//        log.info("[Scheduler] cache warmup heartbeat traceId={}", context.getTraceId());
     }
 }

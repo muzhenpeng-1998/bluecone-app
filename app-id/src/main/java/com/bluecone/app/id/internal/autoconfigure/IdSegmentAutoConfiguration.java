@@ -27,9 +27,11 @@ import org.springframework.context.annotation.Bean;
  * <p>负责在容器中发现 IdSegmentRepository Bean 后，装配 SegmentLongIdGenerator
  * 并升级 IdService 为 EnhancedIdService（支持 ULID + Segment Long ID + Public ID）。
  *
- * <p>启用条件：
+ * <p><b>启用条件（必须同时满足）：</b>
  * <ul>
- *   <li>bluecone.id.long.strategy=SEGMENT（默认值）</li>
+ *   <li>bluecone.id.long.enabled=true（默认为 true）</li>
+ *   <li>bluecone.id.long.strategy=SEGMENT（<b>不允许 matchIfMissing</b>）</li>
+ *   <li>bluecone.id.segment.enabled=true（<b>不允许 matchIfMissing</b>）</li>
  *   <li>容器中存在 IdSegmentRepository Bean（由 app-infra 提供 JDBC 实现）</li>
  * </ul>
  *
@@ -44,7 +46,6 @@ import org.springframework.context.annotation.Bean;
 @AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @AutoConfigureBefore(IdAutoConfiguration.class)
 @EnableConfigurationProperties(BlueconeIdProperties.class)
-@ConditionalOnProperty(prefix = "bluecone.id.long", name = "strategy", havingValue = "SEGMENT", matchIfMissing = true)
 @ConditionalOnBean(IdSegmentRepository.class)
 public class IdSegmentAutoConfiguration {
 
@@ -55,19 +56,33 @@ public class IdSegmentAutoConfiguration {
      *
      * @param repository 号段仓储（由 app-infra 提供）
      * @param propsProvider ID 配置属性
-     * @return SegmentLongIdGenerator 实例
+     * @return SegmentLongIdGenerator 实例（如果未满足条件则返回 null）
      */
     @Bean
     @ConditionalOnMissingBean
     public SegmentLongIdGenerator segmentLongIdGenerator(IdSegmentRepository repository,
                                                          ObjectProvider<BlueconeIdProperties> propsProvider) {
         BlueconeIdProperties props = propsProvider.getIfAvailable();
-        int step = 1000; // 默认步长
-        if (props != null && props.getSegment() != null) {
-            step = props.getSegment().getStep();
+        
+        // 检查是否满足启用条件
+        if (props == null || props.getLong() == null || props.getSegment() == null) {
+            return null;
         }
-
-        log.info("装配 SegmentLongIdGenerator，step={}", step);
+        
+        BlueconeIdProperties.LongId longProps = props.getLong();
+        BlueconeIdProperties.Segment segmentProps = props.getSegment();
+        
+        // 必须同时满足：long.enabled=true, long.strategy=SEGMENT, segment.enabled=true
+        if (!longProps.isEnabled() 
+                || longProps.getStrategy() != BlueconeIdProperties.LongIdStrategy.SEGMENT
+                || !segmentProps.isEnabled()) {
+            log.debug("号段模式未启用：long.enabled={}, long.strategy={}, segment.enabled={}",
+                    longProps.isEnabled(), longProps.getStrategy(), segmentProps.isEnabled());
+            return null;
+        }
+        
+        int step = segmentProps.getStep();
+        log.info("装配 SegmentLongIdGenerator（号段模式已显式开启），step={}", step);
 
         // 初始化所有 scope（幂等操作）
         for (IdScope scope : IdScope.values()) {
@@ -101,7 +116,7 @@ public class IdSegmentAutoConfiguration {
                                ObjectProvider<PublicIdFactory> publicIdFactoryProvider) {
         PublicIdFactory publicIdFactory = publicIdFactoryProvider.getIfAvailable();
         log.info("装配 EnhancedIdService（支持 ULID + Segment Long ID + Public ID）");
-        log.info("Long ID 策略：SEGMENT（号段模式）");
+        log.info("Long ID 策略：SEGMENT（号段模式，已显式开启）");
         return new EnhancedIdService(ulidIdGenerator, segmentLongIdGenerator, publicIdFactory);
     }
 

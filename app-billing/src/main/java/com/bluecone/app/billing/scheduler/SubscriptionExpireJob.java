@@ -37,7 +37,7 @@ public class SubscriptionExpireJob {
      */
     @Scheduled(cron = "0 0 * * * ?")
     public void expireSubscriptions() {
-        log.info("[subscription-expire-job] 开始扫描已到期的订阅");
+//        log.info("[subscription-expire-job] 开始扫描已到期的订阅");
         
         try {
             // 处理 ACTIVE -> GRACE
@@ -46,7 +46,7 @@ public class SubscriptionExpireJob {
             // 处理 GRACE -> EXPIRED
             handleGraceToExpired();
             
-            log.info("[subscription-expire-job] 订阅到期处理完成");
+//            log.info("[subscription-expire-job] 订阅到期处理完成");
             
         } catch (Exception e) {
             log.error("[subscription-expire-job] 订阅到期任务执行失败", e);
@@ -68,11 +68,11 @@ public class SubscriptionExpireJob {
         );
         
         if (expiredSubscriptions.isEmpty()) {
-            log.info("[subscription-expire-job] 没有需要进入宽限期的订阅");
+//            log.info("[subscription-expire-job] 没有需要进入宽限期的订阅");
             return;
         }
         
-        log.info("[subscription-expire-job] 发现 {} 个需要进入宽限期的订阅", expiredSubscriptions.size());
+//        log.info("[subscription-expire-job] 发现 {} 个需要进入宽限期的订阅", expiredSubscriptions.size());
         
         int successCount = 0;
         int failCount = 0;
@@ -121,7 +121,7 @@ public class SubscriptionExpireJob {
         );
         
         if (graceExpiredSubscriptions.isEmpty()) {
-            log.info("[subscription-expire-job] 没有宽限期已结束的订阅");
+//            log.info("[subscription-expire-job] 没有宽限期已结束的订阅");
             return;
         }
         

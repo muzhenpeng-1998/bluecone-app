@@ -1,4 +1,4 @@
-package com.bluecone.app.controller;
+package com.bluecone.app.api.debug;
 
 import java.util.Map;
 

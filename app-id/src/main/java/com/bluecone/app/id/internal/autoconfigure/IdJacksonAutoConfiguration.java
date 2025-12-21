@@ -4,6 +4,7 @@ import com.bluecone.app.id.internal.jackson.BlueconeIdJacksonModule;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -18,9 +19,15 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "bluecone.id.jackson", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class IdJacksonAutoConfiguration {
 
+    /**
+     * 装配 BlueconeId Jackson 模块。
+     * 
+     * <p>使用 ObjectProvider 避免在 PublicIdCodec 未启用时导致启动失败。
+     */
     @Bean
     @ConditionalOnMissingBean(name = "blueconeIdJacksonModule")
-    public Module blueconeIdJacksonModule(PublicIdCodec codec) {
+    public Module blueconeIdJacksonModule(ObjectProvider<PublicIdCodec> codecProvider) {
+        PublicIdCodec codec = codecProvider.getIfAvailable();
         return new BlueconeIdJacksonModule(codec);
     }
 }

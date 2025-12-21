@@ -1,8 +1,10 @@
 package com.bluecone.app.tenant.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.bluecone.app.id.core.Ulid128;
+import com.bluecone.app.id.mybatis.Ulid128BinaryTypeHandler;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -31,6 +33,7 @@ public class Tenant implements Serializable {
 
     // 内部主键 ULID128，对应列 internal_id (BINARY(16))
     @Schema(description = "内部主键 ULID128")
+    @TableField(typeHandler = Ulid128BinaryTypeHandler.class)
     private Ulid128 internalId;
 
     // 对外租户 ID，对应列 public_id

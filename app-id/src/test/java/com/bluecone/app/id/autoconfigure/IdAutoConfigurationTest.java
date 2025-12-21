@@ -8,7 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
+import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
+import com.bluecone.app.id.internal.autoconfigure.IdAutoConfiguration;
+import com.bluecone.app.id.internal.core.SnowflakeLongIdGenerator;
 import com.bluecone.app.id.internal.core.UlidIdGenerator;
 import com.bluecone.app.id.publicid.api.PublicIdCodec;
 
@@ -67,6 +70,21 @@ class IdAutoConfigurationTest {
             public byte[] nextUlidBytes() {
                 return new byte[16];
             }
+
+            @Override
+            public long nextLong(IdScope scope) {
+                return 0L;
+            }
+
+            @Override
+            public String nextPublicId(com.bluecone.app.id.api.ResourceType type) {
+                return "CUSTOM";
+            }
+
+            @Override
+            public void validatePublicId(com.bluecone.app.id.api.ResourceType expectedType, String publicId) {
+                // no-op
+            }
         };
 
         contextRunner
@@ -111,5 +129,85 @@ class IdAutoConfigurationTest {
         contextRunner.run(ctx -> {
             assertThat(ctx).hasSingleBean(PublicIdCodec.class);
         });
+    }
+
+    /**
+     * 零配置启动：默认应装配 SnowflakeLongIdGenerator 和 IdService，
+     * 并且 nextLong 可调用不抛异常。
+     */
+    @Test
+    void zeroConfigShouldEnableSnowflakeAndNextLong() {
+        contextRunner.run(ctx -> {
+            // 应装配 SnowflakeLongIdGenerator
+            assertThat(ctx).hasSingleBean(SnowflakeLongIdGenerator.class);
+            
+            // 应装配 IdService
+            assertThat(ctx).hasSingleBean(IdService.class);
+            
+            // nextLong 应可调用不抛异常
+            IdService idService = ctx.getBean(IdService.class);
+            long id1 = idService.nextLong(IdScope.ORDER);
+            long id2 = idService.nextLong(IdScope.ORDER);
+            
+            assertThat(id1).isPositive();
+            assertThat(id2).isPositive();
+            assertThat(id2).isGreaterThan(id1);
+        });
+    }
+
+    /**
+     * 显式配置 nodeId：应使用配置的 nodeId。
+     */
+    @Test
+    void explicitNodeIdShouldBeUsed() {
+        contextRunner
+                .withPropertyValues("bluecone.id.long.node-id=123")
+                .run(ctx -> {
+                    assertThat(ctx).hasSingleBean(SnowflakeLongIdGenerator.class);
+                    
+                    IdService idService = ctx.getBean(IdService.class);
+                    long id = idService.nextLong(IdScope.ORDER);
+                    assertThat(id).isPositive();
+                });
+    }
+
+    /**
+     * 禁用 long ID：不应装配 SnowflakeLongIdGenerator，
+     * 但 IdService 仍应可用（仅支持 ULID）。
+     */
+    @Test
+    void disableLongIdShouldNotCreateSnowflakeGenerator() {
+        contextRunner
+                .withPropertyValues("bluecone.id.long.enabled=false")
+                .run(ctx -> {
+                    assertThat(ctx).doesNotHaveBean(SnowflakeLongIdGenerator.class);
+                    assertThat(ctx).hasSingleBean(IdService.class);
+                    
+                    // nextUlid 应可用
+                    IdService idService = ctx.getBean(IdService.class);
+                    String ulid = idService.nextUlidString();
+                    assertThat(ulid).hasSize(26);
+                });
+    }
+
+    /**
+     * 切换到 SEGMENT 策略但未提供 repository：
+     * 不应装配 SnowflakeLongIdGenerator。
+     */
+    @Test
+    void segmentStrategyWithoutRepositoryShouldNotCreateSnowflake() {
+        contextRunner
+                .withPropertyValues(
+                        "bluecone.id.long.strategy=SEGMENT",
+                        "bluecone.id.segment.enabled=true"
+                )
+                .run(ctx -> {
+                    // SEGMENT 策略下不应装配 Snowflake
+                    assertThat(ctx).doesNotHaveBean(SnowflakeLongIdGenerator.class);
+                    
+                    // 但 UlidIdGenerator 和 IdService 仍应可用
+                    assertThat(ctx).hasSingleBean(UlidIdGenerator.class);
+                    assertThat(ctx).hasSingleBean(IdService.class);
+                });
     }
 }

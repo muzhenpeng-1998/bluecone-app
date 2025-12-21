@@ -68,7 +68,7 @@ public class SchedulerExecutor {
                 });
                 long duration = System.currentTimeMillis() - start;
                 executionService.onSuccess(definition, context, duration);
-                log.info("[Scheduler] job success code={} traceId={} cost={}ms", definition.getCode(), traceId, duration);
+//                log.info("[Scheduler] job success code={} traceId={} cost={}ms", definition.getCode(), traceId, duration);
             } catch (Exception ex) {
                 long duration = System.currentTimeMillis() - start;
                 executionService.onFailure(definition, context, duration, ex);

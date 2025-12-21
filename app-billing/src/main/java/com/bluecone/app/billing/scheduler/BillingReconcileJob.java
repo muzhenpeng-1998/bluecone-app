@@ -34,7 +34,7 @@ public class BillingReconcileJob {
      */
     @Scheduled(cron = "0 */30 * * * ?")
     public void reconcileBilling() {
-        log.info("[billing-reconcile-job] 开始扫描需要补偿的订阅账单");
+//        log.info("[billing-reconcile-job] 开始扫描需要补偿的订阅账单");
         
         try {
             // 查询已支付但可能未生效的账单（最近24小时内支付的）
@@ -46,11 +46,11 @@ public class BillingReconcileJob {
             );
             
             if (paidInvoices.isEmpty()) {
-                log.info("[billing-reconcile-job] 没有需要检查的已支付账单");
+//                log.info("[billing-reconcile-job] 没有需要检查的已支付账单");
                 return;
             }
             
-            log.info("[billing-reconcile-job] 发现 {} 个已支付账单，开始检查订阅状态", paidInvoices.size());
+//            log.info("[billing-reconcile-job] 发现 {} 个已支付账单，开始检查订阅状态", paidInvoices.size());
             
             int compensateCount = 0;
             

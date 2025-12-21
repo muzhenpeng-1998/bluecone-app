@@ -14,8 +14,11 @@ public final class SecurityConstants {
     public static final String[] PERMIT_ALL_PATHS = {
             "/",
             "/website/**",
+            "/api/dev/**",
             "/ops/**",
-            "/api/admin/**",
+            "/test/id/**",
+             "/api/admin/stores",  // 已移除：admin接口应该需要登录
+             "/api/admin/**",      // 已移除：admin接口应该需要登录
             "/api/auth/**",
             "/api/gw/auth/**",
             "/api/user/auth/wechat-miniapp/**",

@@ -58,6 +58,7 @@ public final class SnowflakeLongIdGenerator {
      * 生成下一个全局唯一且单调递增的 long 型 ID。
      *
      * @return 63 位正整数 ID
+     * @throws IllegalStateException 如果时间戳超出 41 位范围（约 69 年后）
      */
     public long nextId() {
         while (true) {
@@ -65,8 +66,12 @@ public final class SnowflakeLongIdGenerator {
 
             long now = nowMillis.getAsLong();
             long timestamp = Math.max(0L, now - epochMillis);
+            
+            // 时间戳溢出检查：超过 41 位范围时抛异常，不允许取模
             if (timestamp > MAX_TIMESTAMP) {
-                timestamp = timestamp % (MAX_TIMESTAMP + 1);
+                throw new IllegalStateException(
+                        "时间戳超出 41 位范围（当前: " + timestamp + ", 最大: " + MAX_TIMESTAMP + "）。" +
+                        "请考虑调整 epochMillis 配置以延长有效期。");
             }
 
             long prevTimestamp;
@@ -79,8 +84,8 @@ public final class SnowflakeLongIdGenerator {
                 prevSeq = prev & MAX_SEQUENCE;
             }
 
+            // 时钟回拨处理：使用上一次时间戳，保证单调性，不产生重复 ID
             if (prevTimestamp >= 0L && timestamp < prevTimestamp) {
-                // 时钟回拨：使用上一次时间戳，保证单调性
                 timestamp = prevTimestamp;
             }
 
@@ -91,6 +96,12 @@ public final class SnowflakeLongIdGenerator {
                     // 同一毫秒内序列号溢出，推进时间戳 1ms
                     timestamp = prevTimestamp + 1L;
                     sequence = 0L;
+                    
+                    // 再次检查推进后的时间戳是否溢出
+                    if (timestamp > MAX_TIMESTAMP) {
+                        throw new IllegalStateException(
+                                "时间戳推进后超出 41 位范围（当前: " + timestamp + ", 最大: " + MAX_TIMESTAMP + "）。");
+                    }
                 }
             } else {
                 sequence = 0L;

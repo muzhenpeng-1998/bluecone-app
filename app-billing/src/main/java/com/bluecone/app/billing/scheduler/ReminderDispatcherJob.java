@@ -49,7 +49,7 @@ public class ReminderDispatcherJob {
      */
     @Scheduled(cron = "0 * * * * ?")
     public void dispatchReminders() {
-        log.info("[reminder-dispatcher-job] 开始扫描待发送的提醒任务");
+//        log.info("[reminder-dispatcher-job] 开始扫描待发送的提醒任务");
         
         try {
             LocalDateTime now = LocalDateTime.now();
