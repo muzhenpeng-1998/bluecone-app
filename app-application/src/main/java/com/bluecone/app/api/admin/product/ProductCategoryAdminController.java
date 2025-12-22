@@ -60,9 +60,7 @@ import java.util.List;
 public class ProductCategoryAdminController {
     
     private final AuditLogService auditLogService;
-    
-    // TODO: 注入分类应用服务（待实现）
-    // private final ProductCategoryApplicationService categoryApplicationService;
+    private final com.bluecone.app.product.application.service.ProductCategoryAdminApplicationService categoryApplicationService;
     
     /**
      * 创建商品分类
@@ -82,9 +80,19 @@ public class ProductCategoryAdminController {
         
         log.info("创建商品分类: tenantId={}, request={}", tenantId, request);
         
-        // TODO: 调用应用服务创建分类
-        // Long categoryId = categoryApplicationService.createCategory(tenantId, request, operatorId);
-        Long categoryId = 1L; // 临时返回
+        // 转换为命令并调用应用服务
+        com.bluecone.app.product.application.dto.category.CreateProductCategoryCommand command = 
+                com.bluecone.app.product.application.dto.category.CreateProductCategoryCommand.builder()
+                .title(request.getTitle())
+                .parentId(request.getParentId())
+                .imageUrl(request.getImageUrl())
+                .sortOrder(request.getSortOrder())
+                .enabled(request.getEnabled())
+                .displayStartAt(request.getDisplayStartAt())
+                .displayEndAt(request.getDisplayEndAt())
+                .build();
+        
+        Long categoryId = categoryApplicationService.createCategory(tenantId, command, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -119,8 +127,18 @@ public class ProductCategoryAdminController {
         
         log.info("更新商品分类: tenantId={}, categoryId={}, request={}", tenantId, id, request);
         
-        // TODO: 调用应用服务更新分类
-        // categoryApplicationService.updateCategory(tenantId, id, request, operatorId);
+        // 转换为命令并调用应用服务
+        com.bluecone.app.product.application.dto.category.UpdateProductCategoryCommand command = 
+                com.bluecone.app.product.application.dto.category.UpdateProductCategoryCommand.builder()
+                .title(request.getTitle())
+                .imageUrl(request.getImageUrl())
+                .sortOrder(request.getSortOrder())
+                .enabled(request.getEnabled())
+                .displayStartAt(request.getDisplayStartAt())
+                .displayEndAt(request.getDisplayEndAt())
+                .build();
+        
+        categoryApplicationService.updateCategory(tenantId, id, command, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -155,10 +173,25 @@ public class ProductCategoryAdminController {
         log.info("查询商品分类列表: tenantId={}, includeDisabled={}, filterByTime={}", 
                 tenantId, includeDisabled, filterByTime);
         
-        // TODO: 调用应用服务查询分类列表
-        // List<CategoryView> categories = categoryApplicationService.listCategories(
-        //         tenantId, includeDisabled, filterByTime, LocalDateTime.now());
-        List<CategoryView> categories = List.of(); // 临时返回空列表
+        // 调用应用服务查询分类列表
+        List<com.bluecone.app.product.application.dto.category.ProductCategoryAdminView> adminViews = 
+                categoryApplicationService.listCategories(tenantId, includeDisabled, filterByTime, LocalDateTime.now());
+        
+        // 映射为 Controller 视图
+        List<CategoryView> categories = adminViews.stream()
+                .map(view -> CategoryView.builder()
+                        .id(view.getId())
+                        .parentId(view.getParentId())
+                        .title(view.getTitle())
+                        .imageUrl(view.getImageUrl())
+                        .sortOrder(view.getSortOrder())
+                        .enabled(view.getEnabled())
+                        .displayStartAt(view.getDisplayStartAt())
+                        .displayEndAt(view.getDisplayEndAt())
+                        .createdAt(view.getCreatedAt())
+                        .updatedAt(view.getUpdatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
         
         log.info("查询商品分类列表成功: tenantId={}, count={}", tenantId, categories.size());
         return ApiResponse.ok(categories);
@@ -185,8 +218,8 @@ public class ProductCategoryAdminController {
         log.info("修改分类状态: tenantId={}, categoryId={}, enabled={}", 
                 tenantId, id, request.getEnabled());
         
-        // TODO: 调用应用服务修改状态
-        // categoryApplicationService.changeCategoryStatus(tenantId, id, request.getEnabled(), operatorId);
+        // 调用应用服务修改状态
+        categoryApplicationService.changeCategoryStatus(tenantId, id, request.getEnabled(), operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -219,8 +252,16 @@ public class ProductCategoryAdminController {
         
         log.info("批量调整分类排序: tenantId={}, count={}", tenantId, request.getItems().size());
         
-        // TODO: 调用应用服务批量调整排序
-        // categoryApplicationService.reorderCategories(tenantId, request.getItems(), operatorId);
+        // 转换为命令并调用应用服务
+        List<com.bluecone.app.product.application.dto.category.CategoryReorderItem> items = 
+                request.getItems().stream()
+                .map(item -> com.bluecone.app.product.application.dto.category.CategoryReorderItem.builder()
+                        .categoryId(item.getCategoryId())
+                        .sortOrder(item.getSortOrder())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+        
+        categoryApplicationService.reorderCategories(tenantId, items, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
