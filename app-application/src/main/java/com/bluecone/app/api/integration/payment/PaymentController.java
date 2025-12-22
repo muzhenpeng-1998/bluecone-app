@@ -4,6 +4,7 @@ import com.bluecone.app.payment.api.PaymentApi;
 import com.bluecone.app.payment.api.command.CreatePaymentCommand;
 import com.bluecone.app.payment.api.dto.CreatePaymentResult;
 import com.bluecone.app.payment.api.dto.PaymentOrderView;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * - 创建支付单（含微信 JSAPI 预下单等）；
  * - 查询支付单。
  */
+@Tag(name = "🔌 第三方集成 > 支付相关 > 支付接口", description = "支付创建和查询接口")
 @RestController
 @RequestMapping("/api/payments")
 public class PaymentController {

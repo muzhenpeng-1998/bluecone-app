@@ -4,6 +4,7 @@ import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.order.application.OrderPreCheckService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
  * 订单前置校验 Controller（用于调试和管理端接口）。
  * <p>提供订单提交前的门店接单能力校验接口，便于前端和运营人员进行测试和验证。</p>
  */
+@Tag(name = "👤 C端开放接口 > 订单相关", description = "订单预检查接口")
 @RestController
 @RequestMapping("/api/orders/precheck")
 @RequiredArgsConstructor
@@ -31,86 +33,75 @@ public class OrderPreCheckController {
      */
     @PostMapping
     public ResponseEntity<PreCheckResponse> preCheck(@RequestBody PreCheckRequest request) {
-        Long tenantId = request.getTenantId() != null ? request.getTenantId() : requireTenantId();
-        
-        if (request.getStoreId() == null) {
-            return ResponseEntity.badRequest()
-                    .body(PreCheckResponse.failure("门店ID不能为空", "STORE_ID_REQUIRED"));
-        }
-
-        LocalDateTime now = request.getNow() != null ? request.getNow() : LocalDateTime.now();
-
-        try {
-            orderPreCheckService.preCheck(tenantId, request.getStoreId(), request.getChannelType(), now, null);
-            return ResponseEntity.ok(PreCheckResponse.success());
-        } catch (BusinessException e) {
-            // 提取 reasonCode（从异常消息中解析，格式：原因码：xxx）
-            String reasonCode = extractReasonCode(e.getMessage());
-            return ResponseEntity.ok(PreCheckResponse.failure(e.getMessage(), reasonCode));
-        }
-    }
-
-    /**
-     * 从上下文获取租户 ID（辅助方法）。
-     */
-    private Long requireTenantId() {
+        // 1. 获取租户上下文
         String tenantIdStr = TenantContext.getTenantId();
-        if (tenantIdStr == null || tenantIdStr.isBlank()) {
-            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "租户未登录或上下文缺失");
+        if (tenantIdStr == null) {
+            throw new BusinessException(CommonErrorCode.UNAUTHORIZED, "未登录或租户上下文缺失");
         }
+        Long tenantId = Long.parseLong(tenantIdStr);
+
+        // 2. 调用 OrderPreCheckService 进行校验
+        PreCheckResponse response = new PreCheckResponse();
         try {
-            return Long.parseLong(tenantIdStr);
-        } catch (NumberFormatException ex) {
-            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "非法的租户标识");
+            orderPreCheckService.preCheck(
+                tenantId, 
+                request.getStoreId(), 
+                request.getChannelType(),
+                request.getExpectedOrderTime(),
+                null
+            );
+            // 如果没有抛出异常，说明可以接单
+            response.setCanAcceptOrder(true);
+            response.setMessage("门店可接单");
+        } catch (BusinessException e) {
+            // 如果抛出业务异常，说明不可接单
+            response.setCanAcceptOrder(false);
+            response.setReasonCode(e.getCode());
+            response.setMessage(e.getMessage());
         }
+
+        return ResponseEntity.ok(response);
     }
 
     /**
-     * 从异常消息中提取 reasonCode。
-     * 异常消息格式：门店当前不可接单：xxx（原因码：STORE_NOT_ACCEPTING_ORDERS）
+     * 前置校验请求 DTO。
      */
-    private String extractReasonCode(String message) {
-        if (message == null) {
-            return "UNKNOWN";
-        }
-        int start = message.indexOf("（原因码：");
-        if (start > 0) {
-            int end = message.indexOf("）", start);
-            if (end > start) {
-                return message.substring(start + 5, end);
-            }
-        }
-        return "UNKNOWN";
-    }
-
     @Data
     public static class PreCheckRequest {
-        private Long tenantId;
+        /**
+         * 门店 ID（内部 ID）。
+         */
         private Long storeId;
+
+        /**
+         * 渠道类型（可选）。
+         */
         private String channelType;
-        private LocalDateTime now;
+
+        /**
+         * 预计下单时间（可选，用于提前校验）。
+         */
+        private LocalDateTime expectedOrderTime;
     }
 
+    /**
+     * 前置校验响应 DTO。
+     */
     @Data
     public static class PreCheckResponse {
-        private boolean acceptable;
+        /**
+         * 是否可接单。
+         */
+        private boolean canAcceptOrder;
+
+        /**
+         * 不可接单原因码（可接单时为 null）。
+         */
         private String reasonCode;
-        private String reasonMessage;
 
-        public static PreCheckResponse success() {
-            PreCheckResponse response = new PreCheckResponse();
-            response.setAcceptable(true);
-            response.setReasonCode("OK");
-            response.setReasonMessage("门店可接单");
-            return response;
-        }
-
-        public static PreCheckResponse failure(String message, String reasonCode) {
-            PreCheckResponse response = new PreCheckResponse();
-            response.setAcceptable(false);
-            response.setReasonCode(reasonCode);
-            response.setReasonMessage(message);
-            return response;
-        }
+        /**
+         * 提示信息。
+         */
+        private String message;
     }
 }

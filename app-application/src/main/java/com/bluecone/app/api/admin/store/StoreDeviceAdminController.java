@@ -77,7 +77,7 @@ import java.util.List;
  * @since 1.0.0
  * @see StoreDeviceFacade 门店设备领域门面
  */
-@Tag(name = "Admin/Store - 设备管理", description = "平台管理后台 - 门店设备管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 门店管理 > 设备管理", description = "平台管理后台 - 门店设备管理接口")
 @RestController
 @RequestMapping("/api/admin/stores/devices")
 public class StoreDeviceAdminController {

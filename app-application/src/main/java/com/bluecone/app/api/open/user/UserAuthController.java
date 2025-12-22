@@ -4,6 +4,7 @@ import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.user.application.auth.UserAuthApplicationService;
 import com.bluecone.app.user.dto.auth.WechatMiniAppLoginRequest;
 import com.bluecone.app.user.dto.auth.LoginResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 用户认证相关接口。
  */
+@Tag(name = "👤 C端开放接口 > 用户相关", description = "用户身份认证接口")
 @RestController
 @RequestMapping("/api/user/auth")
 @Validated

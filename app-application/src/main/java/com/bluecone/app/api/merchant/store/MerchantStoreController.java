@@ -90,7 +90,7 @@ import org.springframework.web.bind.annotation.*;
  * @see StoreFacade 门店领域门面
  * @see ResolvePublicId Public ID解析注解
  */
-@Tag(name = "Merchant/Store - 门店管理", description = "商户后台 - 门店信息查询接口（Public ID模式）")
+@Tag(name = "🏪 商户后台 > 门店管理", description = "商户后台 - 门店信息查询接口（Public ID模式）")
 @RestController
 @RequestMapping("/api/merchant/stores")
 public class MerchantStoreController {

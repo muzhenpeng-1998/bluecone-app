@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.finance;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  * - 查看：wallet:view
  * - 管理：wallet:manage
  */
-@Tag(name = "Admin - Wallet", description = "平台后台钱包管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 财务管理 > 钱包管理", description = "平台后台钱包管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/wallet")

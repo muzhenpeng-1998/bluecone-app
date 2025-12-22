@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.marketing;
 
 import com.bluecone.app.promo.api.dto.admin.CouponGrantLogView;
 import com.bluecone.app.promo.api.dto.admin.CouponGrantRequest;
@@ -10,6 +10,7 @@ import com.bluecone.app.promo.domain.repository.CouponGrantLogRepository;
 import com.bluecone.app.promo.domain.repository.CouponRepository;
 import com.bluecone.app.promo.domain.repository.CouponTemplateRepository;
 import com.bluecone.app.promo.domain.service.CouponGrantService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
 /**
  * 优惠券发放管理接口（后台）
  */
+@Tag(name = "🎛️ 平台管理后台 > 营销管理 > 优惠券发放管理", description = "平台后台优惠券发放管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/promo/grants")

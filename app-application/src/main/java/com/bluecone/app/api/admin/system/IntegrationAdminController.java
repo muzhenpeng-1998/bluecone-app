@@ -1,4 +1,4 @@
-package com.bluecone.app.api.integration;
+package com.bluecone.app.api.admin.system;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -13,6 +13,7 @@ import com.bluecone.app.infra.integration.service.IntegrationDeliveryService;
 import com.bluecone.app.infra.integration.service.IntegrationDispatchService;
 import com.bluecone.app.infra.integration.service.IntegrationSubscriptionService;
 import com.bluecone.app.core.tenant.TenantContext;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ import java.util.Objects;
  *
  * <p>TODO：实际环境需接入 ADMIN 鉴权。</p>
  */
+@Tag(name = "🎛️ 平台管理后台 > 系统管理 > 集成管理", description = "第三方集成管理接口")
 @RestController
 @RequestMapping("/api/admin/integration")
 public class IntegrationAdminController {

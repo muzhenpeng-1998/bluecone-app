@@ -7,6 +7,7 @@ import com.bluecone.app.payment.api.WechatPayCallbackCommand;
 import com.bluecone.app.payment.application.WechatPayCallbackApplicationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
  * - 解析为业务命令对象后调用应用服务；
  * - 按微信要求返回 SUCCESS/FAIL。
  */
+@Tag(name = "🔌 第三方集成 > 支付相关 > 微信支付回调", description = "微信支付回调接口")
 @RestController
 @RequestMapping("/open-api/wechat/pay")
 @NoApiResponseWrap

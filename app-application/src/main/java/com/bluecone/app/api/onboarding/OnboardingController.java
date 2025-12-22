@@ -24,6 +24,7 @@ import com.bluecone.app.tenant.application.wechat.CreateWechatRegisterTaskComman
 import com.bluecone.app.tenant.application.wechat.WechatAuthorizationAppService;
 import com.bluecone.app.tenant.application.wechat.WechatMiniProgramRegisterAppService;
 import com.bluecone.app.tenant.service.TenantOnboardingAppService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * 提供扫码进入、账号绑定、品牌信息回填、门店信息回填等入驻引导接口。
  */
+@Tag(name = "🎯 新手引导 (Onboarding)", description = "租户入驻引导流程接口")
 @RestController
 @RequestMapping("/api/onboarding")
 public class OnboardingController {

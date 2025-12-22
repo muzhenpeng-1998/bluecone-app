@@ -42,7 +42,7 @@ import java.util.Optional;
 @RequestMapping("/api/open/stores")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "门店菜单 Open API", description = "高性能菜单查询接口，支持多级缓存")
+@Tag(name = "👤 C端开放接口 > 门店相关", description = "高性能菜单查询接口，支持多级缓存")
 public class StoreMenuOpenController {
 
     private final StoreMenuSnapshotProvider storeMenuSnapshotProvider;

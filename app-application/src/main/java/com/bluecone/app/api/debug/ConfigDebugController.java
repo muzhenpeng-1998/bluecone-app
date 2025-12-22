@@ -24,7 +24,7 @@ import java.util.Optional;
  * Developer-friendly debug endpoint to inspect resolution details.
  */
 @Hidden
-@Tag(name = "Internal - Config", description = "配置调试接口（仅开发环境）")
+@Tag(name = "🛠️ 开发调试 > 配置调试", description = "配置调试接口（仅开发环境）")
 @RestController
 @RequestMapping("/api/dev/config")
 public class ConfigDebugController {

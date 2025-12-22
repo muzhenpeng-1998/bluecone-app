@@ -75,7 +75,7 @@ import java.time.LocalDateTime;
  * @since 1.0.0
  * @see StoreFacade 门店领域门面
  */
-@Tag(name = "Open/Store - 门店查询", description = "开放接口 - 门店信息查询（C端/小程序）")
+@Tag(name = "👤 C端开放接口 > 门店相关", description = "开放接口 - 门店信息查询（C端/小程序）")
 @RestController
 @RequestMapping("/api/open/stores")
 public class OpenStoreController {

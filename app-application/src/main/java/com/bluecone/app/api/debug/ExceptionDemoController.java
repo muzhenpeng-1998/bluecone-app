@@ -3,6 +3,7 @@ package com.bluecone.app.controller;
 import com.bluecone.app.core.log.annotation.ApiLog;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.exception.ErrorCode;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
+@Tag(name = "🛠️ 开发调试 > 其他调试接口", description = "异常处理测试接口")
 @RestController
 @RequestMapping("/demo")
 public class ExceptionDemoController {

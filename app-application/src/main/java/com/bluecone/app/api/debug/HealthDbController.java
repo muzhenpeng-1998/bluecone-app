@@ -2,6 +2,7 @@ package com.bluecone.app.controller;
 
 import com.bluecone.app.infra.service.TestService;
 import com.bluecone.app.core.tenant.TenantContext;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,6 +29,7 @@ import java.util.Map;
  * @author BlueCone Architecture Team
  * @since 1.0.0
  */
+@Tag(name = "🛠️ 开发调试 > 其他调试接口", description = "健康检查接口")
 @RestController
 @RequestMapping("/health")
 public class HealthDbController {

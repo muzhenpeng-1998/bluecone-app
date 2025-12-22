@@ -20,6 +20,7 @@ import com.bluecone.app.tenant.model.command.UpdateTenantPlatformAccountCommand;
 import com.bluecone.app.tenant.model.command.UpdateTenantProfileCommand;
 import com.bluecone.app.tenant.model.query.TenantQuery;
 import com.bluecone.app.tenant.service.TenantApplicationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -61,6 +62,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author BlueCone
  * @since 1.0.0
  */
+@Tag(name = "🔧 内部接口 > 租户管理", description = "租户管理内部接口")
 @RestController
 @RequestMapping("/api/tenants")
 @Validated

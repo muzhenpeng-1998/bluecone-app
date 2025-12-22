@@ -1,4 +1,4 @@
-package com.bluecone.app.application.gateway.handler.webhook;
+package com.bluecone.app.api.admin.system;
 
 import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigCreateRequest;
@@ -7,6 +7,7 @@ import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestResult;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigUpdateRequest;
 import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigView;
 import com.bluecone.app.application.service.webhook.WebhookConfigAppService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @author BlueCone
  * @since 1.0.0
  */
+@Tag(name = "🎛️ 平台管理后台 > 系统管理 > Webhook 配置", description = "Webhook配置管理接口")
 @RestController
 @RequestMapping("/api/admin/webhook-configs")
 public class WebhookConfigAdminController {

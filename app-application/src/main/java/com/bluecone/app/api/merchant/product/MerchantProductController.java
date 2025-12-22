@@ -29,7 +29,7 @@ import java.util.Map;
  *   <li>门店级校验：后续可扩展（商品归属门店）</li>
  * </ul>
  */
-@Tag(name = "Merchant - Product", description = "商户侧商品管理接口")
+@Tag(name = "🏪 商户后台 > 商品管理", description = "商户侧商品管理接口")
 @RestController
 @RequestMapping("/api/merchant/products")
 public class MerchantProductController {

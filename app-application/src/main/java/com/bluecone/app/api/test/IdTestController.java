@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,6 +25,7 @@ import com.bluecone.app.id.api.ResourceType;
  * 
  * <p><b>注意：</b>此 Controller 仅用于开发/测试环境，生产环境应禁用。
  */
+@Tag(name = "🛠️ 开发调试 > ID 相关调试", description = "ID模块测试接口")
 @RestController
 @RequestMapping("/test/id")
 public class IdTestController {

@@ -1,4 +1,4 @@
-package com.bluecone.app.user.controller;
+package com.bluecone.app.api.open.user;
 
 import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.user.application.member.MemberApplicationService;
@@ -6,6 +6,7 @@ import com.bluecone.app.user.dto.member.ChangeMemberLevelCommand;
 import com.bluecone.app.user.dto.member.EnrollMemberCommand;
 import com.bluecone.app.user.dto.member.MemberLevelDTO;
 import com.bluecone.app.user.dto.member.MemberSummaryDTO;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,7 @@ import java.util.List;
 /**
  * 会员相关接口。
  */
+@Tag(name = "👤 C端开放接口 > 用户相关", description = "会员信息管理接口")
 @RestController
 @RequestMapping("/api/member")
 @Validated

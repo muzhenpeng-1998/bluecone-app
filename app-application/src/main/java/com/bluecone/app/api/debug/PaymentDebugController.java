@@ -5,6 +5,7 @@ import com.bluecone.app.order.application.OrderPaymentAppService;
 import com.bluecone.app.order.application.dto.OrderPaymentResult;
 import com.bluecone.app.payment.simple.application.PaymentCommandAppService;
 import com.bluecone.app.payment.simple.application.dto.PaymentOrderDTO;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 内部调试用的支付成功模拟接口，联动订单与支付状态。
  */
+@Tag(name = "🛠️ 开发调试 > 支付调试", description = "支付模拟调试接口")
 @RestController
 @RequestMapping("/api/payment/debug")
 public class PaymentDebugController {

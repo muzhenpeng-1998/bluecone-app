@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.marketing;
 
 import com.bluecone.app.campaign.api.dto.*;
 import com.bluecone.app.campaign.api.enums.CampaignType;
@@ -19,7 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/campaigns")
 @RequiredArgsConstructor
-@Tag(name = "活动管理", description = "活动配置、上下线、执行日志查询")
+@Tag(name = "🎛️ 平台管理后台 > 营销管理 > 活动管理", description = "活动配置、上下线、执行日志查询")
 public class CampaignAdminController {
     
     private final CampaignManagementFacade campaignManagementFacade;

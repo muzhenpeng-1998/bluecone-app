@@ -1,11 +1,12 @@
 // File: app-application/src/main/java/com/bluecone/app/controller/admin/OutboxAdminController.java
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.system;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bluecone.app.infra.outbox.entity.OutboxMessageEntity;
 import com.bluecone.app.infra.outbox.entity.OutboxMessageStatus;
 import com.bluecone.app.infra.outbox.repository.OutboxMessageRepository;
 import com.bluecone.app.infra.outbox.service.OutboxDispatchService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -24,6 +25,7 @@ import java.util.Map;
  *
  * <p>谨慎使用：生产环境仅限运维/管理员操作。</p>
  */
+@Tag(name = "🎛️ 平台管理后台 > 系统管理 > 消息队列管理", description = "Outbox消息管理接口")
 @RestController
 @RequestMapping("/api/admin/outbox")
 //@PreAuthorize("hasRole('ADMIN')")

@@ -84,7 +84,7 @@ import org.springframework.web.bind.annotation.*;
  * @see StoreFacade 门店领域门面
  * @see AuditLogService 审计日志服务
  */
-@Tag(name = "Admin/Store - 门店管理", description = "平台管理后台 - 门店信息管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 门店管理 > 门店基础管理", description = "平台管理后台 - 门店信息管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/stores")

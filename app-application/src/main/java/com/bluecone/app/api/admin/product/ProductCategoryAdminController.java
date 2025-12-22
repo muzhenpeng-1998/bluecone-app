@@ -52,7 +52,7 @@ import java.util.List;
  * @author BlueCone Team
  * @since 1.0.0
  */
-@Tag(name = "Admin/Product - 商品分类管理", description = "平台管理后台 - 商品分类管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 商品管理 > 商品分类管理", description = "平台管理后台 - 商品分类管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/product-categories")

@@ -3,6 +3,7 @@ package com.bluecone.app.controller;
 import java.time.Instant;
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +21,7 @@ import com.bluecone.app.infra.redis.ratelimit.annotation.RateLimit;
  * Redis 能力层（锁/限流/幂等）注解演示接口。
  * <p>curl 示例见每个方法注释，可直接复制调用。</p>
  */
+@Tag(name = "🛠️ 开发调试 > 其他调试接口", description = "基础设施能力测试接口")
 @RestController
 @RequestMapping("/api/demo/infra")
 public class InfraCapabilityDemoController {

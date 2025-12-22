@@ -76,7 +76,7 @@ import lombok.RequiredArgsConstructor;
  * @author BlueCone
  * @since 1.0.0
  */
-@Tag(name = "Open - Auth", description = "认证接口（登录/登出/刷新Token）")
+@Tag(name = "🔐 认证授权 (Auth)", description = "认证接口（登录/登出/刷新Token）")
 @RestController
 @RequestMapping("/api/auth")
 @Validated

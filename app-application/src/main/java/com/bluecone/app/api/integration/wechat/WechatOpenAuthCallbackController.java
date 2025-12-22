@@ -7,6 +7,7 @@ import com.bluecone.app.infra.wechat.openplatform.WeChatOpenPlatformClient;
 import com.bluecone.app.infra.wechat.openplatform.WechatComponentCredentialService;
 import com.bluecone.app.tenant.application.wechat.command.WechatAuthorizedEventCommand;
 import com.bluecone.app.tenant.application.wechat.WechatOpenCallbackAppService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 供入驻 H5 流程使用。
  * </p>
  */
+@Tag(name = "🔌 第三方集成 > 微信相关 > 微信开放平台回调", description = "微信授权回调接口")
 @RestController
 @RequestMapping("/api/wechat/open")
 @NoApiResponseWrap

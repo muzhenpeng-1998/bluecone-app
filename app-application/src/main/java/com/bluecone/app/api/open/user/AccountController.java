@@ -5,6 +5,7 @@ import com.bluecone.app.user.application.account.AccountApplicationService;
 import com.bluecone.app.user.dto.account.AccountSummaryDTO;
 import com.bluecone.app.user.dto.account.BalanceLedgerItemDTO;
 import com.bluecone.app.user.dto.account.PointsLedgerItemDTO;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import java.util.List;
 /**
  * 会员账户相关接口。
  */
+@Tag(name = "👤 C端开放接口 > 用户相关", description = "会员账户管理接口")
 @RestController
 @RequestMapping("/api/member/account")
 @Validated

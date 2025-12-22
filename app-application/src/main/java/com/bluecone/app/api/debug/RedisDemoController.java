@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +23,7 @@ import com.bluecone.app.infra.redis.core.RedisOps;
  * curl 示例见各方法注释，可直接复制执行。
  * </p>
  */
+@Tag(name = "🛠️ 开发调试 > 缓存调试", description = "Redis功能测试接口")
 @RestController
 @RequestMapping("/api/demo/redis")
 public class RedisDemoController {

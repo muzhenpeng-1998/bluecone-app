@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 微信小程序订单提交接口。
  */
-@Tag(name = "Mini - Order", description = "小程序订单提交接口")
+@Tag(name = "📱 小程序接口 > 订单", description = "小程序订单提交接口")
 @RestController
 @RequestMapping("/api/mini/orders")
 public class MiniOrderController {

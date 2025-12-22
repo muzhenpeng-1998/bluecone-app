@@ -78,7 +78,7 @@ import java.util.List;
  * @since 1.0.0
  * @see StoreStaffFacade 门店员工领域门面
  */
-@Tag(name = "Admin/Store - 员工管理", description = "平台管理后台 - 门店员工关系管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 门店管理 > 员工管理", description = "平台管理后台 - 门店员工关系管理接口")
 @RestController
 @RequestMapping("/api/admin/stores/staff")
 public class StoreStaffAdminController {

@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.system;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.bluecone.app.order.infra.persistence.po.OrderPO;
@@ -35,7 +35,7 @@ import java.util.List;
  * 权限要求：
  * - 查看：dashboard:view
  */
-@Tag(name = "Admin - Dashboard", description = "平台后台仪表盘接口（数据统计）")
+@Tag(name = "🎛️ 平台管理后台 > 系统管理 > 仪表盘", description = "平台后台仪表盘接口（数据统计）")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/dashboard")

@@ -61,7 +61,7 @@ import java.util.List;
  * @author BlueCone Team
  * @since 1.0.0
  */
-@Tag(name = "Admin/Product - 属性素材库管理", description = "平台管理后台 - 商品属性素材库管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 商品管理 > 属性素材库管理", description = "平台管理后台 - 商品属性素材库管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/attr-groups")

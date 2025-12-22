@@ -4,6 +4,7 @@ import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.product.application.dto.StoreProductReorderRequest;
 import com.bluecone.app.product.application.dto.StoreProductVisibilityRequest;
 import com.bluecone.app.product.application.service.StoreProductAdminApplicationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
  * @author BlueCone Team
  * @since 1.0.0
  */
+@Tag(name = "🎛️ 平台管理后台 > 商品管理 > 门店商品管理", description = "门店商品上下架和排序管理")
 @RestController
 @RequestMapping("/api/admin/stores")
 @RequiredArgsConstructor

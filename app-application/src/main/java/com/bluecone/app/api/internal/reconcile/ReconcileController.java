@@ -3,6 +3,7 @@ package com.bluecone.app.application.payment;
 import com.bluecone.app.payment.api.ReconcileApi;
 import com.bluecone.app.payment.api.dto.DailySettlementSummaryView;
 import com.bluecone.app.payment.api.dto.ReconcileResultView;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.List;
 
+@Tag(name = "🔧 内部接口 > 对账管理", description = "支付对账管理接口")
 @RestController
 @RequestMapping("/api/payments/reconcile")
 public class ReconcileController {

@@ -2,6 +2,7 @@ package com.bluecone.app.api.config;
 
 import com.bluecone.app.core.config.Feature;
 import com.bluecone.app.core.config.FeatureGate;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +14,7 @@ import java.util.Map;
 /**
  * Simple feature flag query endpoints for debugging or gateway checks.
  */
+@Tag(name = "🛠️ 开发调试 > 配置调试", description = "功能开关查询接口")
 @RestController
 @RequestMapping("/api/config/features")
 public class FeatureFlagQueryController {

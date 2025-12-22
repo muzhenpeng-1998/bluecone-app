@@ -6,6 +6,7 @@ import com.bluecone.app.order.api.dto.OrderSubmitRequest;
 import com.bluecone.app.order.api.dto.OrderSubmitResponse;
 import com.bluecone.app.order.application.OrderConfirmApplicationService;
 import com.bluecone.app.order.application.OrderSubmitApplicationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
  * 订单主链路 Controller（M0）。
  * <p>提供订单确认单和提交单接口，遵循项目约定：Controller 仅做装配，业务编排在 app-order 的 application 层。</p>
  */
+@Tag(name = "👤 C端开放接口 > 订单相关", description = "订单主流程接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/order")

@@ -1,6 +1,7 @@
 package com.bluecone.app.controller;
 
 import com.bluecone.app.core.log.annotation.ApiLog;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -8,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Tag(name = "🛠️ 开发调试 > 其他调试接口", description = "日志系统测试接口")
 @RestController
 public class LogDemoController {
 

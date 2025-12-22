@@ -5,6 +5,7 @@ import com.bluecone.app.resource.api.ResourceClient;
 import com.bluecone.app.resource.api.dto.ResourceHandle;
 import com.bluecone.app.resource.api.dto.ResourceUploadRequest;
 import com.bluecone.app.resource.api.dto.UploadPolicyView;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 资源中心对外 HTTP 接口，供前端/业务模块获取上传策略并确认资源落库。
  */
+@Tag(name = "🔌 第三方集成 > 资源管理", description = "资源上传和管理接口")
 @RestController
 @RequestMapping("/api/resource")
 public class ResourceController {

@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin/store-menu-snapshots")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "门店菜单快照管理（Admin）", description = "门店菜单快照的构建与查询接口")
+@Tag(name = "🎛️ 平台管理后台 > 商品管理 > 门店菜单快照管理", description = "门店菜单快照的构建与查询接口")
 public class StoreMenuSnapshotAdminController {
 
     private final StoreMenuSnapshotDomainService storeMenuSnapshotDomainService;

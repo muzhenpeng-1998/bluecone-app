@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * 读接口后续将配合 app-order 的多级缓存；写接口触发缓存失效由应用服务内部处理。
  */
-@Tag(name = "Mini - Cart", description = "小程序购物车接口（订单草稿管理）")
+@Tag(name = "📱 小程序接口 > 购物车", description = "小程序购物车接口（订单草稿管理）")
 @RestController
 @RequestMapping("/api/mini/cart")
 public class MiniCartController {

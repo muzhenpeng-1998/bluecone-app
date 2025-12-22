@@ -1,4 +1,4 @@
-package com.bluecone.app.user.controller;
+package com.bluecone.app.api.admin.user;
 
 import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.user.application.member.MemberApplicationService;
@@ -8,6 +8,7 @@ import com.bluecone.app.user.dto.member.MemberListItemDTO;
 import com.bluecone.app.user.dto.member.MemberSearchQueryDTO;
 import com.bluecone.app.user.dto.member.MemberTagCommandDTO;
 import com.bluecone.app.core.user.domain.member.repository.read.PageResult;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +22,7 @@ import java.util.List;
 /**
  * 管理端会员相关接口。
  */
+@Tag(name = "🎛️ 平台管理后台 > 用户管理", description = "平台后台会员管理接口")
 @RestController
 @RequestMapping("/api/admin")
 @Validated

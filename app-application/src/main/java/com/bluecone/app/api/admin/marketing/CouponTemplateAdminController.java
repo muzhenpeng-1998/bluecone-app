@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.marketing;
 
 import com.bluecone.app.id.api.IdScope;
 import com.bluecone.app.id.api.IdService;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 /**
  * 优惠券模板管理接口（后台）
  */
-@Tag(name = "Admin - Coupon", description = "平台后台优惠券管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 营销管理 > 优惠券模板管理", description = "平台后台优惠券模板管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/promo/templates")

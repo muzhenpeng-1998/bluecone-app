@@ -5,6 +5,7 @@ import com.bluecone.app.infra.cache.facade.CacheClient;
 import com.bluecone.app.infra.cache.profile.CacheProfileName;
 import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.service.DemoCacheService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,7 @@ import java.util.Map;
  * - POST 更新并触发 @CacheEvict
  * - DELETE 手工调用 CacheClient.evict
  */
+@Tag(name = "🛠️ 开发调试 > 缓存调试", description = "缓存功能测试接口")
 @RestController
 @RequestMapping("/demo-cache")
 public class DemoCacheController {

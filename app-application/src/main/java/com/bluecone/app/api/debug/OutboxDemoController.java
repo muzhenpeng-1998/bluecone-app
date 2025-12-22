@@ -5,6 +5,7 @@ import com.bluecone.app.core.event.EventMetadata;
 import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.order.event.OrderPaidEvent;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -21,6 +22,7 @@ import java.util.UUID;
 /**
  * Outbox 演示 Controller：模拟发布订单支付事件。
  */
+@Tag(name = "🛠️ 开发调试 > 其他调试接口", description = "Outbox模式测试接口")
 @RestController
 @RequestMapping("/api/outbox")
 public class OutboxDemoController {

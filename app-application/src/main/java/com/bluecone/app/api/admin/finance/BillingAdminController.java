@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.finance;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.bluecone.app.billing.api.dto.*;
@@ -16,7 +16,7 @@ import java.util.UUID;
 /**
  * 订阅计费管理接口（后台）
  */
-@Tag(name = "Admin - Billing", description = "平台后台订阅计费管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 财务管理 > 账单管理", description = "平台后台订阅计费管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/billing")

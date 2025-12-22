@@ -1,4 +1,4 @@
-package com.bluecone.app.api.notify;
+package com.bluecone.app.api.admin.system;
 
 import com.bluecone.app.core.notify.NotificationFacade;
 import com.bluecone.app.core.notify.NotificationRequest;
@@ -20,7 +20,7 @@ import java.util.Objects;
 /**
  * 通知平台管理/调试入口（仅示范）。
  */
-@Tag(name = "Admin - Notify", description = "平台后台通知管理接口（测试/调试）")
+@Tag(name = "🎛️ 平台管理后台 > 系统管理 > 通知管理", description = "平台后台通知管理接口（测试/调试）")
 @RestController
 @RequestMapping("/api/admin/notify")
 public class NotifyAdminController {

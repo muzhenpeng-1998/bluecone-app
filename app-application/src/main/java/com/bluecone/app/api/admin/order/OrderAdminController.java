@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.order;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  * - 查看：order:view
  * - 管理：order:manage
  */
-@Tag(name = "Admin - Order", description = "平台后台订单管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 订单管理", description = "平台后台订单管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/orders")

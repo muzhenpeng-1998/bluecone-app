@@ -1,8 +1,9 @@
-package com.bluecone.app.api.config;
+package com.bluecone.app.api.admin.system;
 
 import com.bluecone.app.infra.configcenter.entity.ConfigPropertyEntity;
 import com.bluecone.app.infra.configcenter.mapper.ConfigPropertyMapper;
 import com.bluecone.app.infra.configcenter.snapshot.ConfigSnapshotManager;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Objects;
  * Admin endpoints for managing ConfigCenter properties.
  * Note: production must protect these endpoints with authentication/authorization.
  */
+@Tag(name = "🎛️ 平台管理后台 > 系统管理 > 配置管理", description = "系统配置管理接口")
 @RestController
 @RequestMapping("/api/admin/config")
 public class ConfigAdminController {

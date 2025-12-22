@@ -6,6 +6,7 @@ import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.wallet.api.facade.WalletRechargeFacade;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ import java.util.Map;
  * @author bluecone
  * @since 2025-12-19
  */
+@Tag(name = "🔌 第三方集成 > 支付相关 > 微信充值回调", description = "微信充值回调接口")
 @Slf4j
 @RestController
 @RequestMapping("/open-api/wechat/recharge")

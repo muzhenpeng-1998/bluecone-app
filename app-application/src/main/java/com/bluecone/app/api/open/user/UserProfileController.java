@@ -4,6 +4,7 @@ import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.user.application.profile.UserProfileApplicationService;
 import com.bluecone.app.user.dto.profile.UpdateUserProfileCommand;
 import com.bluecone.app.user.dto.profile.UserProfileDTO;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 用户画像接口。
  */
+@Tag(name = "👤 C端开放接口 > 用户相关", description = "用户资料管理接口")
 @RestController
 @RequestMapping("/api/user/profile")
 @Validated

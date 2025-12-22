@@ -1,4 +1,4 @@
-package com.bluecone.app.api.admin;
+package com.bluecone.app.api.admin.product;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -48,7 +48,7 @@ import java.util.stream.Collectors;
  * - 编辑：product:edit
  * - 上下线：product:online
  */
-@Tag(name = "Admin - Product", description = "平台后台商品管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 商品管理 > 商品基础管理", description = "平台后台商品管理接口")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/products")
