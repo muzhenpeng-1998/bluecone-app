@@ -33,12 +33,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 商品管理后台接口
+ * 商品管理后台接口（简化版）
+ * 
+ * <p><b>⚠️ 注意：</b>本 Controller 仅提供简单的商品 CRUD 功能，不支持完整的商品聚合管理（规格、属性、小料等）。
+ * <p><b>推荐使用：</b>{@link ProductAggregateAdminController} 进行完整的商品聚合管理。
  * 
  * 提供商品的CRUD和状态管理功能：
  * - 分页查询商品列表
  * - 查看商品详情
- * - 创建商品
+ * - 创建商品（简化版，推荐使用 ProductAggregateAdminController）
  * - 修改商品信息
  * - 商品上线/下线
  * 
@@ -48,7 +51,7 @@ import java.util.stream.Collectors;
  * - 编辑：product:edit
  * - 上下线：product:online
  */
-@Tag(name = "🎛️ 平台管理后台 > 商品管理 > 商品基础管理", description = "平台后台商品管理接口")
+@Tag(name = "🎛️ 平台管理后台 > 商品管理 > 商品基础管理（简化版）", description = "平台后台商品管理接口（简化版）")
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/products")
@@ -125,23 +128,29 @@ public class ProductAdminController {
     }
     
     /**
-     * 创建商品
+     * 创建商品（简化版）
+     * 
+     * <p><b>⚠️ 已废弃：</b>本方法仅支持简单的商品创建，不支持规格、属性、小料等完整功能。
+     * <p><b>推荐使用：</b>ProductAggregateAdminController 进行完整的商品聚合管理。
      * 
      * @param tenantId 租户ID
      * @param request 创建请求
      * @return 商品ID
+     * @deprecated 请使用 ProductAggregateAdminController 代替
      */
+    @Deprecated
     @PostMapping
     @RequireAdminPermission("product:create")
     public CreateProductResponse createProduct(@RequestHeader("X-Tenant-Id") Long tenantId,
                                               @Valid @RequestBody CreateProductRequest request) {
-        log.info("创建商品: tenantId={}, request={}", tenantId, request);
+        log.warn("⚠️ 使用已废弃的简化版商品创建接口，推荐使用 ProductAggregateAdminController: tenantId={}, request={}", 
+                tenantId, request);
         
         Long operatorId = getCurrentUserId();
         
-        // 构建商品聚合
+        // 构建商品聚合（不再使用 IdService 手动生成 ID，让 DB AUTO_INCREMENT 生成）
         Product product = Product.builder()
-                .id(idService.nextLong(IdScope.PRODUCT))
+                // 不设置 id，让 DB AUTO_INCREMENT 生成
                 .tenantId(tenantId)
                 .productCode(request.getProductCode())
                 .name(request.getName())
@@ -155,14 +164,14 @@ public class ProductAdminController {
                 .sortOrder(request.getSortOrder())
                 .build();
         
-        // 构建SKU列表
+        // 构建SKU列表（不再使用 IdService 手动生成 ID）
         List<ProductSku> skus = new ArrayList<>();
         if (request.getSkus() != null && !request.getSkus().isEmpty()) {
             for (CreateProductRequest.SkuRequest skuReq : request.getSkus()) {
                 ProductSku sku = ProductSku.builder()
-                        .id(idService.nextLong(IdScope.SKU))
+                        // 不设置 id，让 DB AUTO_INCREMENT 生成
                         .tenantId(tenantId)
-                        .productId(product.getId())
+                        // productId 将在 save 后设置
                         .skuCode(skuReq.getSkuCode())
                         .name(skuReq.getName())
                         .basePrice(skuReq.getBasePrice())
@@ -187,10 +196,10 @@ public class ProductAdminController {
                 .resourceType("PRODUCT")
                 .resourceId(productId)
                 .resourceName(request.getName())
-                .operationDesc("创建商品")
+                .operationDesc("创建商品（简化版）")
                 .dataAfter(product));
         
-        log.info("商品创建成功: tenantId={}, productId={}", tenantId, productId);
+        log.info("商品创建成功（简化版）: tenantId={}, productId={}", tenantId, productId);
         return new CreateProductResponse(productId);
     }
     

@@ -51,7 +51,6 @@ public class StoreProductAdminApplicationService {
     
     private final BcProductMapper productMapper;
     private final BcProductStoreConfigMapper storeConfigMapper;
-    private final IdService idService;
     
     @Autowired(required = false)
     @Nullable
@@ -65,19 +64,24 @@ public class StoreProductAdminApplicationService {
     @Nullable
     private com.bluecone.app.product.domain.service.StoreMenuSnapshotDomainService storeMenuSnapshotDomainService;
     
+    @Autowired(required = false)
+    @Nullable
+    private MenuSnapshotRebuildCoordinator menuSnapshotRebuildCoordinator;
+    
     /**
      * 设置商品在门店的可见性（上架/下架）
      * 
      * <p>如果配置不存在，则创建；如果存在，则更新。
      * 
+     * @param tenantId 租户ID（从上下文获取，不信任请求体）
      * @param storeId 门店ID
      * @param productId 商品ID
      * @param request 可见性设置请求
+     * @param operatorId 操作人ID（从上下文获取，不信任请求体）
      */
     @Transactional(rollbackFor = Exception.class)
-    public void setProductVisibility(Long storeId, Long productId, StoreProductVisibilityRequest request) {
-        Long tenantId = request.getTenantId();
-        Long operatorId = request.getOperatorId();
+    public void setProductVisibility(Long tenantId, Long storeId, Long productId, 
+                                     StoreProductVisibilityRequest request, Long operatorId) {
         String channel = request.getChannel() != null ? request.getChannel().toUpperCase() : "ALL";
         
         log.info("设置商品可见性: tenantId={}, storeId={}, productId={}, visible={}, channel={}", 
@@ -103,11 +107,9 @@ public class StoreProductAdminApplicationService {
                 .isNull(request.getSkuId() == null, BcProductStoreConfig::getSkuId));
         
         if (existing == null) {
-            // 3.1 创建新配置
-            Long configId = idService.nextLong(IdScope.PRODUCT);
-            
+            // 3.1 创建新配置（不设置 id，让 DB AUTO_INCREMENT 生成）
             BcProductStoreConfig config = new BcProductStoreConfig();
-            config.setId(configId);
+            // 不设置 id，让 DB AUTO_INCREMENT 生成
             config.setTenantId(tenantId);
             config.setStoreId(storeId);
             config.setProductId(productId);
@@ -125,7 +127,7 @@ public class StoreProductAdminApplicationService {
             config.setUpdatedBy(operatorId);
             
             storeConfigMapper.insert(config);
-            log.info("商品门店配置已创建: configId={}", configId);
+            log.info("商品门店配置已创建: configId={}", config.getId());
         } else {
             // 3.2 更新现有配置
             existing.setVisible(request.getVisible());
@@ -138,28 +140,28 @@ public class StoreProductAdminApplicationService {
             log.info("商品门店配置已更新: configId={}", existing.getId());
         }
         
-        // 4. afterCommit：发布缓存失效事件
+        // 4. afterCommit：发布缓存失效事件 & 触发重建
         publishStoreMenuSnapshotInvalidation(tenantId, storeId);
         
-        // 5. 可选：自动重建快照
-        if (Boolean.TRUE.equals(request.getAutoRebuildSnapshot())) {
-            rebuildStoreMenuSnapshot(tenantId, storeId, channel);
+        // 触发菜单快照重建（门店维度，细粒度）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForStore(tenantId, storeId, "store-product:visibility");
         }
         
-        log.info("商品可见性设置成功: tenantId={}, storeId={}, productId={}, visible={}, autoRebuild={}", 
-                tenantId, storeId, productId, request.getVisible(), request.getAutoRebuildSnapshot());
+        log.info("商品可见性设置成功: tenantId={}, storeId={}, productId={}, visible={}", 
+                tenantId, storeId, productId, request.getVisible());
     }
     
     /**
      * 批量调整商品在门店的排序
      * 
+     * @param tenantId 租户ID（从上下文获取，不信任请求体）
      * @param storeId 门店ID
      * @param request 排序请求
+     * @param operatorId 操作人ID（从上下文获取，不信任请求体）
      */
     @Transactional(rollbackFor = Exception.class)
-    public void reorderProducts(Long storeId, StoreProductReorderRequest request) {
-        Long tenantId = request.getTenantId();
-        Long operatorId = request.getOperatorId();
+    public void reorderProducts(Long tenantId, Long storeId, StoreProductReorderRequest request, Long operatorId) {
         String channel = request.getChannel() != null ? request.getChannel().toUpperCase() : "ALL";
         
         log.info("批量调整商品排序: tenantId={}, storeId={}, channel={}, count={}", 
@@ -176,11 +178,9 @@ public class StoreProductAdminApplicationService {
                     .isNull(BcProductStoreConfig::getSkuId));
             
             if (config == null) {
-                // 如果配置不存在，创建一个（自动上架）
-                Long configId = idService.nextLong(IdScope.PRODUCT);
-                
+                // 如果配置不存在，创建一个（自动上架）（不设置 id，让 DB AUTO_INCREMENT 生成）
                 config = new BcProductStoreConfig();
-                config.setId(configId);
+                // 不设置 id，让 DB AUTO_INCREMENT 生成
                 config.setTenantId(tenantId);
                 config.setStoreId(storeId);
                 config.setProductId(item.getProductId());
@@ -205,16 +205,16 @@ public class StoreProductAdminApplicationService {
             }
         }
         
-        // 2. afterCommit：发布缓存失效事件
+        // 2. afterCommit：发布缓存失效事件 & 触发重建
         publishStoreMenuSnapshotInvalidation(tenantId, storeId);
         
-        // 3. 可选：自动重建快照
-        if (Boolean.TRUE.equals(request.getAutoRebuildSnapshot())) {
-            rebuildStoreMenuSnapshot(tenantId, storeId, channel);
+        // 触发菜单快照重建（门店维度，细粒度）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForStore(tenantId, storeId, "store-product:reorder");
         }
         
-        log.info("商品排序调整成功: tenantId={}, storeId={}, count={}, autoRebuild={}", 
-                tenantId, storeId, request.getProducts().size(), request.getAutoRebuildSnapshot());
+        log.info("商品排序调整成功: tenantId={}, storeId={}, count={}", 
+                tenantId, storeId, request.getProducts().size());
     }
     
     /**
@@ -230,36 +230,6 @@ public class StoreProductAdminApplicationService {
         
         // Prompt 09: 门店上架/下架/排序，按门店失效（细粒度）
         menuSnapshotInvalidationHelper.invalidateStoreMenu(tenantId, storeId, "门店商品配置变更");
-    }
-    
-    /**
-     * 重建门店菜单快照（可选功能，Phase 4 增强）
-     * <p>
-     * 立即重建指定门店/渠道的菜单快照
-     */
-    private void rebuildStoreMenuSnapshot(Long tenantId, Long storeId, String channel) {
-        if (storeMenuSnapshotDomainService == null) {
-            log.warn("StoreMenuSnapshotDomainService 未注入，跳过快照重建");
-            return;
-        }
-        
-        try {
-            String channelCode = channel != null ? channel.toUpperCase() : "ALL";
-            String orderScene = "DEFAULT"; // 默认场景
-            LocalDateTime now = LocalDateTime.now();
-            
-            log.info("开始重建门店菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}", 
-                    tenantId, storeId, channelCode, orderScene);
-            
-            storeMenuSnapshotDomainService.rebuildAndSaveSnapshot(tenantId, storeId, channelCode, orderScene, now);
-            
-            log.info("门店菜单快照重建成功: tenantId={}, storeId={}, channel={}", 
-                    tenantId, storeId, channelCode);
-        } catch (Exception ex) {
-            // best-effort: 不影响主流程
-            log.error("门店菜单快照重建失败: tenantId={}, storeId={}, channel={}", 
-                    tenantId, storeId, channel, ex);
-        }
     }
 }
 

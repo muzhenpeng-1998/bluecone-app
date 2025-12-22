@@ -1,6 +1,7 @@
 package com.bluecone.app.api.admin.product;
 
 import com.bluecone.app.core.api.ApiResponse;
+import com.bluecone.app.core.context.CurrentUserContext;
 import com.bluecone.app.product.application.dto.StoreProductReorderRequest;
 import com.bluecone.app.product.application.dto.StoreProductVisibilityRequest;
 import com.bluecone.app.product.application.service.StoreProductAdminApplicationService;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 public class StoreProductAdminController {
     
     private final StoreProductAdminApplicationService storeProductService;
+    private final CurrentUserContext currentUserContext;
     
     /**
      * 设置商品在门店的可见性（上架/下架）
@@ -58,7 +60,11 @@ public class StoreProductAdminController {
         log.info("设置商品可见性: storeId={}, productId={}, visible={}", 
                 storeId, productId, request.getVisible());
         
-        storeProductService.setProductVisibility(storeId, productId, request);
+        // 从上下文获取 tenantId 和 operatorId
+        Long tenantId = currentUserContext.getCurrentTenantId();
+        Long operatorId = currentUserContext.getCurrentUserId();
+        
+        storeProductService.setProductVisibility(tenantId, storeId, productId, request, operatorId);
         
         return ApiResponse.success();
     }
@@ -92,7 +98,11 @@ public class StoreProductAdminController {
         log.info("批量调整商品排序: storeId={}, count={}", 
                 storeId, request.getProducts().size());
         
-        storeProductService.reorderProducts(storeId, request);
+        // 从上下文获取 tenantId 和 operatorId
+        Long tenantId = currentUserContext.getCurrentTenantId();
+        Long operatorId = currentUserContext.getCurrentUserId();
+        
+        storeProductService.reorderProducts(tenantId, storeId, request, operatorId);
         
         return ApiResponse.success();
     }

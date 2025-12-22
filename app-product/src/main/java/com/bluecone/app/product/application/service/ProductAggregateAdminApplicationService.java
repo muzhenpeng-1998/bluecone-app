@@ -113,6 +113,13 @@ public class ProductAggregateAdminApplicationService {
     @Nullable
     private com.bluecone.app.product.infrastructure.cache.MenuSnapshotInvalidationHelper menuSnapshotInvalidationHelper;
     
+    @Autowired(required = false)
+    @Nullable
+    private MenuSnapshotRebuildCoordinator menuSnapshotRebuildCoordinator;
+    
+    // JSON 序列化工具
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    
     /**
      * 创建商品聚合
      * 
@@ -195,8 +202,13 @@ public class ProductAggregateAdminApplicationService {
                     tenantId, command.getStoreId(), productId, command.getChannel());
         }
         
-        // ===== 10. afterCommit：发布缓存失效事件 =====
+        // ===== 10. afterCommit：发布缓存失效事件 & 重建快照 =====
         publishMenuSnapshotInvalidation(tenantId);
+        
+        // 触发菜单快照重建（如果商品已上架到门店）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForProduct(tenantId, productId, "product:create");
+        }
         
         log.info("商品聚合创建成功: tenantId={}, productId={}, publicId={}", 
                 tenantId, productId, productPublicId);
@@ -297,8 +309,13 @@ public class ProductAggregateAdminApplicationService {
             insertCategoryBindings(tenantId, productId, command.getCategoryIds(), operatorId);
         }
         
-        // ===== 5. afterCommit：发布缓存失效事件 =====
+        // ===== 5. afterCommit：发布缓存失效事件 & 重建快照 =====
         publishMenuSnapshotInvalidation(tenantId);
+        
+        // 触发菜单快照重建（如果商品已上架到门店）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForProduct(tenantId, productId, "product:update");
+        }
         
         log.info("商品聚合更新成功: tenantId={}, productId={}", tenantId, productId);
     }
@@ -315,16 +332,129 @@ public class ProductAggregateAdminApplicationService {
     public ProductDetailDTO getDetail(Long tenantId, Long productId) {
         log.info("查询商品详情: tenantId={}, productId={}", tenantId, productId);
         
-        // TODO: 实现详情查询逻辑
         // 1. 查询 bc_product
-        // 2. 查询 bc_product_sku
-        // 3. 查询 bc_product_spec_group + bc_product_spec_option
-        // 4. 查询 bc_product_attr_group_rel + bc_product_attr_rel + bc_product_attr_group + bc_product_attr_option
-        // 5. 查询 bc_product_addon_group_rel + bc_product_addon_rel + bc_addon_group + bc_addon_item
-        // 6. 查询 bc_product_category_rel + bc_product_category
-        // 7. 组装为 ProductDetailDTO
+        BcProduct product = productMapper.selectOne(new LambdaQueryWrapper<BcProduct>()
+                .eq(BcProduct::getId, productId)
+                .eq(BcProduct::getTenantId, tenantId)
+                .eq(BcProduct::getDeleted, 0));
         
-        throw new UnsupportedOperationException("详情查询功能待实现");
+        if (product == null) {
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "商品不存在或无权访问");
+        }
+        
+        // 2. 查询 bc_product_sku
+        List<BcProductSku> skus = skuMapper.selectList(new LambdaQueryWrapper<BcProductSku>()
+                .eq(BcProductSku::getProductId, productId)
+                .eq(BcProductSku::getTenantId, tenantId)
+                .eq(BcProductSku::getDeleted, 0)
+                .orderByDesc(BcProductSku::getSortOrder)
+                .orderByAsc(BcProductSku::getId));
+        
+        // 3. 查询 bc_product_spec_group + bc_product_spec_option
+        List<BcProductSpecGroup> specGroups = specGroupMapper.selectList(new LambdaQueryWrapper<BcProductSpecGroup>()
+                .eq(BcProductSpecGroup::getProductId, productId)
+                .eq(BcProductSpecGroup::getTenantId, tenantId)
+                .orderByDesc(BcProductSpecGroup::getSortOrder)
+                .orderByAsc(BcProductSpecGroup::getId));
+        
+        Map<Long, List<BcProductSpecOption>> specOptionMap = new HashMap<>();
+        if (!specGroups.isEmpty()) {
+            Set<Long> specGroupIds = specGroups.stream().map(BcProductSpecGroup::getId).collect(Collectors.toSet());
+            List<BcProductSpecOption> specOptions = specOptionMapper.selectList(new LambdaQueryWrapper<BcProductSpecOption>()
+                    .in(BcProductSpecOption::getSpecGroupId, specGroupIds)
+                    .eq(BcProductSpecOption::getTenantId, tenantId)
+                    .orderByDesc(BcProductSpecOption::getSortOrder)
+                    .orderByAsc(BcProductSpecOption::getId));
+            specOptionMap = specOptions.stream().collect(Collectors.groupingBy(BcProductSpecOption::getSpecGroupId));
+        }
+        
+        // 4. 查询 bc_product_attr_group_rel + bc_product_attr_rel + bc_product_attr_group + bc_product_attr_option
+        List<BcProductAttrGroupRel> attrGroupRels = attrGroupRelMapper.selectList(new LambdaQueryWrapper<BcProductAttrGroupRel>()
+                .eq(BcProductAttrGroupRel::getProductId, productId)
+                .eq(BcProductAttrGroupRel::getTenantId, tenantId)
+                .eq(BcProductAttrGroupRel::getDeleted, 0)
+                .orderByDesc(BcProductAttrGroupRel::getSortOrder)
+                .orderByAsc(BcProductAttrGroupRel::getId));
+        
+        Map<Long, BcProductAttrGroup> attrGroupMap = new HashMap<>();
+        Map<Long, List<BcProductAttrOption>> attrOptionMap = new HashMap<>();
+        Map<Long, List<BcProductAttrRel>> attrRelMap = new HashMap<>();
+        
+        if (!attrGroupRels.isEmpty()) {
+            Set<Long> attrGroupIds = attrGroupRels.stream().map(BcProductAttrGroupRel::getAttrGroupId).collect(Collectors.toSet());
+            List<BcProductAttrGroup> attrGroups = attrGroupMapper.selectList(new LambdaQueryWrapper<BcProductAttrGroup>()
+                    .in(BcProductAttrGroup::getId, attrGroupIds)
+                    .eq(BcProductAttrGroup::getTenantId, tenantId));
+            attrGroupMap = attrGroups.stream().collect(Collectors.toMap(BcProductAttrGroup::getId, g -> g));
+            
+            List<BcProductAttrOption> attrOptions = attrOptionMapper.selectList(new LambdaQueryWrapper<BcProductAttrOption>()
+                    .in(BcProductAttrOption::getAttrGroupId, attrGroupIds)
+                    .eq(BcProductAttrOption::getTenantId, tenantId)
+                    .orderByDesc(BcProductAttrOption::getSortOrder)
+                    .orderByAsc(BcProductAttrOption::getId));
+            attrOptionMap = attrOptions.stream().collect(Collectors.groupingBy(BcProductAttrOption::getAttrGroupId));
+            
+            List<BcProductAttrRel> attrRels = attrRelMapper.selectList(new LambdaQueryWrapper<BcProductAttrRel>()
+                    .eq(BcProductAttrRel::getProductId, productId)
+                    .eq(BcProductAttrRel::getTenantId, tenantId)
+                    .eq(BcProductAttrRel::getDeleted, 0));
+            attrRelMap = attrRels.stream().collect(Collectors.groupingBy(BcProductAttrRel::getAttrGroupId));
+        }
+        
+        // 5. 查询 bc_product_addon_group_rel + bc_product_addon_rel + bc_addon_group + bc_addon_item
+        List<BcProductAddonGroupRel> addonGroupRels = addonGroupRelMapper.selectList(new LambdaQueryWrapper<BcProductAddonGroupRel>()
+                .eq(BcProductAddonGroupRel::getProductId, productId)
+                .eq(BcProductAddonGroupRel::getTenantId, tenantId)
+                .eq(BcProductAddonGroupRel::getDeleted, 0)
+                .orderByDesc(BcProductAddonGroupRel::getSortOrder)
+                .orderByAsc(BcProductAddonGroupRel::getId));
+        
+        Map<Long, BcAddonGroup> addonGroupMap = new HashMap<>();
+        Map<Long, List<BcAddonItem>> addonItemMap = new HashMap<>();
+        Map<Long, List<BcProductAddonRel>> addonRelMap = new HashMap<>();
+        
+        if (!addonGroupRels.isEmpty()) {
+            Set<Long> addonGroupIds = addonGroupRels.stream().map(BcProductAddonGroupRel::getAddonGroupId).collect(Collectors.toSet());
+            List<BcAddonGroup> addonGroups = addonGroupMapper.selectList(new LambdaQueryWrapper<BcAddonGroup>()
+                    .in(BcAddonGroup::getId, addonGroupIds)
+                    .eq(BcAddonGroup::getTenantId, tenantId));
+            addonGroupMap = addonGroups.stream().collect(Collectors.toMap(BcAddonGroup::getId, g -> g));
+            
+            List<BcAddonItem> addonItems = addonItemMapper.selectList(new LambdaQueryWrapper<BcAddonItem>()
+                    .in(BcAddonItem::getGroupId, addonGroupIds)
+                    .eq(BcAddonItem::getTenantId, tenantId)
+                    .orderByDesc(BcAddonItem::getSortOrder)
+                    .orderByAsc(BcAddonItem::getId));
+            addonItemMap = addonItems.stream().collect(Collectors.groupingBy(BcAddonItem::getGroupId));
+            
+            List<BcProductAddonRel> addonRels = addonRelMapper.selectList(new LambdaQueryWrapper<BcProductAddonRel>()
+                    .eq(BcProductAddonRel::getProductId, productId)
+                    .eq(BcProductAddonRel::getTenantId, tenantId)
+                    .eq(BcProductAddonRel::getDeleted, 0));
+            addonRelMap = addonRels.stream().collect(Collectors.groupingBy(BcProductAddonRel::getAddonGroupId));
+        }
+        
+        // 6. 查询 bc_product_category_rel + bc_product_category
+        List<BcProductCategoryRel> categoryRels = categoryRelMapper.selectList(new LambdaQueryWrapper<BcProductCategoryRel>()
+                .eq(BcProductCategoryRel::getProductId, productId)
+                .eq(BcProductCategoryRel::getTenantId, tenantId)
+                .eq(BcProductCategoryRel::getDeleted, 0));
+        
+        Map<Long, BcProductCategory> categoryMap = new HashMap<>();
+        if (!categoryRels.isEmpty()) {
+            Set<Long> categoryIds = categoryRels.stream().map(BcProductCategoryRel::getCategoryId).collect(Collectors.toSet());
+            List<BcProductCategory> categories = categoryMapper.selectList(new LambdaQueryWrapper<BcProductCategory>()
+                    .in(BcProductCategory::getId, categoryIds)
+                    .eq(BcProductCategory::getTenantId, tenantId)
+                    .eq(BcProductCategory::getDeleted, 0));
+            categoryMap = categories.stream().collect(Collectors.toMap(BcProductCategory::getId, c -> c));
+        }
+        
+        // 7. 组装为 ProductDetailDTO
+        return buildProductDetailDTO(product, skus, specGroups, specOptionMap, 
+                attrGroupRels, attrGroupMap, attrOptionMap, attrRelMap,
+                addonGroupRels, addonGroupMap, addonItemMap, addonRelMap,
+                categoryRels, categoryMap);
     }
     
     /**
@@ -357,10 +487,251 @@ public class ProductAggregateAdminApplicationService {
         product.setUpdatedBy(operatorId);
         productMapper.updateById(product);
         
-        // afterCommit：发布缓存失效事件
+        // afterCommit：发布缓存失效事件 & 重建快照
         publishMenuSnapshotInvalidation(tenantId);
         
+        // 触发菜单快照重建（如果商品已上架到门店）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForProduct(tenantId, productId, "product:changeStatus");
+        }
+        
         log.info("商品状态修改成功: tenantId={}, productId={}, status={}", tenantId, productId, status);
+    }
+    
+    // ===== 私有方法：构建详情DTO =====
+    
+    /**
+     * 构建商品详情DTO
+     */
+    private ProductDetailDTO buildProductDetailDTO(
+            BcProduct product,
+            List<BcProductSku> skus,
+            List<BcProductSpecGroup> specGroups,
+            Map<Long, List<BcProductSpecOption>> specOptionMap,
+            List<BcProductAttrGroupRel> attrGroupRels,
+            Map<Long, BcProductAttrGroup> attrGroupMap,
+            Map<Long, List<BcProductAttrOption>> attrOptionMap,
+            Map<Long, List<BcProductAttrRel>> attrRelMap,
+            List<BcProductAddonGroupRel> addonGroupRels,
+            Map<Long, BcAddonGroup> addonGroupMap,
+            Map<Long, List<BcAddonItem>> addonItemMap,
+            Map<Long, List<BcProductAddonRel>> addonRelMap,
+            List<BcProductCategoryRel> categoryRels,
+            Map<Long, BcProductCategory> categoryMap) {
+        
+        ProductDetailDTO dto = new ProductDetailDTO();
+        
+        // 基本信息 (匹配 BcProduct 实体字段)
+        dto.setId(product.getId());
+        dto.setTenantId(product.getTenantId());
+        dto.setPublicId(product.getPublicId());
+        dto.setProductCode(product.getProductCode());
+        dto.setName(product.getName());
+        dto.setSubtitle(product.getSubtitle());
+        dto.setProductType(product.getProductType());
+        dto.setDescription(product.getDescription());
+        dto.setMainImage(product.getMainImage());
+        // mediaGallery 是 JSON 字符串，需要解析为 List<String>
+        if (product.getMediaGallery() != null) {
+            try {
+                dto.setMediaGallery(objectMapper.readValue(product.getMediaGallery(), 
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+            } catch (Exception e) {
+                log.warn("Failed to parse mediaGallery for product {}: {}", product.getId(), e.getMessage());
+                dto.setMediaGallery(Collections.emptyList());
+            }
+        }
+        dto.setUnit(product.getUnit());
+        dto.setStatus(product.getStatus());
+        dto.setSortOrder(product.getSortOrder());
+        dto.setCreatedAt(product.getCreatedAt());
+        dto.setUpdatedAt(product.getUpdatedAt());
+        
+        // SKU列表 (匹配 BcProductSku 实体字段)
+        List<ProductDetailDTO.SkuDTO> skuDTOs = skus.stream().map(sku -> {
+            ProductDetailDTO.SkuDTO skuDTO = new ProductDetailDTO.SkuDTO();
+            skuDTO.setId(sku.getId());
+            skuDTO.setPublicId(sku.getPublicId());
+            skuDTO.setSkuCode(sku.getSkuCode());
+            skuDTO.setName(sku.getName());
+            skuDTO.setBasePrice(sku.getBasePrice());
+            skuDTO.setMarketPrice(sku.getMarketPrice());
+            skuDTO.setCostPrice(sku.getCostPrice());
+            skuDTO.setBarcode(sku.getBarcode());
+            skuDTO.setDefaultSku(sku.getIsDefault());
+            skuDTO.setStatus(sku.getStatus());
+            skuDTO.setSortOrder(sku.getSortOrder());
+            return skuDTO;
+        }).collect(Collectors.toList());
+        dto.setSkus(skuDTOs);
+        
+        // 规格组列表 (匹配 BcProductSpecGroup 实体字段)
+        List<ProductDetailDTO.SpecGroupDTO> specGroupDTOs = specGroups.stream().map(group -> {
+            ProductDetailDTO.SpecGroupDTO groupDTO = new ProductDetailDTO.SpecGroupDTO();
+            groupDTO.setId(group.getId());
+            groupDTO.setName(group.getName());
+            groupDTO.setSelectType(group.getSelectType());
+            groupDTO.setRequired(group.getRequired());
+            groupDTO.setMaxSelect(group.getMaxSelect());
+            groupDTO.setStatus(group.getStatus());
+            groupDTO.setSortOrder(group.getSortOrder());
+            
+            // 规格项列表 (匹配 BcProductSpecOption 实体字段)
+            List<BcProductSpecOption> options = specOptionMap.getOrDefault(group.getId(), Collections.emptyList());
+            List<ProductDetailDTO.SpecOptionDTO> optionDTOs = options.stream().map(option -> {
+                ProductDetailDTO.SpecOptionDTO optionDTO = new ProductDetailDTO.SpecOptionDTO();
+                optionDTO.setId(option.getId());
+                optionDTO.setName(option.getName());
+                optionDTO.setPriceDelta(option.getPriceDelta());
+                optionDTO.setIsDefault(option.getIsDefault());
+                optionDTO.setStatus(option.getStatus());
+                optionDTO.setSortOrder(option.getSortOrder());
+                return optionDTO;
+            }).collect(Collectors.toList());
+            groupDTO.setOptions(optionDTOs);
+            
+            return groupDTO;
+        }).collect(Collectors.toList());
+        dto.setSpecGroups(specGroupDTOs);
+        
+        // 属性组绑定列表 (匹配 BcProductAttrGroupRel 实体字段)
+        List<ProductDetailDTO.AttrGroupBindingDTO> attrGroupBindingDTOs = attrGroupRels.stream().map(rel -> {
+            ProductDetailDTO.AttrGroupBindingDTO bindingDTO = new ProductDetailDTO.AttrGroupBindingDTO();
+            bindingDTO.setGroupId(rel.getAttrGroupId());
+            bindingDTO.setRequired(rel.getRequired());
+            bindingDTO.setMinSelect(rel.getMinSelect());
+            bindingDTO.setMaxSelect(rel.getMaxSelect());
+            bindingDTO.setSortOrder(rel.getSortOrder());
+            bindingDTO.setEnabled(rel.getStatus() == 1); // status: 1=启用, 0=禁用
+            bindingDTO.setDisplayStartAt(rel.getDisplayStartAt());
+            bindingDTO.setDisplayEndAt(rel.getDisplayEndAt());
+            
+            // 属性组基本信息
+            BcProductAttrGroup attrGroup = attrGroupMap.get(rel.getAttrGroupId());
+            if (attrGroup != null) {
+                bindingDTO.setGroupName(attrGroup.getName());
+            }
+            
+            // 属性项列表 (匹配 BcProductAttrOption 实体字段 + 覆盖字段)
+            List<BcProductAttrOption> options = attrOptionMap.getOrDefault(rel.getAttrGroupId(), Collections.emptyList());
+            List<BcProductAttrRel> attrRels = attrRelMap.getOrDefault(rel.getAttrGroupId(), Collections.emptyList());
+            Map<Long, BcProductAttrRel> attrRelByOptionId = attrRels.stream()
+                    .collect(Collectors.toMap(BcProductAttrRel::getAttrOptionId, r -> r, (a, b) -> a));
+            
+            List<ProductDetailDTO.AttrOptionDTO> optionDTOs = options.stream().map(option -> {
+                ProductDetailDTO.AttrOptionDTO optionDTO = new ProductDetailDTO.AttrOptionDTO();
+                optionDTO.setId(option.getId());
+                optionDTO.setName(option.getName());
+                
+                // 应用覆盖字段
+                BcProductAttrRel attrRel = attrRelByOptionId.get(option.getId());
+                if (attrRel != null && attrRel.getPriceDeltaOverride() != null) {
+                    optionDTO.setPriceDelta(attrRel.getPriceDeltaOverride());
+                } else {
+                    optionDTO.setPriceDelta(option.getPriceDelta());
+                }
+                
+                if (attrRel != null && attrRel.getSortOrder() != null) {
+                    optionDTO.setSortOrder(attrRel.getSortOrder());
+                } else {
+                    optionDTO.setSortOrder(option.getSortOrder());
+                }
+                
+                if (attrRel != null && attrRel.getStatus() != null) {
+                    optionDTO.setEnabled(attrRel.getStatus() == 1); // status: 1=启用, 0=禁用
+                } else {
+                    optionDTO.setEnabled(option.getStatus() == 1);
+                }
+                
+                return optionDTO;
+            }).collect(Collectors.toList());
+            bindingDTO.setOptions(optionDTOs);
+            
+            return bindingDTO;
+        }).collect(Collectors.toList());
+        dto.setAttrGroups(attrGroupBindingDTOs);
+        
+        // 小料组绑定列表 (匹配 BcProductAddonGroupRel 实体字段)
+        List<ProductDetailDTO.AddonGroupBindingDTO> addonGroupBindingDTOs = addonGroupRels.stream().map(rel -> {
+            ProductDetailDTO.AddonGroupBindingDTO bindingDTO = new ProductDetailDTO.AddonGroupBindingDTO();
+            bindingDTO.setGroupId(rel.getAddonGroupId());
+            bindingDTO.setRequired(rel.getRequired());
+            bindingDTO.setMinSelect(rel.getMinSelect());
+            bindingDTO.setMaxSelect(rel.getMaxSelect());
+            bindingDTO.setMaxTotal(rel.getMaxTotalQuantity()); // 字段名是 maxTotalQuantity
+            bindingDTO.setSortOrder(rel.getSortOrder());
+            bindingDTO.setEnabled(rel.getStatus() == 1); // status: 1=启用, 0=禁用
+            bindingDTO.setDisplayStartAt(rel.getDisplayStartAt());
+            bindingDTO.setDisplayEndAt(rel.getDisplayEndAt());
+            
+            // 小料组基本信息
+            BcAddonGroup addonGroup = addonGroupMap.get(rel.getAddonGroupId());
+            if (addonGroup != null) {
+                bindingDTO.setGroupName(addonGroup.getName());
+            }
+            
+            // 小料项列表 (匹配 BcAddonItem 实体字段 + 覆盖字段)
+            List<BcAddonItem> items = addonItemMap.getOrDefault(rel.getAddonGroupId(), Collections.emptyList());
+            List<BcProductAddonRel> addonRels = addonRelMap.getOrDefault(rel.getAddonGroupId(), Collections.emptyList());
+            Map<Long, BcProductAddonRel> addonRelByItemId = addonRels.stream()
+                    .collect(Collectors.toMap(BcProductAddonRel::getAddonItemId, r -> r, (a, b) -> a));
+            
+            List<ProductDetailDTO.AddonItemDTO> itemDTOs = items.stream().map(item -> {
+                ProductDetailDTO.AddonItemDTO itemDTO = new ProductDetailDTO.AddonItemDTO();
+                itemDTO.setId(item.getId());
+                itemDTO.setName(item.getName());
+                
+                // 应用覆盖字段
+                BcProductAddonRel addonRel = addonRelByItemId.get(item.getId());
+                if (addonRel != null && addonRel.getPriceOverride() != null) {
+                    itemDTO.setPrice(addonRel.getPriceOverride());
+                } else {
+                    itemDTO.setPrice(item.getPrice());
+                }
+                
+                if (addonRel != null && addonRel.getMaxQuantityOverride() != null) {
+                    itemDTO.setMaxQuantity(addonRel.getMaxQuantityOverride());
+                } else {
+                    itemDTO.setMaxQuantity(item.getMaxQuantity());
+                }
+                
+                if (addonRel != null && addonRel.getSortOrder() != null) {
+                    itemDTO.setSortOrder(addonRel.getSortOrder());
+                } else {
+                    itemDTO.setSortOrder(item.getSortOrder());
+                }
+                
+                if (addonRel != null && addonRel.getStatus() != null) {
+                    itemDTO.setEnabled(addonRel.getStatus() == 1); // status: 1=启用, 0=禁用
+                } else {
+                    itemDTO.setEnabled(item.getStatus() == 1);
+                }
+                
+                return itemDTO;
+            }).collect(Collectors.toList());
+            bindingDTO.setItems(itemDTOs);
+            
+            return bindingDTO;
+        }).collect(Collectors.toList());
+        dto.setAddonGroups(addonGroupBindingDTOs);
+        
+        // 分类绑定列表 (匹配 BcProductCategoryRel 实体字段)
+        List<ProductDetailDTO.CategoryBindingDTO> categoryBindingDTOs = categoryRels.stream().map(rel -> {
+            ProductDetailDTO.CategoryBindingDTO bindingDTO = new ProductDetailDTO.CategoryBindingDTO();
+            bindingDTO.setCategoryId(rel.getCategoryId());
+            bindingDTO.setSortOrder(rel.getSortOrder());
+            
+            // 分类基本信息
+            BcProductCategory category = categoryMap.get(rel.getCategoryId());
+            if (category != null) {
+                bindingDTO.setCategoryName(category.getName());
+            }
+            
+            return bindingDTO;
+        }).collect(Collectors.toList());
+        dto.setCategories(categoryBindingDTOs);
+        
+        return dto;
     }
     
     // ===== 私有方法：插入子表 =====

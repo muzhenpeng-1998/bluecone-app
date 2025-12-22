@@ -29,6 +29,17 @@ public class StoreMenuProductView implements Serializable {
     private String mainImage;
     private List<String> tags;
     private Map<String, Object> productMeta;
+    
+    /**
+     * 门店维度排序值（从 bc_product_store_config.sort_order）
+     * <p>用于分类下商品排序：优先门店排序，其次商品排序，最后 productId</p>
+     */
+    private Integer storeSortOrder;
+    
+    /**
+     * 商品自身排序值（从 bc_product.sort_order）
+     */
+    private Integer productSortOrder;
 
     private List<StoreMenuSkuView> skus;
     

@@ -56,6 +56,10 @@ public class ProductCategoryAdminApplicationService {
     @Nullable
     private MenuSnapshotInvalidationHelper menuSnapshotInvalidationHelper;
     
+    @Autowired(required = false)
+    @Nullable
+    private MenuSnapshotRebuildCoordinator menuSnapshotRebuildCoordinator;
+    
     /**
      * 最大分类层级限制
      */
@@ -134,8 +138,13 @@ public class ProductCategoryAdminApplicationService {
         Long categoryId = category.getId();
         log.info("商品分类创建成功: tenantId={}, categoryId={}, level={}", tenantId, categoryId, level);
         
-        // 5. 失效菜单快照缓存（best-effort）
+        // 5. 失效菜单快照缓存 & 触发重建（best-effort）
         invalidateTenantMenus(tenantId, "product-category:create");
+        
+        // 触发菜单快照重建（分类影响范围大，按租户全量门店重建）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForTenant(tenantId, "category:create");
+        }
         
         return categoryId;
     }
@@ -197,8 +206,13 @@ public class ProductCategoryAdminApplicationService {
         
         log.info("商品分类更新成功: tenantId={}, categoryId={}", tenantId, categoryId);
         
-        // 4. 失效菜单快照缓存（best-effort）
+        // 4. 失效菜单快照缓存 & 触发重建（best-effort）
         invalidateTenantMenus(tenantId, "product-category:update");
+        
+        // 触发菜单快照重建（分类影响范围大，按租户全量门店重建）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForTenant(tenantId, "category:update");
+        }
     }
     
     /**
@@ -312,8 +326,13 @@ public class ProductCategoryAdminApplicationService {
         
         log.info("分类状态修改成功: tenantId={}, categoryId={}, enabled={}", tenantId, categoryId, enabled);
         
-        // 4. 失效菜单快照缓存（best-effort）
+        // 4. 失效菜单快照缓存 & 触发重建（best-effort）
         invalidateTenantMenus(tenantId, "product-category:status");
+        
+        // 触发菜单快照重建（分类影响范围大，按租户全量门店重建）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForTenant(tenantId, "category:changeStatus");
+        }
     }
     
     /**
@@ -365,8 +384,13 @@ public class ProductCategoryAdminApplicationService {
         
         log.info("分类排序调整成功: tenantId={}, count={}", tenantId, items.size());
         
-        // 3. 失效菜单快照缓存（best-effort）
+        // 3. 失效菜单快照缓存 & 触发重建（best-effort）
         invalidateTenantMenus(tenantId, "product-category:reorder");
+        
+        // 触发菜单快照重建（分类影响范围大，按租户全量门店重建）
+        if (menuSnapshotRebuildCoordinator != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForTenant(tenantId, "category:reorder");
+        }
     }
     
     // ===== 私有方法 =====

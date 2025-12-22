@@ -20,6 +20,7 @@ public class StoreMenuCategoryView implements Serializable {
 
     private Long categoryId;
     private String name;
+    private String iconUrl; // 分类图标/图片 URL
     private Integer sortOrder;
     private List<StoreMenuProductView> products;
 }

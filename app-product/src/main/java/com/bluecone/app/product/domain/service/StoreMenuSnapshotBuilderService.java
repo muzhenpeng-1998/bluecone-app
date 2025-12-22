@@ -129,11 +129,19 @@ public class StoreMenuSnapshotBuilderService {
         // 3. 构建分类视图
         Map<Long, StoreMenuCategoryView> categoryViewMap = new HashMap<>();
         
+        // 构建 productId -> storeConfig 映射，用于获取门店排序值
+        Map<Long, BcProductStoreConfig> productStoreConfigMap = storeConfigs.stream()
+                .collect(Collectors.toMap(BcProductStoreConfig::getProductId, cfg -> cfg, (a, b) -> a));
+        
         for (BcProduct product : productMap.values()) {
             // 过滤：商品必须启用且在展示窗口内
             if (!isEnabled(product.getStatus()) || !isInDisplayWindow(product.getDisplayStartAt(), product.getDisplayEndAt(), now)) {
                 continue;
             }
+            
+            // 获取门店配置（用于获取门店排序值）
+            BcProductStoreConfig storeConfig = productStoreConfigMap.get(product.getId());
+            Integer storeSortOrder = storeConfig != null ? storeConfig.getSortOrder() : null;
             
             // 构建商品视图
             StoreMenuProductView productView = buildProductView(
@@ -149,6 +157,7 @@ public class StoreMenuSnapshotBuilderService {
                     addonGroupMap,
                     addonItemMap,
                     addonRelMap.get(product.getId()),
+                    storeSortOrder,
                     now
             );
             
@@ -184,6 +193,7 @@ public class StoreMenuSnapshotBuilderService {
                             id -> StoreMenuCategoryView.builder()
                                     .categoryId(id)
                                     .name(category.getName())
+                                    .iconUrl(category.getIcon()) // 添加分类图标/图片
                                     .sortOrder(category.getSortOrder())
                                     .products(new ArrayList<>())
                                     .build()
@@ -196,7 +206,12 @@ public class StoreMenuSnapshotBuilderService {
         // 4. 排序并返回
         List<StoreMenuCategoryView> sortedCategories = categoryViewMap.values().stream()
                 .peek(cat -> cat.getProducts().sort(
-                        Comparator.comparing(StoreMenuProductView::getProductId)))
+                        // 商品排序：优先门店排序，其次商品排序，最后 productId
+                        Comparator.comparing(StoreMenuProductView::getStoreSortOrder, 
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                                .thenComparing(StoreMenuProductView::getProductSortOrder, 
+                                        Comparator.nullsLast(Comparator.reverseOrder()))
+                                .thenComparing(StoreMenuProductView::getProductId)))
                 .sorted(Comparator.comparing(StoreMenuCategoryView::getSortOrder, Comparator.reverseOrder())
                         .thenComparing(StoreMenuCategoryView::getCategoryId))
                 .collect(Collectors.toList());
@@ -449,6 +464,7 @@ public class StoreMenuSnapshotBuilderService {
             Map<Long, BcAddonGroup> addonGroupMap,
             Map<Long, List<BcAddonItem>> addonItemMap,
             List<BcProductAddonRel> addonRels,
+            Integer storeSortOrder,
             LocalDateTime now
     ) {
         // 构建 SKU 视图
@@ -512,6 +528,8 @@ public class StoreMenuSnapshotBuilderService {
                 .mainImage(product.getMainImage())
                 .tags(Collections.emptyList()) // TODO: 如需标签，从 product.getTags() 获取
                 .productMeta(parseProductMeta(product.getProductMeta()))
+                .storeSortOrder(storeSortOrder) // 门店维度排序值
+                .productSortOrder(product.getSortOrder()) // 商品自身排序值
                 .skus(skuViews)
                 .optionGroups(optionGroups)
                 .build();

@@ -55,6 +55,10 @@ public class AddonAdminApplicationService {
     @Nullable
     private MenuSnapshotInvalidationHelper menuSnapshotInvalidationHelper;
     
+    @Autowired(required = false)
+    @Nullable
+    private MenuSnapshotRebuildCoordinator menuSnapshotRebuildCoordinator;
+    
     // ===== 小料组管理 =====
     
     /**
@@ -555,7 +559,7 @@ public class AddonAdminApplicationService {
     }
     
     /**
-     * 失效租户菜单快照缓存（best-effort）
+     * 失效租户菜单快照缓存 & 触发重建（best-effort）
      */
     private void invalidateTenantMenus(Long tenantId, String reason) {
         if (menuSnapshotInvalidationHelper != null && tenantId != null) {
@@ -565,6 +569,11 @@ public class AddonAdminApplicationService {
                 // best-effort: 不影响主流程
                 log.error("菜单快照缓存失效失败: tenantId={}, reason={}", tenantId, reason, ex);
             }
+        }
+        
+        // 触发菜单快照重建（小料影响范围大，按租户全量门店重建）
+        if (menuSnapshotRebuildCoordinator != null && tenantId != null) {
+            menuSnapshotRebuildCoordinator.afterCommitRebuildForTenant(tenantId, reason);
         }
     }
 }
