@@ -65,5 +65,12 @@ public class StoreProductVisibilityRequest {
      * 定时下架：设置未来时间
      */
     private LocalDateTime displayEndAt;
+    
+    /**
+     * 是否自动重建快照（可选，默认 false）
+     * true=操作后立即重建门店菜单快照
+     * false=仅失效缓存，不重建快照
+     */
+    private Boolean autoRebuildSnapshot;
 }
 

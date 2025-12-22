@@ -91,7 +91,7 @@ public class StoreMenuSnapshotAdminController {
     }
 
     /**
-     * 查询指定门店/渠道/场景的菜单快照。
+     * 查询指定门店/渠道/场景的菜单快照（只读，不触发重建）。
      *
      * @param tenantId   租户ID
      * @param storeId    门店ID
@@ -100,7 +100,7 @@ public class StoreMenuSnapshotAdminController {
      * @return 菜单快照信息
      */
     @GetMapping
-    @Operation(summary = "查询菜单快照", description = "查询指定门店/渠道/场景的菜单快照")
+    @Operation(summary = "查询菜单快照", description = "查询指定门店/渠道/场景的菜单快照（只读）")
     public ApiResponse<StoreMenuSnapshotDTO> getSnapshot(
             @Parameter(description = "租户ID", required = true)
             @RequestParam Long tenantId,
@@ -117,8 +117,9 @@ public class StoreMenuSnapshotAdminController {
         log.info("查询菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}", 
                 tenantId, storeId, channel, orderScene);
 
-        BcStoreMenuSnapshot snapshot = storeMenuSnapshotDomainService.rebuildAndSaveSnapshot(
-                tenantId, storeId, channel, orderScene, null);
+        // Phase 5 修复：GET 不触发重建，只查询现有快照
+        BcStoreMenuSnapshot snapshot = storeMenuSnapshotDomainService.getSnapshot(
+                tenantId, storeId, channel, orderScene);
 
         if (snapshot == null) {
             log.warn("菜单快照不存在: tenantId={}, storeId={}, channel={}, orderScene={}", 

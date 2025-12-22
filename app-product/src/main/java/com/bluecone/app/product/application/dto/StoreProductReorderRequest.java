@@ -47,6 +47,13 @@ public class StoreProductReorderRequest {
     private List<ProductSortItem> products;
     
     /**
+     * 是否自动重建快照（可选，默认 false）
+     * true=操作后立即重建门店菜单快照
+     * false=仅失效缓存，不重建快照
+     */
+    private Boolean autoRebuildSnapshot;
+    
+    /**
      * 商品排序项
      */
     @Data

@@ -131,13 +131,12 @@ public class ProductAggregateAdminApplicationService {
         // ===== 1. 强校验 =====
         validateCreateCommand(command);
         
-        // ===== 2. 生成 ID =====
-        Long productId = idService.nextLong(IdScope.PRODUCT);
+        // ===== 2. 生成 public_id（对外 ID）=====
         String productPublicId = idService.nextPublicId(ResourceType.PRODUCT);
         
-        // ===== 3. 插入 bc_product =====
+        // ===== 3. 插入 bc_product（DB 自增生成 id）=====
         BcProduct product = new BcProduct();
-        product.setId(productId);
+        // 不设置 id，让 DB AUTO 生成
         product.setTenantId(tenantId);
         product.setPublicId(productPublicId);
         product.setProductCode(command.getProductCode());
@@ -149,7 +148,8 @@ public class ProductAggregateAdminApplicationService {
         product.setMediaGallery(command.getMediaGallery() != null ? 
                 String.join(",", command.getMediaGallery()) : null);
         product.setUnit(command.getUnit());
-        product.setStatus(ProductStatus.DRAFT.getCode()); // 默认草稿状态
+        // 根据 publishNow 设置状态
+        product.setStatus(Boolean.TRUE.equals(command.getPublishNow()) ? 1 : 0);
         product.setSortOrder(command.getSortOrder() != null ? command.getSortOrder() : 0);
         product.setCreatedAt(LocalDateTime.now());
         product.setUpdatedAt(LocalDateTime.now());
@@ -158,7 +158,10 @@ public class ProductAggregateAdminApplicationService {
         product.setDeleted(0);
         
         productMapper.insert(product);
-        log.info("商品基本信息已插入: productId={}, publicId={}", productId, productPublicId);
+        
+        // insert 后获取 DB 自增的 id
+        Long productId = product.getId();
+        log.info("商品基本信息已插入: productId={}, publicId={}, status={}", productId, productPublicId, product.getStatus());
         
         // ===== 4. 插入 bc_product_sku =====
         if (command.getSkus() != null && !command.getSkus().isEmpty()) {
@@ -363,17 +366,20 @@ public class ProductAggregateAdminApplicationService {
     // ===== 私有方法：插入子表 =====
     
     /**
-     * 插入 SKU 列表
+     * 插入 SKU 列表（修复：DB AUTO 生成 id + 根据 publishNow 设置 status + 序列化 specCombination）
      */
     private void insertSkus(Long tenantId, Long productId, 
                            List<CreateProductAggregateCommand.SkuRequest> skuRequests, 
                            Long operatorId) {
+        // 获取 product 的 status 来决定 SKU 的 status
+        BcProduct product = productMapper.selectById(productId);
+        int skuStatus = (product != null && product.getStatus() != null && product.getStatus() == 1) ? 1 : 0;
+        
         for (CreateProductAggregateCommand.SkuRequest skuReq : skuRequests) {
-            Long skuId = idService.nextLong(IdScope.SKU);
             String skuPublicId = idService.nextPublicId(ResourceType.SKU);
             
             BcProductSku sku = new BcProductSku();
-            sku.setId(skuId);
+            // 不设置 id，让 DB AUTO 生成
             sku.setTenantId(tenantId);
             sku.setPublicId(skuPublicId);
             sku.setProductId(productId);
@@ -384,28 +390,39 @@ public class ProductAggregateAdminApplicationService {
             sku.setCostPrice(skuReq.getCostPrice());
             sku.setBarcode(skuReq.getBarcode());
             sku.setIsDefault(skuReq.isDefaultSku());
-            sku.setStatus(ProductStatus.DRAFT.getCode());
+            sku.setStatus(skuStatus); // 跟随 product 的 status
             sku.setSortOrder(skuReq.getSortOrder() != null ? skuReq.getSortOrder() : 0);
+            
+            // 序列化 specCombination 到 JSON
+            if (skuReq.getSpecCombination() != null && !skuReq.getSpecCombination().isEmpty()) {
+                try {
+                    String specCombinationJson = new com.fasterxml.jackson.databind.ObjectMapper()
+                            .writeValueAsString(skuReq.getSpecCombination());
+                    sku.setSpecCombination(specCombinationJson);
+                } catch (Exception e) {
+                    log.error("序列化 specCombination 失败: skuName={}", skuReq.getName(), e);
+                    sku.setSpecCombination(null);
+                }
+            }
+            
             sku.setCreatedAt(LocalDateTime.now());
             sku.setUpdatedAt(LocalDateTime.now());
             sku.setDeleted(0);
             
             skuMapper.insert(sku);
         }
-        log.info("SKU已插入: productId={}, count={}", productId, skuRequests.size());
+        log.info("SKU已插入: productId={}, count={}, status={}", productId, skuRequests.size(), skuStatus);
     }
     
     /**
-     * 插入规格组和规格选项
+     * 插入规格组和规格选项（修复：DB AUTO 生成 id）
      */
     private void insertSpecGroups(Long tenantId, Long productId,
                                   List<CreateProductAggregateCommand.SpecGroupRequest> specGroupRequests,
                                   Long operatorId) {
         for (CreateProductAggregateCommand.SpecGroupRequest groupReq : specGroupRequests) {
-            Long groupId = idService.nextLong(IdScope.PRODUCT);
-            
             BcProductSpecGroup group = new BcProductSpecGroup();
-            group.setId(groupId);
+            // 不设置 id，让 DB AUTO 生成
             group.setTenantId(tenantId);
             group.setProductId(productId);
             group.setName(groupReq.getName());
@@ -419,13 +436,14 @@ public class ProductAggregateAdminApplicationService {
             
             specGroupMapper.insert(group);
             
+            // insert 后获取 DB 自增的 id
+            Long groupId = group.getId();
+            
             // 插入规格选项
             if (groupReq.getOptions() != null && !groupReq.getOptions().isEmpty()) {
                 for (CreateProductAggregateCommand.SpecOptionRequest optionReq : groupReq.getOptions()) {
-                    Long optionId = idService.nextLong(IdScope.PRODUCT);
-                    
                     BcProductSpecOption option = new BcProductSpecOption();
-                    option.setId(optionId);
+                    // 不设置 id，让 DB AUTO 生成
                     option.setTenantId(tenantId);
                     option.setProductId(productId);
                     option.setSpecGroupId(groupId);
@@ -445,16 +463,14 @@ public class ProductAggregateAdminApplicationService {
     }
     
     /**
-     * 插入属性组绑定和属性选项覆盖
+     * 插入属性组绑定和属性选项覆盖（修复：DB AUTO 生成 id）
      */
     private void insertAttrGroupBindings(Long tenantId, Long productId,
                                         List<CreateProductAggregateCommand.AttrGroupBinding> attrGroupBindings,
                                         Long operatorId) {
         for (CreateProductAggregateCommand.AttrGroupBinding binding : attrGroupBindings) {
-            Long relId = idService.nextLong(IdScope.PRODUCT);
-            
             BcProductAttrGroupRel groupRel = new BcProductAttrGroupRel();
-            groupRel.setId(relId);
+            // 不设置 id，让 DB AUTO 生成
             groupRel.setTenantId(tenantId);
             groupRel.setProductId(productId);
             groupRel.setAttrGroupId(binding.getGroupId());
@@ -474,10 +490,8 @@ public class ProductAggregateAdminApplicationService {
             // 插入属性选项覆盖
             if (binding.getOptionOverrides() != null && !binding.getOptionOverrides().isEmpty()) {
                 for (CreateProductAggregateCommand.AttrOptionOverride override : binding.getOptionOverrides()) {
-                    Long overrideId = idService.nextLong(IdScope.PRODUCT);
-                    
                     BcProductAttrRel attrRel = new BcProductAttrRel();
-                    attrRel.setId(overrideId);
+                    // 不设置 id，让 DB AUTO 生成
                     attrRel.setTenantId(tenantId);
                     attrRel.setProductId(productId);
                     attrRel.setAttrGroupId(binding.getGroupId());
@@ -497,16 +511,14 @@ public class ProductAggregateAdminApplicationService {
     }
     
     /**
-     * 插入小料组绑定和小料项覆盖
+     * 插入小料组绑定和小料项覆盖（修复：DB AUTO 生成 id）
      */
     private void insertAddonGroupBindings(Long tenantId, Long productId,
                                          List<CreateProductAggregateCommand.AddonGroupBinding> addonGroupBindings,
                                          Long operatorId) {
         for (CreateProductAggregateCommand.AddonGroupBinding binding : addonGroupBindings) {
-            Long relId = idService.nextLong(IdScope.PRODUCT);
-            
             BcProductAddonGroupRel groupRel = new BcProductAddonGroupRel();
-            groupRel.setId(relId);
+            // 不设置 id，让 DB AUTO 生成
             groupRel.setTenantId(tenantId);
             groupRel.setProductId(productId);
             groupRel.setAddonGroupId(binding.getGroupId());
@@ -527,10 +539,8 @@ public class ProductAggregateAdminApplicationService {
             // 插入小料项覆盖
             if (binding.getItemOverrides() != null && !binding.getItemOverrides().isEmpty()) {
                 for (CreateProductAggregateCommand.AddonItemOverride override : binding.getItemOverrides()) {
-                    Long overrideId = idService.nextLong(IdScope.PRODUCT);
-                    
                     BcProductAddonRel addonRel = new BcProductAddonRel();
-                    addonRel.setId(overrideId);
+                    // 不设置 id，让 DB AUTO 生成
                     addonRel.setTenantId(tenantId);
                     addonRel.setProductId(productId);
                     addonRel.setAddonGroupId(binding.getGroupId());
@@ -551,16 +561,14 @@ public class ProductAggregateAdminApplicationService {
     }
     
     /**
-     * 插入分类绑定
+     * 插入分类绑定（修复：DB AUTO 生成 id）
      */
     private void insertCategoryBindings(Long tenantId, Long productId, 
                                        List<Long> categoryIds, 
                                        Long operatorId) {
         for (Long categoryId : categoryIds) {
-            Long relId = idService.nextLong(IdScope.PRODUCT);
-            
             BcProductCategoryRel categoryRel = new BcProductCategoryRel();
-            categoryRel.setId(relId);
+            // 不设置 id，让 DB AUTO 生成
             categoryRel.setTenantId(tenantId);
             categoryRel.setCategoryId(categoryId);
             categoryRel.setProductId(productId);
@@ -576,17 +584,16 @@ public class ProductAggregateAdminApplicationService {
     }
     
     /**
-     * 插入门店配置（自动上架）
+     * 插入门店配置（自动上架）（修复：DB AUTO 生成 id）
      * 
      * <p>Prompt 06: 创建后立即上架
      */
     private void insertStoreConfig(Long tenantId, Long storeId, Long productId, 
                                    String channel, Long operatorId) {
-        Long configId = idService.nextLong(IdScope.PRODUCT);
         String channelCode = channel != null ? channel.toUpperCase() : "ALL";
         
         BcProductStoreConfig config = new BcProductStoreConfig();
-        config.setId(configId);
+        // 不设置 id，让 DB AUTO 生成
         config.setTenantId(tenantId);
         config.setStoreId(storeId);
         config.setProductId(productId);

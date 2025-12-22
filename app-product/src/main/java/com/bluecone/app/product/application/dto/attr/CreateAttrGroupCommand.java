@@ -25,6 +25,21 @@ public class CreateAttrGroupCommand {
     private String title;
     
     /**
+     * 选择类型（1=单选，2=多选）
+     */
+    private Integer selectType;
+    
+    /**
+     * 是否必选
+     */
+    private Boolean required;
+    
+    /**
+     * 最大选择数量
+     */
+    private Integer maxSelect;
+    
+    /**
      * 排序值（数值越大越靠前）
      */
     private Integer sortOrder;

@@ -128,6 +128,13 @@ public class CreateProductAggregateCommand {
      */
     private String channel;
     
+    /**
+     * 是否立即发布（可选，默认 false）
+     * <p>true: product.status=1, sku.status=1（立即可见）
+     * <p>false: product.status=0, sku.status=0（草稿状态）
+     */
+    private Boolean publishNow;
+    
     // ===== 内部类：SKU 请求 =====
     
     @Data

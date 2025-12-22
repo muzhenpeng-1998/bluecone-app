@@ -61,6 +61,10 @@ public class StoreProductAdminApplicationService {
     @Nullable
     private com.bluecone.app.product.infrastructure.cache.MenuSnapshotInvalidationHelper menuSnapshotInvalidationHelper;
     
+    @Autowired(required = false)
+    @Nullable
+    private com.bluecone.app.product.domain.service.StoreMenuSnapshotDomainService storeMenuSnapshotDomainService;
+    
     /**
      * 设置商品在门店的可见性（上架/下架）
      * 
@@ -137,8 +141,13 @@ public class StoreProductAdminApplicationService {
         // 4. afterCommit：发布缓存失效事件
         publishStoreMenuSnapshotInvalidation(tenantId, storeId);
         
-        log.info("商品可见性设置成功: tenantId={}, storeId={}, productId={}, visible={}", 
-                tenantId, storeId, productId, request.getVisible());
+        // 5. 可选：自动重建快照
+        if (Boolean.TRUE.equals(request.getAutoRebuildSnapshot())) {
+            rebuildStoreMenuSnapshot(tenantId, storeId, channel);
+        }
+        
+        log.info("商品可见性设置成功: tenantId={}, storeId={}, productId={}, visible={}, autoRebuild={}", 
+                tenantId, storeId, productId, request.getVisible(), request.getAutoRebuildSnapshot());
     }
     
     /**
@@ -199,8 +208,13 @@ public class StoreProductAdminApplicationService {
         // 2. afterCommit：发布缓存失效事件
         publishStoreMenuSnapshotInvalidation(tenantId, storeId);
         
-        log.info("商品排序调整成功: tenantId={}, storeId={}, count={}", 
-                tenantId, storeId, request.getProducts().size());
+        // 3. 可选：自动重建快照
+        if (Boolean.TRUE.equals(request.getAutoRebuildSnapshot())) {
+            rebuildStoreMenuSnapshot(tenantId, storeId, channel);
+        }
+        
+        log.info("商品排序调整成功: tenantId={}, storeId={}, count={}, autoRebuild={}", 
+                tenantId, storeId, request.getProducts().size(), request.getAutoRebuildSnapshot());
     }
     
     /**
@@ -216,6 +230,36 @@ public class StoreProductAdminApplicationService {
         
         // Prompt 09: 门店上架/下架/排序，按门店失效（细粒度）
         menuSnapshotInvalidationHelper.invalidateStoreMenu(tenantId, storeId, "门店商品配置变更");
+    }
+    
+    /**
+     * 重建门店菜单快照（可选功能，Phase 4 增强）
+     * <p>
+     * 立即重建指定门店/渠道的菜单快照
+     */
+    private void rebuildStoreMenuSnapshot(Long tenantId, Long storeId, String channel) {
+        if (storeMenuSnapshotDomainService == null) {
+            log.warn("StoreMenuSnapshotDomainService 未注入，跳过快照重建");
+            return;
+        }
+        
+        try {
+            String channelCode = channel != null ? channel.toUpperCase() : "ALL";
+            String orderScene = "DEFAULT"; // 默认场景
+            LocalDateTime now = LocalDateTime.now();
+            
+            log.info("开始重建门店菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}", 
+                    tenantId, storeId, channelCode, orderScene);
+            
+            storeMenuSnapshotDomainService.rebuildAndSaveSnapshot(tenantId, storeId, channelCode, orderScene, now);
+            
+            log.info("门店菜单快照重建成功: tenantId={}, storeId={}, channel={}", 
+                    tenantId, storeId, channelCode);
+        } catch (Exception ex) {
+            // best-effort: 不影响主流程
+            log.error("门店菜单快照重建失败: tenantId={}, storeId={}, channel={}", 
+                    tenantId, storeId, channel, ex);
+        }
     }
 }
 

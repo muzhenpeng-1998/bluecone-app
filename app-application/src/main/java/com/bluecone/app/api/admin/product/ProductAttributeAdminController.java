@@ -69,9 +69,7 @@ import java.util.List;
 public class ProductAttributeAdminController {
     
     private final AuditLogService auditLogService;
-    
-    // TODO: 注入属性应用服务（待实现）
-    // private final ProductAttributeApplicationService attributeApplicationService;
+    private final com.bluecone.app.product.application.service.ProductAttributeAdminApplicationService attributeAdminApplicationService;
     
     // ===== 属性组管理 =====
     
@@ -93,9 +91,17 @@ public class ProductAttributeAdminController {
         
         log.info("创建属性组: tenantId={}, request={}", tenantId, request);
         
-        // TODO: 调用应用服务创建属性组
-        // Long groupId = attributeApplicationService.createAttrGroup(tenantId, request, operatorId);
-        Long groupId = 1L; // 临时返回
+        // 转换为命令并调用应用服务
+        com.bluecone.app.product.application.dto.attr.CreateAttrGroupCommand command = 
+                com.bluecone.app.product.application.dto.attr.CreateAttrGroupCommand.builder()
+                .title(request.getTitle())
+                .sortOrder(request.getSortOrder())
+                .enabled(request.getEnabled())
+                .displayStartAt(request.getDisplayStartAt())
+                .displayEndAt(request.getDisplayEndAt())
+                .build();
+        
+        Long groupId = attributeAdminApplicationService.createAttrGroup(tenantId, command, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -130,8 +136,17 @@ public class ProductAttributeAdminController {
         
         log.info("更新属性组: tenantId={}, groupId={}, request={}", tenantId, groupId, request);
         
-        // TODO: 调用应用服务更新属性组
-        // attributeApplicationService.updateAttrGroup(tenantId, groupId, request, operatorId);
+        // 转换为命令并调用应用服务
+        com.bluecone.app.product.application.dto.attr.UpdateAttrGroupCommand command = 
+                com.bluecone.app.product.application.dto.attr.UpdateAttrGroupCommand.builder()
+                .title(request.getTitle())
+                .sortOrder(request.getSortOrder())
+                .enabled(request.getEnabled())
+                .displayStartAt(request.getDisplayStartAt())
+                .displayEndAt(request.getDisplayEndAt())
+                .build();
+        
+        attributeAdminApplicationService.updateAttrGroup(tenantId, groupId, command, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -163,8 +178,8 @@ public class ProductAttributeAdminController {
         
         log.info("删除属性组: tenantId={}, groupId={}", tenantId, groupId);
         
-        // TODO: 调用应用服务删除属性组
-        // attributeApplicationService.deleteAttrGroup(tenantId, groupId, operatorId);
+        // 调用应用服务修改状态为禁用（软删除）
+        attributeAdminApplicationService.changeAttrGroupStatus(tenantId, groupId, false, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -194,9 +209,23 @@ public class ProductAttributeAdminController {
         
         log.info("查询属性组列表: tenantId={}, includeDisabled={}", tenantId, includeDisabled);
         
-        // TODO: 调用应用服务查询属性组列表
-        // List<AttrGroupView> groups = attributeApplicationService.listAttrGroups(tenantId, includeDisabled);
-        List<AttrGroupView> groups = List.of(); // 临时返回空列表
+        // 调用应用服务查询属性组列表
+        List<com.bluecone.app.product.application.dto.attr.AttrGroupAdminView> serviceViews = 
+                attributeAdminApplicationService.listAttrGroups(tenantId, includeDisabled, false, java.time.LocalDateTime.now());
+        
+        // 转换为 Controller 的 DTO
+        List<AttrGroupView> groups = serviceViews.stream()
+                .map(v -> AttrGroupView.builder()
+                        .id(v.getId())
+                        .title(v.getTitle())
+                        .sortOrder(v.getSortOrder())
+                        .enabled(v.getEnabled())
+                        .displayStartAt(v.getDisplayStartAt())
+                        .displayEndAt(v.getDisplayEndAt())
+                        .createdAt(v.getCreatedAt())
+                        .updatedAt(v.getUpdatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
         
         log.info("查询属性组列表成功: tenantId={}, count={}", tenantId, groups.size());
         return ApiResponse.ok(groups);
@@ -224,9 +253,18 @@ public class ProductAttributeAdminController {
         
         log.info("创建属性选项: tenantId={}, groupId={}, request={}", tenantId, groupId, request);
         
-        // TODO: 调用应用服务创建属性选项
-        // Long optionId = attributeApplicationService.createAttrOption(tenantId, groupId, request, operatorId);
-        Long optionId = 1L; // 临时返回
+        // 转换为命令并调用应用服务
+        com.bluecone.app.product.application.dto.attr.CreateAttrOptionCommand command = 
+                com.bluecone.app.product.application.dto.attr.CreateAttrOptionCommand.builder()
+                .title(request.getTitle())
+                .priceDelta(request.getPriceDelta())
+                .sortOrder(request.getSortOrder())
+                .enabled(request.getEnabled())
+                .displayStartAt(request.getDisplayStartAt())
+                .displayEndAt(request.getDisplayEndAt())
+                .build();
+        
+        Long optionId = attributeAdminApplicationService.createAttrOption(tenantId, groupId, command, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -264,8 +302,18 @@ public class ProductAttributeAdminController {
         log.info("更新属性选项: tenantId={}, groupId={}, optionId={}, request={}", 
                 tenantId, groupId, id, request);
         
-        // TODO: 调用应用服务更新属性选项
-        // attributeApplicationService.updateAttrOption(tenantId, groupId, id, request, operatorId);
+        // 转换为命令并调用应用服务
+        com.bluecone.app.product.application.dto.attr.UpdateAttrOptionCommand command = 
+                com.bluecone.app.product.application.dto.attr.UpdateAttrOptionCommand.builder()
+                .title(request.getTitle())
+                .priceDelta(request.getPriceDelta())
+                .sortOrder(request.getSortOrder())
+                .enabled(request.getEnabled())
+                .displayStartAt(request.getDisplayStartAt())
+                .displayEndAt(request.getDisplayEndAt())
+                .build();
+        
+        attributeAdminApplicationService.updateAttrOption(tenantId, groupId, id, command, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -300,8 +348,8 @@ public class ProductAttributeAdminController {
         
         log.info("删除属性选项: tenantId={}, groupId={}, optionId={}", tenantId, groupId, id);
         
-        // TODO: 调用应用服务删除属性选项
-        // attributeApplicationService.deleteAttrOption(tenantId, groupId, id, operatorId);
+        // 调用应用服务修改状态为禁用（软删除）
+        attributeAdminApplicationService.changeAttrOptionStatus(tenantId, groupId, id, false, operatorId);
         
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
@@ -334,9 +382,24 @@ public class ProductAttributeAdminController {
         log.info("查询属性选项列表: tenantId={}, groupId={}, includeDisabled={}", 
                 tenantId, groupId, includeDisabled);
         
-        // TODO: 调用应用服务查询属性选项列表
-        // List<AttrOptionView> options = attributeApplicationService.listAttrOptions(tenantId, groupId, includeDisabled);
-        List<AttrOptionView> options = List.of(); // 临时返回空列表
+        // 调用应用服务查询属性选项列表
+        List<com.bluecone.app.product.application.dto.attr.AttrOptionAdminView> serviceViews = 
+                attributeAdminApplicationService.listAttrOptions(tenantId, groupId, includeDisabled, false, java.time.LocalDateTime.now());
+        
+        // 转换为 Controller 的 DTO
+        List<AttrOptionView> options = serviceViews.stream()
+                .map(v -> AttrOptionView.builder()
+                        .id(v.getId())
+                        .title(v.getTitle())
+                        .priceDelta(v.getPriceDelta())
+                        .sortOrder(v.getSortOrder())
+                        .enabled(v.getEnabled())
+                        .displayStartAt(v.getDisplayStartAt())
+                        .displayEndAt(v.getDisplayEndAt())
+                        .createdAt(v.getCreatedAt())
+                        .updatedAt(v.getUpdatedAt())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
         
         log.info("查询属性选项列表成功: tenantId={}, groupId={}, count={}", tenantId, groupId, options.size());
         return ApiResponse.ok(options);

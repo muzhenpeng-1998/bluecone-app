@@ -31,6 +31,10 @@ public class StoreMenuSnapshotDomainService {
     private final StoreMenuSnapshotBuilderService builderService;
     private final StoreMenuSnapshotRepository storeMenuSnapshotRepository;
     private final CacheEpochProvider epochProvider;
+    
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    @org.springframework.lang.Nullable
+    private com.bluecone.app.product.infrastructure.cache.MenuSnapshotInvalidationHelper menuSnapshotInvalidationHelper;
 
     /**
      * 重建并保存指定门店/渠道/场景的菜单快照。
@@ -85,10 +89,47 @@ public class StoreMenuSnapshotDomainService {
             }
         }
         
+        // Phase 5 增强：同时使用 MenuSnapshotInvalidationHelper 失效门店级缓存
+        if (menuSnapshotInvalidationHelper != null) {
+            try {
+                menuSnapshotInvalidationHelper.invalidateStoreMenu(tenantId, storeId, "snapshot rebuilt");
+                log.info("门店菜单缓存已失效（MenuSnapshotInvalidationHelper）: tenantId={}, storeId={}", 
+                        tenantId, storeId);
+            } catch (Exception ex) {
+                log.error("门店菜单缓存失效失败: tenantId={}, storeId={}", tenantId, storeId, ex);
+                // best-effort: 不影响主流程
+            }
+        }
+        
         log.info("菜单快照已重建并保存, tenantId={}, storeId={}, channel={}, scene={}, version={}", 
                 tenantId, storeId, channel, orderScene, latest.getVersion());
         
         return latest;
+    }
+    
+    /**
+     * 查询指定门店/渠道/场景的菜单快照（只读，不触发重建）。
+     * <p>
+     * Phase 5 新增：GET 语义修正，只查询现有快照，不执行重建。
+     *
+     * @param tenantId   租户ID
+     * @param storeId    门店ID
+     * @param channel    渠道（ALL, DINE_IN, TAKEAWAY, DELIVERY, PICKUP）
+     * @param orderScene 订单场景（DEFAULT, BREAKFAST, LUNCH, DINNER, NIGHT）
+     * @return 快照实体，如果不存在返回 null
+     */
+    public BcStoreMenuSnapshot getSnapshot(
+            Long tenantId, 
+            Long storeId, 
+            String channel, 
+            String orderScene
+    ) {
+        log.info("查询菜单快照（只读）: tenantId={}, storeId={}, channel={}, orderScene={}", 
+                tenantId, storeId, channel, orderScene);
+        
+        return storeMenuSnapshotRepository
+                .findByTenantAndStoreAndChannelAndScene(tenantId, storeId, channel, orderScene)
+                .orElse(null);
     }
 
     /**
