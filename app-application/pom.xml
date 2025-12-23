@@ -105,10 +105,11 @@
         <dependency>
             <groupId>com.bluecone</groupId>
             <artifactId>app-wallet</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bluecone</groupId>
-            <artifactId>app-growth</artifactId>
+            <artifactId>app-notify</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -118,7 +119,7 @@
         </dependency>
         <dependency>
             <groupId>com.bluecone</groupId>
-            <artifactId>app-notify</artifactId>
+            <artifactId>app-wechat</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -146,15 +147,6 @@
             <artifactId>logstash-logback-encoder</artifactId>
             <version>7.4</version>
         </dependency>
-        <!-- Springdoc OpenAPI for API documentation -->
-        <!-- Temporarily disabled due to compatibility issue with Spring Boot 3.2.5 -->
-        <!-- TODO: Upgrade to Springdoc 2.8.1+ or Spring Boot 3.3+ to re-enable -->
-        <!--
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-        </dependency>
-        -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

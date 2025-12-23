@@ -9,17 +9,9 @@ import org.springframework.stereotype.Component;
  *
  * TODO: 后续使用 WebClient 或 RestTemplate 实现真实 HTTP 调用，
  * 并通过配置切换替代 Stub 实现。
- */
-/**
- * 微信开放平台 HTTP 客户端正式实现（骨架）。
- *
- * TODO: 后续使用 WebClient 或 RestTemplate 实现真实 HTTP 调用，
- * 并通过配置切换替代 Stub 实现。
  * 
- * 说明：此实现仅在非 local/dev/stub-wechat profile 下激活，避免与 Stub 实现冲突。
+ * 注意：此类不再使用 @Component 注解，而是由 WeChatClientConfiguration 根据配置创建 bean。
  */
-@Component
-@Profile("!local & !dev & !stub-wechat")
 public class WeChatOpenPlatformHttpClient implements WeChatOpenPlatformClient {
 
     @Override

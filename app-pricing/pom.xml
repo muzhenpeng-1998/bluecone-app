@@ -46,7 +46,6 @@
             <groupId>com.bluecone</groupId>
             <artifactId>app-campaign-api</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

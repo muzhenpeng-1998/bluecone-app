@@ -1,11 +1,10 @@
-package com.bluecone.app.infra.wechat.openplatform.mapper;
+package com.bluecone.app.infra.wechat.openplatform;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.bluecone.app.infra.wechat.openplatform.WechatComponentCredentialDO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * bc_wechat_component_credential 表对应的 Mapper。
+ * 微信第三方平台凭证 Mapper。
  */
 @Mapper
 public interface WechatComponentCredentialMapper extends BaseMapper<WechatComponentCredentialDO> {

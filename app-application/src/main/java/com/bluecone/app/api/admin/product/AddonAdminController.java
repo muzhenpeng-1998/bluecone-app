@@ -3,6 +3,7 @@ package com.bluecone.app.api.admin.product;
 import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.infra.admin.service.AuditLogService;
+import com.bluecone.app.product.application.service.AddonAdminApplicationService;
 import com.bluecone.app.security.admin.RequireAdminPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,7 +25,7 @@ import java.util.List;
 
 /**
  * 小料素材库管理后台接口
- * 
+ *
  * <h3>📋 职责范围：</h3>
  * <ul>
  *   <li>小料组的创建、修改、删除、查询</li>
@@ -32,10 +33,10 @@ import java.util.List;
  *   <li>小料组和小料项的排序管理</li>
  *   <li>小料的定时展示配置</li>
  * </ul>
- * 
+ *
  * <h3>💡 设计说明：</h3>
  * <p>小料素材库是租户级别的可复用资源，商品可以通过绑定关系引用小料组，并在商品级别覆盖小料的规则和价格。</p>
- * 
+ *
  * <h3>🔐 权限要求：</h3>
  * <ul>
  *   <li><b>addon:view</b> - 查看小料</li>
@@ -43,20 +44,20 @@ import java.util.List;
  *   <li><b>addon:edit</b> - 编辑小料</li>
  *   <li><b>addon:delete</b> - 删除小料</li>
  * </ul>
- * 
+ *
  * <h3>📍 API 路径规范：</h3>
  * <pre>
  * POST   /api/admin/addon-groups                       - 创建小料组
  * PUT    /api/admin/addon-groups/{groupId}             - 更新小料组
  * DELETE /api/admin/addon-groups/{groupId}             - 删除小料组
  * GET    /api/admin/addon-groups                       - 查询小料组列表
- * 
+ *
  * POST   /api/admin/addon-groups/{groupId}/items       - 创建小料项
  * PUT    /api/admin/addon-groups/{groupId}/items/{id}  - 更新小料项
  * DELETE /api/admin/addon-groups/{groupId}/items/{id}  - 删除小料项
  * GET    /api/admin/addon-groups/{groupId}/items       - 查询小料项列表
  * </pre>
- * 
+ *
  * @author BlueCone Team
  * @since 1.0.0
  */
@@ -66,17 +67,17 @@ import java.util.List;
 @RequestMapping("/api/admin/addon-groups")
 @RequiredArgsConstructor
 public class AddonAdminController {
-    
+
     private final AuditLogService auditLogService;
-    private final com.bluecone.app.product.application.service.AddonAdminApplicationService addonAdminApplicationService;
-    
+    private final AddonAdminApplicationService addonAdminApplicationService;
+
     // ===== 小料组管理 =====
-    
+
     /**
      * 创建小料组
-     * 
+     *
      * <p>创建新的小料组，用于组织和管理小料项。
-     * 
+     *
      * @param request 创建请求
      * @return 创建的小料组ID
      */
@@ -87,11 +88,11 @@ public class AddonAdminController {
             @Valid @RequestBody CreateAddonGroupRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("创建小料组: tenantId={}, request={}", tenantId, request);
-        
+
         // 转换为命令并调用应用服务
-        com.bluecone.app.product.application.dto.addon.CreateAddonGroupCommand command = 
+        com.bluecone.app.product.application.dto.addon.CreateAddonGroupCommand command =
                 com.bluecone.app.product.application.dto.addon.CreateAddonGroupCommand.builder()
                 .title(request.getTitle())
                 .sortOrder(request.getSortOrder())
@@ -99,9 +100,9 @@ public class AddonAdminController {
                 .displayStartAt(request.getDisplayStartAt())
                 .displayEndAt(request.getDisplayEndAt())
                 .build();
-        
+
         Long groupId = addonAdminApplicationService.createAddonGroup(tenantId, command, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("CREATE")
@@ -110,16 +111,16 @@ public class AddonAdminController {
                 .resourceName(request.getTitle())
                 .operationDesc("创建小料组")
                 .dataAfter(request));
-        
+
         log.info("小料组创建成功: tenantId={}, groupId={}", tenantId, groupId);
         return ApiResponse.ok(new CreateAddonGroupResponse(groupId));
     }
-    
+
     /**
      * 更新小料组
-     * 
+     *
      * <p>更新小料组的基本信息。
-     * 
+     *
      * @param groupId 小料组ID
      * @param request 更新请求
      * @return 成功响应
@@ -132,11 +133,11 @@ public class AddonAdminController {
             @Valid @RequestBody UpdateAddonGroupRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("更新小料组: tenantId={}, groupId={}, request={}", tenantId, groupId, request);
-        
+
         // 转换为命令并调用应用服务
-        com.bluecone.app.product.application.dto.addon.UpdateAddonGroupCommand command = 
+        com.bluecone.app.product.application.dto.addon.UpdateAddonGroupCommand command =
                 com.bluecone.app.product.application.dto.addon.UpdateAddonGroupCommand.builder()
                 .title(request.getTitle())
                 .sortOrder(request.getSortOrder())
@@ -144,9 +145,9 @@ public class AddonAdminController {
                 .displayStartAt(request.getDisplayStartAt())
                 .displayEndAt(request.getDisplayEndAt())
                 .build();
-        
+
         addonAdminApplicationService.updateAddonGroup(tenantId, groupId, command, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("UPDATE")
@@ -155,16 +156,16 @@ public class AddonAdminController {
                 .resourceName(request.getTitle())
                 .operationDesc("更新小料组")
                 .dataAfter(request));
-        
+
         log.info("小料组更新成功: tenantId={}, groupId={}", tenantId, groupId);
         return ApiResponse.ok();
     }
-    
+
     /**
      * 删除小料组
-     * 
+     *
      * <p>删除小料组（软删除），同时会删除该组下的所有小料项。
-     * 
+     *
      * @param groupId 小料组ID
      * @return 成功响应
      */
@@ -174,28 +175,28 @@ public class AddonAdminController {
     public ApiResponse<Void> deleteAddonGroup(@PathVariable Long groupId) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("删除小料组: tenantId={}, groupId={}", tenantId, groupId);
-        
+
         // 调用应用服务修改状态为禁用（软删除）
         addonAdminApplicationService.changeAddonGroupStatus(tenantId, groupId, false, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("DELETE")
                 .resourceType("ADDON_GROUP")
                 .resourceId(groupId)
                 .operationDesc("删除小料组"));
-        
+
         log.info("小料组删除成功: tenantId={}, groupId={}", tenantId, groupId);
         return ApiResponse.ok();
     }
-    
+
     /**
      * 查询小料组列表
-     * 
+     *
      * <p>查询小料组列表，支持按启用状态筛选。
-     * 
+     *
      * @param includeDisabled 是否包含禁用的小料组（默认false）
      * @return 小料组列表
      */
@@ -205,13 +206,13 @@ public class AddonAdminController {
     public ApiResponse<List<AddonGroupView>> listAddonGroups(
             @RequestParam(defaultValue = "false") Boolean includeDisabled) {
         Long tenantId = requireTenantId();
-        
+
         log.info("查询小料组列表: tenantId={}, includeDisabled={}", tenantId, includeDisabled);
-        
+
         // 调用应用服务查询小料组列表
-        List<com.bluecone.app.product.application.dto.addon.AddonGroupAdminView> serviceViews = 
+        List<com.bluecone.app.product.application.dto.addon.AddonGroupAdminView> serviceViews =
                 addonAdminApplicationService.listAddonGroups(tenantId, includeDisabled, false, java.time.LocalDateTime.now());
-        
+
         // 转换为 Controller 的 DTO
         List<AddonGroupView> groups = serviceViews.stream()
                 .map(v -> AddonGroupView.builder()
@@ -225,18 +226,18 @@ public class AddonAdminController {
                         .updatedAt(v.getUpdatedAt())
                         .build())
                 .collect(java.util.stream.Collectors.toList());
-        
+
         log.info("查询小料组列表成功: tenantId={}, count={}", tenantId, groups.size());
         return ApiResponse.ok(groups);
     }
-    
+
     // ===== 小料项管理 =====
-    
+
     /**
      * 创建小料项
-     * 
+     *
      * <p>在指定小料组下创建新的小料项。
-     * 
+     *
      * @param groupId 小料组ID
      * @param request 创建请求
      * @return 创建的小料项ID
@@ -249,11 +250,11 @@ public class AddonAdminController {
             @Valid @RequestBody CreateAddonItemRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("创建小料项: tenantId={}, groupId={}, request={}", tenantId, groupId, request);
-        
+
         // 转换为命令并调用应用服务
-        com.bluecone.app.product.application.dto.addon.CreateAddonItemCommand command = 
+        com.bluecone.app.product.application.dto.addon.CreateAddonItemCommand command =
                 com.bluecone.app.product.application.dto.addon.CreateAddonItemCommand.builder()
                 .title(request.getTitle())
                 .priceDelta(request.getPriceDelta())
@@ -262,9 +263,9 @@ public class AddonAdminController {
                 .displayStartAt(request.getDisplayStartAt())
                 .displayEndAt(request.getDisplayEndAt())
                 .build();
-        
+
         Long itemId = addonAdminApplicationService.createAddonItem(tenantId, groupId, command, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("CREATE")
@@ -273,16 +274,16 @@ public class AddonAdminController {
                 .resourceName(request.getTitle())
                 .operationDesc("创建小料项")
                 .dataAfter(request));
-        
+
         log.info("小料项创建成功: tenantId={}, groupId={}, itemId={}", tenantId, groupId, itemId);
         return ApiResponse.ok(new CreateAddonItemResponse(itemId));
     }
-    
+
     /**
      * 更新小料项
-     * 
+     *
      * <p>更新小料项的基本信息、价格、排序等。
-     * 
+     *
      * @param groupId 小料组ID
      * @param id 小料项ID
      * @param request 更新请求
@@ -297,12 +298,12 @@ public class AddonAdminController {
             @Valid @RequestBody UpdateAddonItemRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
-        log.info("更新小料项: tenantId={}, groupId={}, itemId={}, request={}", 
+
+        log.info("更新小料项: tenantId={}, groupId={}, itemId={}, request={}",
                 tenantId, groupId, id, request);
-        
+
         // 转换为命令并调用应用服务
-        com.bluecone.app.product.application.dto.addon.UpdateAddonItemCommand command = 
+        com.bluecone.app.product.application.dto.addon.UpdateAddonItemCommand command =
                 com.bluecone.app.product.application.dto.addon.UpdateAddonItemCommand.builder()
                 .title(request.getTitle())
                 .priceDelta(request.getPriceDelta())
@@ -311,9 +312,9 @@ public class AddonAdminController {
                 .displayStartAt(request.getDisplayStartAt())
                 .displayEndAt(request.getDisplayEndAt())
                 .build();
-        
+
         addonAdminApplicationService.updateAddonItem(tenantId, groupId, id, command, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("UPDATE")
@@ -322,16 +323,16 @@ public class AddonAdminController {
                 .resourceName(request.getTitle())
                 .operationDesc("更新小料项")
                 .dataAfter(request));
-        
+
         log.info("小料项更新成功: tenantId={}, groupId={}, itemId={}", tenantId, groupId, id);
         return ApiResponse.ok();
     }
-    
+
     /**
      * 删除小料项
-     * 
+     *
      * <p>删除小料项（软删除）。
-     * 
+     *
      * @param groupId 小料组ID
      * @param id 小料项ID
      * @return 成功响应
@@ -344,28 +345,28 @@ public class AddonAdminController {
             @PathVariable Long id) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("删除小料项: tenantId={}, groupId={}, itemId={}", tenantId, groupId, id);
-        
+
         // 调用应用服务修改状态为禁用（软删除）
         addonAdminApplicationService.changeAddonItemStatus(tenantId, groupId, id, false, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("DELETE")
                 .resourceType("ADDON_ITEM")
                 .resourceId(id)
                 .operationDesc("删除小料项"));
-        
+
         log.info("小料项删除成功: tenantId={}, groupId={}, itemId={}", tenantId, groupId, id);
         return ApiResponse.ok();
     }
-    
+
     /**
      * 查询小料项列表
-     * 
+     *
      * <p>查询指定小料组下的小料项列表。
-     * 
+     *
      * @param groupId 小料组ID
      * @param includeDisabled 是否包含禁用的小料项（默认false）
      * @return 小料项列表
@@ -377,14 +378,14 @@ public class AddonAdminController {
             @PathVariable Long groupId,
             @RequestParam(defaultValue = "false") Boolean includeDisabled) {
         Long tenantId = requireTenantId();
-        
-        log.info("查询小料项列表: tenantId={}, groupId={}, includeDisabled={}", 
+
+        log.info("查询小料项列表: tenantId={}, groupId={}, includeDisabled={}",
                 tenantId, groupId, includeDisabled);
-        
+
         // 调用应用服务查询小料项列表
-        List<com.bluecone.app.product.application.dto.addon.AddonItemAdminView> serviceViews = 
+        List<com.bluecone.app.product.application.dto.addon.AddonItemAdminView> serviceViews =
                 addonAdminApplicationService.listAddonItems(tenantId, groupId, includeDisabled, false, java.time.LocalDateTime.now());
-        
+
         // 转换为 Controller 的 DTO
         List<AddonItemView> items = serviceViews.stream()
                 .map(v -> AddonItemView.builder()
@@ -399,11 +400,11 @@ public class AddonAdminController {
                         .updatedAt(v.getUpdatedAt())
                         .build())
                 .collect(java.util.stream.Collectors.toList());
-        
+
         log.info("查询小料项列表成功: tenantId={}, groupId={}, count={}", tenantId, groupId, items.size());
         return ApiResponse.ok(items);
     }
-    
+
     /**
      * 获取当前租户ID
      */
@@ -414,7 +415,7 @@ public class AddonAdminController {
         }
         return Long.parseLong(tenantIdStr);
     }
-    
+
     /**
      * 获取当前操作人ID
      */
@@ -432,9 +433,9 @@ public class AddonAdminController {
         }
         return null;
     }
-    
+
     // ===== DTO 类 =====
-    
+
     /**
      * 创建小料组请求
      */
@@ -443,38 +444,38 @@ public class AddonAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateAddonGroupRequest {
-        
+
         /**
          * 小料组名称
          */
         @NotBlank(message = "小料组名称不能为空")
         @Size(max = 64, message = "小料组名称不能超过64个字符")
         private String title;
-        
+
         /**
          * 排序值（数值越大越靠前）
          */
         @NotNull(message = "排序值不能为空")
         @Min(value = 0, message = "排序值不能小于0")
         private Integer sortOrder;
-        
+
         /**
          * 是否启用
          */
         @NotNull(message = "启用状态不能为空")
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间
          */
         private LocalDateTime displayEndAt;
     }
-    
+
     /**
      * 更新小料组请求
      */
@@ -483,38 +484,38 @@ public class AddonAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UpdateAddonGroupRequest {
-        
+
         /**
          * 小料组名称
          */
         @NotBlank(message = "小料组名称不能为空")
         @Size(max = 64, message = "小料组名称不能超过64个字符")
         private String title;
-        
+
         /**
          * 排序值
          */
         @NotNull(message = "排序值不能为空")
         @Min(value = 0, message = "排序值不能小于0")
         private Integer sortOrder;
-        
+
         /**
          * 是否启用
          */
         @NotNull(message = "启用状态不能为空")
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间
          */
         private LocalDateTime displayEndAt;
     }
-    
+
     /**
      * 创建小料项请求
      */
@@ -523,45 +524,45 @@ public class AddonAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateAddonItemRequest {
-        
+
         /**
          * 小料项名称
          */
         @NotBlank(message = "小料项名称不能为空")
         @Size(max = 64, message = "小料项名称不能超过64个字符")
         private String title;
-        
+
         /**
          * 价格增量（相对于基础价格的加价）
          */
         @NotNull(message = "价格增量不能为空")
         @DecimalMin(value = "0.00", message = "价格增量不能小于0")
         private BigDecimal priceDelta;
-        
+
         /**
          * 排序值
          */
         @NotNull(message = "排序值不能为空")
         @Min(value = 0, message = "排序值不能小于0")
         private Integer sortOrder;
-        
+
         /**
          * 是否启用
          */
         @NotNull(message = "启用状态不能为空")
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间
          */
         private LocalDateTime displayEndAt;
     }
-    
+
     /**
      * 更新小料项请求
      */
@@ -570,45 +571,45 @@ public class AddonAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UpdateAddonItemRequest {
-        
+
         /**
          * 小料项名称
          */
         @NotBlank(message = "小料项名称不能为空")
         @Size(max = 64, message = "小料项名称不能超过64个字符")
         private String title;
-        
+
         /**
          * 价格增量
          */
         @NotNull(message = "价格增量不能为空")
         @DecimalMin(value = "0.00", message = "价格增量不能小于0")
         private BigDecimal priceDelta;
-        
+
         /**
          * 排序值
          */
         @NotNull(message = "排序值不能为空")
         @Min(value = 0, message = "排序值不能小于0")
         private Integer sortOrder;
-        
+
         /**
          * 是否启用
          */
         @NotNull(message = "启用状态不能为空")
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间
          */
         private LocalDateTime displayEndAt;
     }
-    
+
     /**
      * 小料组视图
      */
@@ -617,48 +618,48 @@ public class AddonAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AddonGroupView {
-        
+
         /**
          * 小料组ID
          */
         private Long id;
-        
+
         /**
          * 小料组名称
          */
         private String title;
-        
+
         /**
          * 排序值
          */
         private Integer sortOrder;
-        
+
         /**
          * 是否启用
          */
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间
          */
         private LocalDateTime displayEndAt;
-        
+
         /**
          * 创建时间
          */
         private LocalDateTime createdAt;
-        
+
         /**
          * 更新时间
          */
         private LocalDateTime updatedAt;
     }
-    
+
     /**
      * 小料项视图
      */
@@ -667,53 +668,53 @@ public class AddonAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AddonItemView {
-        
+
         /**
          * 小料项ID
          */
         private Long id;
-        
+
         /**
          * 小料项名称
          */
         private String title;
-        
+
         /**
          * 价格增量
          */
         private BigDecimal priceDelta;
-        
+
         /**
          * 排序值
          */
         private Integer sortOrder;
-        
+
         /**
          * 是否启用
          */
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间
          */
         private LocalDateTime displayEndAt;
-        
+
         /**
          * 创建时间
          */
         private LocalDateTime createdAt;
-        
+
         /**
          * 更新时间
          */
         private LocalDateTime updatedAt;
     }
-    
+
     /**
      * 创建小料组响应
      */
@@ -721,13 +722,13 @@ public class AddonAdminController {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class CreateAddonGroupResponse {
-        
+
         /**
          * 创建的小料组ID
          */
         private Long groupId;
     }
-    
+
     /**
      * 创建小料项响应
      */
@@ -735,7 +736,7 @@ public class AddonAdminController {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class CreateAddonItemResponse {
-        
+
         /**
          * 创建的小料项ID
          */

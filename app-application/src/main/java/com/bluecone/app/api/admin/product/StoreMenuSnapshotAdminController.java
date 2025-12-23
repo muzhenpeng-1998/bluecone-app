@@ -62,29 +62,29 @@ public class StoreMenuSnapshotAdminController {
     public ApiResponse<StoreMenuSnapshotDTO> rebuildSnapshot(
             @Parameter(description = "租户ID", required = true)
             @RequestParam Long tenantId,
-            
+
             @Parameter(description = "门店ID", required = true)
             @RequestParam Long storeId,
-            
+
             @Parameter(description = "渠道（ALL, DINE_IN, TAKEAWAY, DELIVERY, PICKUP）", example = "ALL")
             @RequestParam(required = false, defaultValue = "ALL") String channel,
-            
+
             @Parameter(description = "订单场景（DEFAULT, BREAKFAST, LUNCH, DINNER, NIGHT）", example = "DEFAULT")
             @RequestParam(required = false, defaultValue = "DEFAULT") String orderScene,
-            
+
             @Parameter(description = "当前时间，用于定时展示判断（格式：yyyy-MM-dd'T'HH:mm:ss）", example = "2025-12-25T12:00:00")
-            @RequestParam(required = false) 
+            @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime now
     ) {
-        log.info("触发重建菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}, now={}", 
+        log.info("触发重建菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}, now={}",
                 tenantId, storeId, channel, orderScene, now);
 
         BcStoreMenuSnapshot snapshot = storeMenuSnapshotDomainService.rebuildAndSaveSnapshot(
                 tenantId, storeId, channel, orderScene, now);
 
         StoreMenuSnapshotDTO dto = toDTO(snapshot);
-        
-        log.info("菜单快照重建成功: tenantId={}, storeId={}, channel={}, orderScene={}, version={}", 
+
+        log.info("菜单快照重建成功: tenantId={}, storeId={}, channel={}, orderScene={}, version={}",
                 tenantId, storeId, channel, orderScene, snapshot.getVersion());
 
         return ApiResponse.success(dto);
@@ -104,17 +104,17 @@ public class StoreMenuSnapshotAdminController {
     public ApiResponse<StoreMenuSnapshotDTO> getSnapshot(
             @Parameter(description = "租户ID", required = true)
             @RequestParam Long tenantId,
-            
+
             @Parameter(description = "门店ID", required = true)
             @RequestParam Long storeId,
-            
+
             @Parameter(description = "渠道（ALL, DINE_IN, TAKEAWAY, DELIVERY, PICKUP）", example = "ALL")
             @RequestParam(required = false, defaultValue = "ALL") String channel,
-            
+
             @Parameter(description = "订单场景（DEFAULT, BREAKFAST, LUNCH, DINNER, NIGHT）", example = "DEFAULT")
             @RequestParam(required = false, defaultValue = "DEFAULT") String orderScene
     ) {
-        log.info("查询菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}", 
+        log.info("查询菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}",
                 tenantId, storeId, channel, orderScene);
 
         // Phase 5 修复：GET 不触发重建，只查询现有快照
@@ -122,13 +122,13 @@ public class StoreMenuSnapshotAdminController {
                 tenantId, storeId, channel, orderScene);
 
         if (snapshot == null) {
-            log.warn("菜单快照不存在: tenantId={}, storeId={}, channel={}, orderScene={}", 
+            log.warn("菜单快照不存在: tenantId={}, storeId={}, channel={}, orderScene={}",
                     tenantId, storeId, channel, orderScene);
             return ApiResponse.success(null);
         }
 
         StoreMenuSnapshotDTO dto = toDTO(snapshot);
-        
+
         return ApiResponse.success(dto);
     }
 

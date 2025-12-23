@@ -1,9 +1,9 @@
 package com.bluecone.app.tenant.application.wechat;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.bluecone.app.infra.wechat.dataobject.WechatAuthorizedAppDO;
+import com.bluecone.app.infra.wechat.openplatform.WechatAuthorizedAppDO;
 import com.bluecone.app.infra.wechat.dataobject.WechatRegisterTaskDO;
-import com.bluecone.app.infra.wechat.mapper.WechatAuthorizedAppMapper;
+import com.bluecone.app.infra.wechat.openplatform.WechatAuthorizedAppMapper;
 import com.bluecone.app.infra.wechat.mapper.WechatRegisterTaskMapper;
 import com.bluecone.app.store.dao.entity.BcStore;
 import com.bluecone.app.store.dao.mapper.BcStoreMapper;
@@ -86,7 +86,7 @@ public class WechatOpenCallbackAppService {
         // 1）查找已有授权记录
         WechatAuthorizedAppDO existing = wechatAuthorizedAppMapper.selectOne(
                 new QueryWrapper<WechatAuthorizedAppDO>()
-                        .eq("authorizer_appid", appid)
+                        .eq("authorizer_app_id", appid)
                         .last("LIMIT 1"));
 
         WechatAuthorizedAppDO appRecord;
@@ -102,22 +102,23 @@ public class WechatOpenCallbackAppService {
             appRecord = new WechatAuthorizedAppDO();
             if (task != null) {
                 appRecord.setTenantId(task.getTenantId());
-                appRecord.setStoreId(task.getStoreId());
+                // Note: storeId is not in the new DO, skip
             }
+            appRecord.setCreatedAt(now);
 
             applyAuthorizedFields(appRecord, command, now, true);
 
             wechatAuthorizedAppMapper.insert(appRecord);
-            log.info("[WechatOpenCallback] created authorized app record, appid={}, tenantId={}, storeId={}",
-                    appid, appRecord.getTenantId(), appRecord.getStoreId());
+            log.info("[WechatOpenCallback] created authorized app record, appid={}, tenantId={}",
+                    appid, appRecord.getTenantId());
         } else {
             // 3）更新授权信息
             appRecord = existing;
             applyAuthorizedFields(appRecord, command, now, false);
 
             wechatAuthorizedAppMapper.updateById(appRecord);
-            log.info("[WechatOpenCallback] updated authorized app record, appid={}, tenantId={}, storeId={}",
-                    appid, appRecord.getTenantId(), appRecord.getStoreId());
+            log.info("[WechatOpenCallback] updated authorized app record, appid={}, tenantId={}",
+                    appid, appRecord.getTenantId());
         }
 
         // 4）更新租户默认小程序与入驻状态
@@ -148,7 +149,7 @@ public class WechatOpenCallbackAppService {
 
         WechatAuthorizedAppDO appRecord = wechatAuthorizedAppMapper.selectOne(
                 new QueryWrapper<WechatAuthorizedAppDO>()
-                        .eq("authorizer_appid", appid)
+                        .eq("authorizer_app_id", appid)
                         .last("LIMIT 1"));
         if (appRecord == null) {
             log.warn("[WechatOpenCallback] unauthorized event for unknown appid={}", appid);
@@ -156,8 +157,9 @@ public class WechatOpenCallbackAppService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        appRecord.setAuthStatus(2); // 已取消
-        appRecord.setCanceledAt(now);
+        appRecord.setAuthorizationStatus("UNAUTHORIZED"); // 已取消
+        appRecord.setUnauthorizedAt(now);
+        appRecord.setUpdatedAt(now);
         wechatAuthorizedAppMapper.updateById(appRecord);
 
         // 清理租户默认小程序 appid（如匹配当前被取消的 appid）
@@ -171,16 +173,7 @@ public class WechatOpenCallbackAppService {
             }
         }
 
-        // 清理门店级小程序 appid（如匹配当前被取消的 appid）
-        if (appRecord.getStoreId() != null) {
-            BcStore store = bcStoreMapper.selectById(appRecord.getStoreId());
-            if (store != null && Objects.equals(store.getMiniappAppid(), appid)) {
-                store.setMiniappAppid(null);
-                bcStoreMapper.updateById(store);
-                log.info("[WechatOpenCallback] cleared store.miniappAppid for storeId={} appid={}",
-                        store.getId(), appid);
-            }
-        }
+        // Note: storeId is not in the new DO, skip store-level cleanup
 
         // TODO: 如需对注册任务做额外处理，可在此处补充（例如标记为取消）
     }
@@ -189,30 +182,30 @@ public class WechatOpenCallbackAppService {
                                        WechatAuthorizedEventCommand command,
                                        LocalDateTime now,
                                        boolean isNew) {
-        appRecord.setAuthorizerAppid(command.authorizerAppid());
+        appRecord.setAuthorizerAppId(command.authorizerAppid());
         if (StringUtils.hasText(command.authorizerRefreshToken())) {
             appRecord.setAuthorizerRefreshToken(command.authorizerRefreshToken());
         }
         appRecord.setNickName(command.nickName());
         appRecord.setHeadImg(command.headImg());
-        appRecord.setPrincipalType(command.principalType());
+        // principalType -> not in new DO, skip
         appRecord.setPrincipalName(command.principalName());
-        appRecord.setSignature(command.signature());
-        appRecord.setServiceType(command.serviceType());
-        appRecord.setVerifyType(command.verifyType());
-        appRecord.setFuncInfoJson(command.funcInfoJson());
-        appRecord.setBusinessInfoJson(command.businessInfoJson());
-        appRecord.setMiniprograminfoJson(command.miniprograminfoJson());
+        // signature -> not in new DO, skip
+        appRecord.setServiceTypeInfo(command.serviceType());
+        appRecord.setVerifyTypeInfo(command.verifyType());
+        // funcInfoJson -> not in new DO, skip
+        appRecord.setBusinessInfo(command.businessInfoJson());
+        appRecord.setMiniProgramInfo(command.miniprograminfoJson());
 
-        // 授权状态：1-已授权
-        appRecord.setAuthStatus(1);
-        // 认证状态粗略推导：verifyType != 0 视为已认证
-        appRecord.setCertStatus(resolveCertStatus(command.verifyType(), appRecord.getCertStatus()));
+        // 授权状态：AUTHORIZED
+        appRecord.setAuthorizationStatus("AUTHORIZED");
+        // certStatus -> not in new DO, skip
 
-        if (isNew || appRecord.getFirstAuthTime() == null) {
-            appRecord.setFirstAuthTime(now);
+        if (isNew || appRecord.getAuthorizedAt() == null) {
+            appRecord.setAuthorizedAt(now);
         }
-        appRecord.setLastAuthUpdateAt(now);
+        // lastAuthUpdateAt -> not in new DO, use updatedAt
+        appRecord.setUpdatedAt(now);
     }
 
     private Integer resolveCertStatus(Integer verifyType, Integer existing) {
@@ -253,33 +246,9 @@ public class WechatOpenCallbackAppService {
     }
 
     private void updateStoreOnAuthorization(WechatAuthorizedAppDO appRecord, String appid) {
-        Long storeId = appRecord.getStoreId();
-        if (storeId == null) {
-            return;
-        }
-        BcStore store = bcStoreMapper.selectById(storeId);
-        if (store == null) {
-            log.warn("[WechatOpenCallback] store not found for storeId={} appid={}", storeId, appid);
-            return;
-        }
-
-        boolean changed = false;
-        // 入驻状态：0-草稿 -> 1-可营业（READY）
-        if (store.getOnboardStatus() != null && store.getOnboardStatus() == 0) {
-            store.setOnboardStatus(1);
-            changed = true;
-        }
-        // 门店级小程序 appid 为空时，设置为当前授权 appid
-        if (!StringUtils.hasText(store.getMiniappAppid())) {
-            store.setMiniappAppid(appid);
-            changed = true;
-        }
-
-        if (changed) {
-            bcStoreMapper.updateById(store);
-            log.info("[WechatOpenCallback] updated store on authorization, storeId={}, onboardStatus={}, miniappAppid={}",
-                    store.getId(), store.getOnboardStatus(), store.getMiniappAppid());
-        }
+        // Note: storeId is not in the new DO, this method is now a no-op
+        // If store-level authorization is needed, it should be tracked differently
+        log.debug("[WechatOpenCallback] updateStoreOnAuthorization skipped (storeId not in new schema)");
     }
 
     private void markRegisterTasksAsSuccess(String appid) {

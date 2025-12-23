@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
  *
  * 用于本地开发初期 / 单元测试时的占位实现，不真正调用微信接口。
  * 后续会在同包下新增基于 WebClient 或 RestTemplate 的正式实现。
+ * 
+ * 注意：此类不再使用 @Component 注解，而是由 WeChatClientConfiguration 手动创建 bean。
  */
-@Component
-@Profile({"local", "dev", "stub-wechat"})
 public class WeChatOpenPlatformClientStub implements WeChatOpenPlatformClient {
 
     private static final Logger log = LoggerFactory.getLogger(WeChatOpenPlatformClientStub.class);

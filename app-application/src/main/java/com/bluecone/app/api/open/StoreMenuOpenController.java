@@ -75,17 +75,17 @@ public class StoreMenuOpenController {
     public ApiResponse<Map<String, Object>> getStoreMenu(
             @Parameter(description = "租户ID", required = true)
             @RequestParam Long tenantId,
-            
+
             @Parameter(description = "门店ID", required = true)
             @PathVariable Long storeId,
-            
+
             @Parameter(description = "渠道（ALL, DINE_IN, TAKEAWAY, DELIVERY, PICKUP）", example = "ALL")
             @RequestParam(required = false, defaultValue = "ALL") String channel,
-            
+
             @Parameter(description = "订单场景（DEFAULT, BREAKFAST, LUNCH, DINNER, NIGHT）", example = "DEFAULT")
             @RequestParam(required = false, defaultValue = "DEFAULT") String orderScene
     ) {
-        log.info("获取门店菜单: tenantId={}, storeId={}, channel={}, orderScene={}", 
+        log.info("获取门店菜单: tenantId={}, storeId={}, channel={}, orderScene={}",
                 tenantId, storeId, channel, orderScene);
 
         // 从 Provider 获取快照（自动处理多级缓存）
@@ -93,27 +93,27 @@ public class StoreMenuOpenController {
                 tenantId, storeId, channel, orderScene);
 
         if (snapshotOpt.isEmpty()) {
-            log.warn("门店菜单快照不存在: tenantId={}, storeId={}, channel={}, orderScene={}", 
+            log.warn("门店菜单快照不存在: tenantId={}, storeId={}, channel={}, orderScene={}",
                     tenantId, storeId, channel, orderScene);
             return ApiResponse.success(null);
         }
 
         StoreMenuSnapshotData snapshot = snapshotOpt.get();
-        
+
         // 解析 menu_json 为结构化对象
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> menuData = objectMapper.readValue(snapshot.menuJson(), Map.class);
-            
+
             // 添加 version 字段
             menuData.put("version", snapshot.version());
-            
-            log.info("门店菜单快照返回成功: tenantId={}, storeId={}, channel={}, orderScene={}, version={}", 
+
+            log.info("门店菜单快照返回成功: tenantId={}, storeId={}, channel={}, orderScene={}, version={}",
                     tenantId, storeId, channel, orderScene, snapshot.version());
-            
+
             return ApiResponse.success(menuData);
         } catch (JsonProcessingException e) {
-            log.error("解析门店菜单快照失败: tenantId={}, storeId={}, channel={}, orderScene={}", 
+            log.error("解析门店菜单快照失败: tenantId={}, storeId={}, channel={}, orderScene={}",
                     tenantId, storeId, channel, orderScene, e);
             return ApiResponse.fail("MENU-500-001", "解析菜单快照失败");
         }
@@ -135,17 +135,17 @@ public class StoreMenuOpenController {
     public ApiResponse<String> getStoreMenuRaw(
             @Parameter(description = "租户ID", required = true)
             @RequestParam Long tenantId,
-            
+
             @Parameter(description = "门店ID", required = true)
             @PathVariable Long storeId,
-            
+
             @Parameter(description = "渠道（ALL, DINE_IN, TAKEAWAY, DELIVERY, PICKUP）", example = "ALL")
             @RequestParam(required = false, defaultValue = "ALL") String channel,
-            
+
             @Parameter(description = "订单场景（DEFAULT, BREAKFAST, LUNCH, DINNER, NIGHT）", example = "DEFAULT")
             @RequestParam(required = false, defaultValue = "DEFAULT") String orderScene
     ) {
-        log.info("获取门店菜单（原始JSON）: tenantId={}, storeId={}, channel={}, orderScene={}", 
+        log.info("获取门店菜单（原始JSON）: tenantId={}, storeId={}, channel={}, orderScene={}",
                 tenantId, storeId, channel, orderScene);
 
         // 从 Provider 获取快照（自动处理多级缓存）
@@ -153,16 +153,16 @@ public class StoreMenuOpenController {
                 tenantId, storeId, channel, orderScene);
 
         if (snapshotOpt.isEmpty()) {
-            log.warn("门店菜单快照不存在: tenantId={}, storeId={}, channel={}, orderScene={}", 
+            log.warn("门店菜单快照不存在: tenantId={}, storeId={}, channel={}, orderScene={}",
                     tenantId, storeId, channel, orderScene);
             return ApiResponse.success(null);
         }
 
         StoreMenuSnapshotData snapshot = snapshotOpt.get();
-        
-        log.info("门店菜单快照返回成功（原始JSON）: tenantId={}, storeId={}, channel={}, orderScene={}, version={}", 
+
+        log.info("门店菜单快照返回成功（原始JSON）: tenantId={}, storeId={}, channel={}, orderScene={}, version={}",
                 tenantId, storeId, channel, orderScene, snapshot.version());
-        
+
         return ApiResponse.success(snapshot.menuJson());
     }
 }

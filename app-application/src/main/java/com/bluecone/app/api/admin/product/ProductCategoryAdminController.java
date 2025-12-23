@@ -3,6 +3,8 @@ package com.bluecone.app.api.admin.product;
 import com.bluecone.app.core.api.ApiResponse;
 import com.bluecone.app.core.tenant.TenantContext;
 import com.bluecone.app.infra.admin.service.AuditLogService;
+import com.bluecone.app.product.application.service.ProductCategoryAdminApplicationService;
+import com.bluecone.app.product.application.service.ProductCategoryProductAdminApplicationService;
 import com.bluecone.app.security.admin.RequireAdminPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,7 +25,7 @@ import java.util.List;
 
 /**
  * 商品分类管理后台接口
- * 
+ *
  * <h3>📋 职责范围：</h3>
  * <ul>
  *   <li>商品分类的创建、修改、查询</li>
@@ -31,7 +33,7 @@ import java.util.List;
  *   <li>分类的排序管理（批量调整排序）</li>
  *   <li>分类的定时展示配置</li>
  * </ul>
- * 
+ *
  * <h3>🔐 权限要求：</h3>
  * <ul>
  *   <li><b>product-category:view</b> - 查看分类</li>
@@ -39,7 +41,7 @@ import java.util.List;
  *   <li><b>product-category:edit</b> - 编辑分类</li>
  *   <li><b>product-category:status</b> - 修改分类状态</li>
  * </ul>
- * 
+ *
  * <h3>📍 API 路径规范：</h3>
  * <pre>
  * POST   /api/admin/product-categories              - 创建分类
@@ -48,7 +50,7 @@ import java.util.List;
  * PATCH  /api/admin/product-categories/{id}/status  - 修改分类状态（显示/隐藏）
  * POST   /api/admin/product-categories/reorder      - 批量调整分类排序
  * </pre>
- * 
+ *
  * @author BlueCone Team
  * @since 1.0.0
  */
@@ -58,15 +60,16 @@ import java.util.List;
 @RequestMapping("/api/admin/product-categories")
 @RequiredArgsConstructor
 public class ProductCategoryAdminController {
-    
+
     private final AuditLogService auditLogService;
-    private final com.bluecone.app.product.application.service.ProductCategoryAdminApplicationService categoryApplicationService;
-    
+    private final ProductCategoryAdminApplicationService categoryApplicationService;
+    private final ProductCategoryProductAdminApplicationService categoryProductApplicationService;
+
     /**
      * 创建商品分类
-     * 
+     *
      * <p>创建新的商品分类，支持设置图标、排序、启用状态、定时展示等配置。
-     * 
+     *
      * @param request 创建请求
      * @return 创建的分类ID
      */
@@ -77,11 +80,11 @@ public class ProductCategoryAdminController {
             @Valid @RequestBody CreateCategoryRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("创建商品分类: tenantId={}, request={}", tenantId, request);
-        
+
         // 转换为命令并调用应用服务
-        com.bluecone.app.product.application.dto.category.CreateProductCategoryCommand command = 
+        com.bluecone.app.product.application.dto.category.CreateProductCategoryCommand command =
                 com.bluecone.app.product.application.dto.category.CreateProductCategoryCommand.builder()
                 .title(request.getTitle())
                 .parentId(request.getParentId())
@@ -91,9 +94,9 @@ public class ProductCategoryAdminController {
                 .displayStartAt(request.getDisplayStartAt())
                 .displayEndAt(request.getDisplayEndAt())
                 .build();
-        
+
         Long categoryId = categoryApplicationService.createCategory(tenantId, command, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("CREATE")
@@ -102,16 +105,16 @@ public class ProductCategoryAdminController {
                 .resourceName(request.getTitle())
                 .operationDesc("创建商品分类")
                 .dataAfter(request));
-        
+
         log.info("商品分类创建成功: tenantId={}, categoryId={}", tenantId, categoryId);
         return ApiResponse.ok(new CreateCategoryResponse(categoryId));
     }
-    
+
     /**
      * 更新商品分类
-     * 
+     *
      * <p>更新商品分类的基本信息、图标、排序、启用状态、定时展示等配置。
-     * 
+     *
      * @param id 分类ID
      * @param request 更新请求
      * @return 成功响应
@@ -124,11 +127,11 @@ public class ProductCategoryAdminController {
             @Valid @RequestBody UpdateCategoryRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("更新商品分类: tenantId={}, categoryId={}, request={}", tenantId, id, request);
-        
+
         // 转换为命令并调用应用服务
-        com.bluecone.app.product.application.dto.category.UpdateProductCategoryCommand command = 
+        com.bluecone.app.product.application.dto.category.UpdateProductCategoryCommand command =
                 com.bluecone.app.product.application.dto.category.UpdateProductCategoryCommand.builder()
                 .title(request.getTitle())
                 .imageUrl(request.getImageUrl())
@@ -137,9 +140,9 @@ public class ProductCategoryAdminController {
                 .displayStartAt(request.getDisplayStartAt())
                 .displayEndAt(request.getDisplayEndAt())
                 .build();
-        
+
         categoryApplicationService.updateCategory(tenantId, id, command, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("UPDATE")
@@ -148,16 +151,16 @@ public class ProductCategoryAdminController {
                 .resourceName(request.getTitle())
                 .operationDesc("更新商品分类")
                 .dataAfter(request));
-        
+
         log.info("商品分类更新成功: tenantId={}, categoryId={}", tenantId, id);
         return ApiResponse.ok();
     }
-    
+
     /**
      * 查询商品分类列表
-     * 
+     *
      * <p>查询商品分类列表，支持按启用状态筛选、按定时展示时间过滤。
-     * 
+     *
      * @param includeDisabled 是否包含禁用的分类（默认false，仅返回启用的）
      * @param filterByTime 是否按当前时间过滤定时展示（默认false，返回全部）
      * @return 分类列表
@@ -169,14 +172,14 @@ public class ProductCategoryAdminController {
             @RequestParam(defaultValue = "false") Boolean includeDisabled,
             @RequestParam(defaultValue = "false") Boolean filterByTime) {
         Long tenantId = requireTenantId();
-        
-        log.info("查询商品分类列表: tenantId={}, includeDisabled={}, filterByTime={}", 
+
+        log.info("查询商品分类列表: tenantId={}, includeDisabled={}, filterByTime={}",
                 tenantId, includeDisabled, filterByTime);
-        
+
         // 调用应用服务查询分类列表
-        List<com.bluecone.app.product.application.dto.category.ProductCategoryAdminView> adminViews = 
+        List<com.bluecone.app.product.application.dto.category.ProductCategoryAdminView> adminViews =
                 categoryApplicationService.listCategories(tenantId, includeDisabled, filterByTime, LocalDateTime.now());
-        
+
         // 映射为 Controller 视图
         List<CategoryView> categories = adminViews.stream()
                 .map(view -> CategoryView.builder()
@@ -192,16 +195,16 @@ public class ProductCategoryAdminController {
                         .updatedAt(view.getUpdatedAt())
                         .build())
                 .collect(java.util.stream.Collectors.toList());
-        
+
         log.info("查询商品分类列表成功: tenantId={}, count={}", tenantId, categories.size());
         return ApiResponse.ok(categories);
     }
-    
+
     /**
      * 修改分类状态（显示/隐藏）
-     * 
+     *
      * <p>修改商品分类的启用状态，用于控制分类在C端的显示/隐藏。
-     * 
+     *
      * @param id 分类ID
      * @param request 状态修改请求
      * @return 成功响应
@@ -214,13 +217,13 @@ public class ProductCategoryAdminController {
             @Valid @RequestBody ChangeCategoryStatusRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
-        log.info("修改分类状态: tenantId={}, categoryId={}, enabled={}", 
+
+        log.info("修改分类状态: tenantId={}, categoryId={}, enabled={}",
                 tenantId, id, request.getEnabled());
-        
+
         // 调用应用服务修改状态
         categoryApplicationService.changeCategoryStatus(tenantId, id, request.getEnabled(), operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("CHANGE_STATUS")
@@ -228,17 +231,17 @@ public class ProductCategoryAdminController {
                 .resourceId(id)
                 .operationDesc(request.getEnabled() ? "显示分类" : "隐藏分类")
                 .dataAfter(request));
-        
-        log.info("分类状态修改成功: tenantId={}, categoryId={}, enabled={}", 
+
+        log.info("分类状态修改成功: tenantId={}, categoryId={}, enabled={}",
                 tenantId, id, request.getEnabled());
         return ApiResponse.ok();
     }
-    
+
     /**
      * 批量调整分类排序
-     * 
+     *
      * <p>批量调整商品分类的排序值，用于调整分类在C端的展示顺序。
-     * 
+     *
      * @param request 批量排序请求
      * @return 成功响应
      */
@@ -249,31 +252,78 @@ public class ProductCategoryAdminController {
             @Valid @RequestBody ReorderCategoriesRequest request) {
         Long tenantId = requireTenantId();
         Long operatorId = getCurrentUserId();
-        
+
         log.info("批量调整分类排序: tenantId={}, count={}", tenantId, request.getItems().size());
-        
+
         // 转换为命令并调用应用服务
-        List<com.bluecone.app.product.application.dto.category.CategoryReorderItem> items = 
+        List<com.bluecone.app.product.application.dto.category.CategoryReorderItem> items =
                 request.getItems().stream()
                 .map(item -> com.bluecone.app.product.application.dto.category.CategoryReorderItem.builder()
                         .categoryId(item.getCategoryId())
                         .sortOrder(item.getSortOrder())
                         .build())
                 .collect(java.util.stream.Collectors.toList());
-        
+
         categoryApplicationService.reorderCategories(tenantId, items, operatorId);
-        
+
         // 记录审计日志
         auditLogService.log(auditLogService.builder(tenantId, operatorId)
                 .action("REORDER")
                 .resourceType("PRODUCT_CATEGORY")
                 .operationDesc("批量调整分类排序")
                 .dataAfter(request));
-        
+
         log.info("分类排序调整成功: tenantId={}, count={}", tenantId, request.getItems().size());
         return ApiResponse.ok();
     }
-    
+
+    /**
+     * 批量调整分类内商品排序
+     *
+     * <p>批量调整指定分类下商品的排序值（更新 bc_product_category_rel.sort_order），
+     * 用于调整商品在该分类下的展示顺序。
+     *
+     * <p><b>注意：</b>此接口只会触发"上架了这些商品的门店"的菜单快照重建，避免全量重建。
+     *
+     * @param categoryId 分类ID
+     * @param request 批量排序请求
+     * @return 成功响应
+     */
+    @Operation(summary = "批量调整分类内商品排序", description = "批量调整指定分类下商品的排序值")
+    @PostMapping("/{categoryId}/products/reorder")
+    @RequireAdminPermission("product-category:edit")
+    public ApiResponse<Void> reorderCategoryProducts(
+            @PathVariable Long categoryId,
+            @Valid @RequestBody ReorderCategoryProductsRequest request) {
+        Long tenantId = requireTenantId();
+        Long operatorId = getCurrentUserId();
+
+        log.info("批量调整分类内商品排序: tenantId={}, categoryId={}, count={}",
+                tenantId, categoryId, request.getItems().size());
+
+        // 转换为应用服务参数
+        List<com.bluecone.app.product.application.service.ProductCategoryProductAdminApplicationService.ReorderItem> items =
+                request.getItems().stream()
+                .map(item -> new com.bluecone.app.product.application.service.ProductCategoryProductAdminApplicationService.ReorderItem(
+                        item.getProductId(), item.getSortOrder()))
+                .collect(java.util.stream.Collectors.toList());
+
+        // 调用应用服务
+        categoryProductApplicationService.reorderCategoryProducts(tenantId, categoryId, items, operatorId);
+
+        // 记录审计日志
+        auditLogService.log(auditLogService.builder(tenantId, operatorId)
+                .action("REORDER")
+                .resourceType("PRODUCT_CATEGORY_PRODUCT")
+                .resourceId(categoryId)
+                .operationDesc("批量调整分类内商品排序")
+                .dataAfter(request));
+
+        log.info("分类内商品排序调整成功: tenantId={}, categoryId={}, count={}",
+                tenantId, categoryId, request.getItems().size());
+        return ApiResponse.ok();
+    }
+
     /**
      * 获取当前租户ID
      */
@@ -284,7 +334,7 @@ public class ProductCategoryAdminController {
         }
         return Long.parseLong(tenantIdStr);
     }
-    
+
     /**
      * 获取当前操作人ID
      */
@@ -302,9 +352,9 @@ public class ProductCategoryAdminController {
         }
         return null;
     }
-    
+
     // ===== DTO 类 =====
-    
+
     /**
      * 创建分类请求
      */
@@ -313,51 +363,51 @@ public class ProductCategoryAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateCategoryRequest {
-        
+
         /**
          * 分类名称
          */
         @NotBlank(message = "分类名称不能为空")
         @Size(max = 64, message = "分类名称不能超过64个字符")
         private String title;
-        
+
         /**
          * 父分类ID（0表示顶级分类）
          */
         @NotNull(message = "父分类ID不能为空")
         @Min(value = 0, message = "父分类ID不能小于0")
         private Long parentId;
-        
+
         /**
          * 分类图标URL
          */
         @Size(max = 512, message = "图标URL不能超过512个字符")
         private String imageUrl;
-        
+
         /**
          * 排序值（数值越大越靠前）
          */
         @NotNull(message = "排序值不能为空")
         @Min(value = 0, message = "排序值不能小于0")
         private Integer sortOrder;
-        
+
         /**
          * 是否启用（true=显示，false=隐藏）
          */
         @NotNull(message = "启用状态不能为空")
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间（null表示立即生效）
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间（null表示永久有效）
          */
         private LocalDateTime displayEndAt;
     }
-    
+
     /**
      * 更新分类请求
      */
@@ -366,44 +416,44 @@ public class ProductCategoryAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UpdateCategoryRequest {
-        
+
         /**
          * 分类名称
          */
         @NotBlank(message = "分类名称不能为空")
         @Size(max = 64, message = "分类名称不能超过64个字符")
         private String title;
-        
+
         /**
          * 分类图标URL
          */
         @Size(max = 512, message = "图标URL不能超过512个字符")
         private String imageUrl;
-        
+
         /**
          * 排序值（数值越大越靠前）
          */
         @NotNull(message = "排序值不能为空")
         @Min(value = 0, message = "排序值不能小于0")
         private Integer sortOrder;
-        
+
         /**
          * 是否启用（true=显示，false=隐藏）
          */
         @NotNull(message = "启用状态不能为空")
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间（null表示立即生效）
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间（null表示永久有效）
          */
         private LocalDateTime displayEndAt;
     }
-    
+
     /**
      * 修改分类状态请求
      */
@@ -412,14 +462,14 @@ public class ProductCategoryAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ChangeCategoryStatusRequest {
-        
+
         /**
          * 是否启用（true=显示，false=隐藏）
          */
         @NotNull(message = "启用状态不能为空")
         private Boolean enabled;
     }
-    
+
     /**
      * 批量调整排序请求
      */
@@ -428,14 +478,14 @@ public class ProductCategoryAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ReorderCategoriesRequest {
-        
+
         /**
          * 排序项列表
          */
         @NotEmpty(message = "排序项列表不能为空")
         @Size(min = 1, message = "至少需要一个排序项")
         private List<ReorderItem> items;
-        
+
         /**
          * 排序项
          */
@@ -444,13 +494,13 @@ public class ProductCategoryAdminController {
         @NoArgsConstructor
         @AllArgsConstructor
         public static class ReorderItem {
-            
+
             /**
              * 分类ID
              */
             @NotNull(message = "分类ID不能为空")
             private Long categoryId;
-            
+
             /**
              * 新的排序值
              */
@@ -459,7 +509,7 @@ public class ProductCategoryAdminController {
             private Integer sortOrder;
         }
     }
-    
+
     /**
      * 分类视图
      */
@@ -468,58 +518,58 @@ public class ProductCategoryAdminController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CategoryView {
-        
+
         /**
          * 分类ID
          */
         private Long id;
-        
+
         /**
          * 父分类ID（0表示顶级分类）
          */
         private Long parentId;
-        
+
         /**
          * 分类名称
          */
         private String title;
-        
+
         /**
          * 分类图标URL
          */
         private String imageUrl;
-        
+
         /**
          * 排序值
          */
         private Integer sortOrder;
-        
+
         /**
          * 是否启用
          */
         private Boolean enabled;
-        
+
         /**
          * 定时展示开始时间
          */
         private LocalDateTime displayStartAt;
-        
+
         /**
          * 定时展示结束时间
          */
         private LocalDateTime displayEndAt;
-        
+
         /**
          * 创建时间
          */
         private LocalDateTime createdAt;
-        
+
         /**
          * 更新时间
          */
         private LocalDateTime updatedAt;
     }
-    
+
     /**
      * 创建分类响应
      */
@@ -527,11 +577,51 @@ public class ProductCategoryAdminController {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class CreateCategoryResponse {
-        
+
         /**
          * 创建的分类ID
          */
         private Long categoryId;
+    }
+
+    /**
+     * 批量调整分类内商品排序请求
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReorderCategoryProductsRequest {
+
+        /**
+         * 排序项列表
+         */
+        @NotEmpty(message = "排序项列表不能为空")
+        @Size(min = 1, message = "至少需要一个排序项")
+        private List<ReorderProductItem> items;
+
+        /**
+         * 排序项
+         */
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class ReorderProductItem {
+
+            /**
+             * 商品ID
+             */
+            @NotNull(message = "商品ID不能为空")
+            private Long productId;
+
+            /**
+             * 新的排序值（在该分类下的排序值）
+             */
+            @NotNull(message = "排序值不能为空")
+            @Min(value = 0, message = "排序值不能小于0")
+            private Integer sortOrder;
+        }
     }
 }
 

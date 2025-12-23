@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
  *
  * 用于本地开发/测试时的占位实现，不真正调用微信接口。
  * 后续会在同包下新增基于 WebClient 或 RestTemplate 的正式实现。
+ * 
+ * 注意：此类不再使用 @Component 注解，如需使用请在配置类中手动创建 bean。
  */
-@Component
-@Profile({"local", "dev", "stub-wechat"})
 public class WeChatFastRegisterClientStub implements WeChatFastRegisterClient {
 
     @Override

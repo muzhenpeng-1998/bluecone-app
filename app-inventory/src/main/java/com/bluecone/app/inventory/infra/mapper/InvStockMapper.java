@@ -1,9 +1,12 @@
 package com.bluecone.app.inventory.infra.mapper;
 
+import org.apache.ibatis.annotations.Mapper;
+
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.bluecone.app.inventory.infra.po.InvStockDO;
 import org.apache.ibatis.annotations.Param;
 
+@Mapper
 public interface InvStockMapper extends BaseMapper<InvStockDO> {
 
     /**

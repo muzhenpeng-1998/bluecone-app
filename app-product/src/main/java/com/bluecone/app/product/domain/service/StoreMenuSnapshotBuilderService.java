@@ -88,10 +88,11 @@ public class StoreMenuSnapshotBuilderService {
         log.info("开始构建菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}, now={}", 
                 tenantId, storeId, channel, orderScene, now);
 
-        // 1. 查询门店可售商品配置
-        List<BcProductStoreConfig> storeConfigs = loadStoreConfigs(tenantId, storeId, channel);
+        // 1. 查询门店可售商品配置（已过滤展示时间窗）
+        List<BcProductStoreConfig> storeConfigs = loadStoreConfigs(tenantId, storeId, channel, now);
         if (CollectionUtils.isEmpty(storeConfigs)) {
-            log.info("门店无可售商品配置: tenantId={}, storeId={}, channel={}", tenantId, storeId, channel);
+            log.info("门店无可售商品配置（已过滤展示时间窗）: tenantId={}, storeId={}, channel={}, now={}", 
+                    tenantId, storeId, channel, now);
             return buildEmptySnapshot(tenantId, storeId, channel, orderScene);
         }
 
@@ -109,6 +110,10 @@ public class StoreMenuSnapshotBuilderService {
         Map<Long, List<BcProductSku>> skuMap = loadSkus(tenantId, productMap.keySet(), now);
         Map<Long, List<BcProductCategoryRel>> categoryRelMap = loadCategoryRels(tenantId, productMap.keySet());
         Map<Long, BcProductCategory> categoryMap = loadCategories(tenantId, categoryRelMap, now);
+        
+        // 构建分类内商品排序映射：Map<categoryId, Map<productId, relSortOrder>>
+        // 用于在分类内按 category_rel.sort_order 排序商品
+        Map<Long, Map<Long, Integer>> categoryProductSortMap = buildCategoryProductSortMap(categoryRelMap);
         
         // 规格组/选项
         Map<Long, List<BcProductSpecGroup>> specGroupMap = loadSpecGroups(tenantId, productMap.keySet());
@@ -205,13 +210,20 @@ public class StoreMenuSnapshotBuilderService {
 
         // 4. 排序并返回
         List<StoreMenuCategoryView> sortedCategories = categoryViewMap.values().stream()
-                .peek(cat -> cat.getProducts().sort(
-                        // 商品排序：优先门店排序，其次商品排序，最后 productId
-                        Comparator.comparing(StoreMenuProductView::getStoreSortOrder, 
-                                Comparator.nullsLast(Comparator.reverseOrder()))
-                                .thenComparing(StoreMenuProductView::getProductSortOrder, 
-                                        Comparator.nullsLast(Comparator.reverseOrder()))
-                                .thenComparing(StoreMenuProductView::getProductId)))
+                .peek(cat -> {
+                    Long categoryId = cat.getCategoryId();
+                    Map<Long, Integer> productSortMap = categoryProductSortMap.getOrDefault(categoryId, Collections.emptyMap());
+                    
+                    cat.getProducts().sort(
+                            // 商品排序：优先门店排序，其次分类内排序，再次商品排序，最后 productId
+                            Comparator.comparing(StoreMenuProductView::getStoreSortOrder, 
+                                    Comparator.nullsLast(Comparator.reverseOrder()))
+                                    .thenComparing(product -> productSortMap.get(product.getProductId()), 
+                                            Comparator.nullsLast(Comparator.reverseOrder()))
+                                    .thenComparing(StoreMenuProductView::getProductSortOrder, 
+                                            Comparator.nullsLast(Comparator.reverseOrder()))
+                                    .thenComparing(StoreMenuProductView::getProductId));
+                })
                 .sorted(Comparator.comparing(StoreMenuCategoryView::getSortOrder, Comparator.reverseOrder())
                         .thenComparing(StoreMenuCategoryView::getCategoryId))
                 .collect(Collectors.toList());
@@ -256,17 +268,40 @@ public class StoreMenuSnapshotBuilderService {
                 .build();
     }
 
-    private List<BcProductStoreConfig> loadStoreConfigs(Long tenantId, Long storeId, String channel) {
+    /**
+     * 加载门店商品配置，并过滤展示时间窗。
+     * <p>
+     * <b>展示时间窗过滤规则：</b>
+     * <ul>
+     *   <li>只加载 SPU 级配置（sku_id IS NULL），避免 SKU 级配置污染菜单</li>
+     *   <li>过滤展示时间窗：display_start_at <= now < display_end_at</li>
+     *   <li>未来支持 SKU 级配置（override_price/sku visible）时，需在此处扩展</li>
+     * </ul>
+     * 
+     * @param tenantId 租户ID
+     * @param storeId 门店ID
+     * @param channel 渠道
+     * @param now 当前时间（用于展示时间窗过滤）
+     * @return 过滤后的门店商品配置列表
+     */
+    private List<BcProductStoreConfig> loadStoreConfigs(Long tenantId, Long storeId, String channel, LocalDateTime now) {
         String channelCode = channel == null ? null : channel.toUpperCase();
         LambdaQueryWrapper<BcProductStoreConfig> wrapper = new LambdaQueryWrapper<BcProductStoreConfig>()
                 .eq(BcProductStoreConfig::getTenantId, tenantId)
                 .eq(BcProductStoreConfig::getStoreId, storeId)
                 .eq(BcProductStoreConfig::getVisible, true)
-                .eq(BcProductStoreConfig::getStatus, 1);
+                .eq(BcProductStoreConfig::getStatus, 1)
+                .isNull(BcProductStoreConfig::getSkuId); // 只加载 SPU 级配置，避免 SKU 级配置污染菜单
         if (channelCode != null) {
             wrapper.in(BcProductStoreConfig::getChannel, List.of("ALL", channelCode));
         }
-        return productStoreConfigMapper.selectList(wrapper);
+        
+        List<BcProductStoreConfig> configs = productStoreConfigMapper.selectList(wrapper);
+        
+        // 过滤展示时间窗：只保留在展示窗口内的配置
+        return configs.stream()
+                .filter(config -> isInDisplayWindow(config.getDisplayStartAt(), config.getDisplayEndAt(), now))
+                .collect(Collectors.toList());
     }
 
     private Map<Long, BcProduct> loadProducts(Long tenantId, Set<Long> productIds, LocalDateTime now) {
@@ -308,6 +343,37 @@ public class StoreMenuSnapshotBuilderService {
                 .in(BcProductCategoryRel::getProductId, productIds)
                 .eq(BcProductCategoryRel::getStatus, 1));
         return rels.stream().collect(Collectors.groupingBy(BcProductCategoryRel::getProductId));
+    }
+    
+    /**
+     * 构建分类内商品排序映射。
+     * <p>
+     * 返回格式：Map<categoryId, Map<productId, relSortOrder>>
+     * <p>
+     * 用于在分类内按 bc_product_category_rel.sort_order 排序商品，
+     * 这是运营最常用的排序方式（比商品自身的 sort_order 优先级更高）。
+     * 
+     * @param categoryRelMap 商品分类关联映射（按 productId 分组）
+     * @return 分类内商品排序映射
+     */
+    private Map<Long, Map<Long, Integer>> buildCategoryProductSortMap(
+            Map<Long, List<BcProductCategoryRel>> categoryRelMap) {
+        Map<Long, Map<Long, Integer>> result = new HashMap<>();
+        
+        for (Map.Entry<Long, List<BcProductCategoryRel>> entry : categoryRelMap.entrySet()) {
+            Long productId = entry.getKey();
+            List<BcProductCategoryRel> rels = entry.getValue();
+            
+            for (BcProductCategoryRel rel : rels) {
+                Long categoryId = rel.getCategoryId();
+                Integer sortOrder = rel.getSortOrder();
+                
+                result.computeIfAbsent(categoryId, k -> new HashMap<>())
+                        .put(productId, sortOrder);
+            }
+        }
+        
+        return result;
     }
 
     private Map<Long, BcProductCategory> loadCategories(Long tenantId, Map<Long, List<BcProductCategoryRel>> categoryRelMap, LocalDateTime now) {

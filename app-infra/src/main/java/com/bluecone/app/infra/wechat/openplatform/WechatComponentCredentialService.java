@@ -1,6 +1,6 @@
 package com.bluecone.app.infra.wechat.openplatform;
 
-import com.bluecone.app.infra.wechat.openplatform.mapper.WechatComponentCredentialMapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -45,20 +45,22 @@ public class WechatComponentCredentialService {
         LocalDateTime now = LocalDateTime.now();
 
         WechatComponentCredentialDO existing = credentialMapper.selectOne(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<WechatComponentCredentialDO>()
+                new QueryWrapper<WechatComponentCredentialDO>()
                         .eq("component_app_id", componentAppId)
                         .last("LIMIT 1"));
 
         if (existing == null) {
             WechatComponentCredentialDO entity = new WechatComponentCredentialDO();
             entity.setComponentAppId(componentAppId);
+            entity.setComponentAppSecret(componentAppSecret);
             entity.setComponentVerifyTicket(componentVerifyTicket);
-            entity.setLastTicketAt(now);
+            entity.setCreatedAt(now);
+            entity.setUpdatedAt(now);
             credentialMapper.insert(entity);
             log.info("[WechatComponentCredential] created credential record for componentAppId={}", componentAppId);
         } else {
             existing.setComponentVerifyTicket(componentVerifyTicket);
-            existing.setLastTicketAt(now);
+            existing.setUpdatedAt(now);
             credentialMapper.updateById(existing);
             log.info("[WechatComponentCredential] updated verify_ticket for componentAppId={}", componentAppId);
         }
@@ -80,15 +82,15 @@ public class WechatComponentCredentialService {
         }
 
         WechatComponentCredentialDO credential = credentialMapper.selectOne(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<WechatComponentCredentialDO>()
+                new QueryWrapper<WechatComponentCredentialDO>()
                         .eq("component_app_id", componentAppId)
                         .last("LIMIT 1"));
 
         LocalDateTime now = LocalDateTime.now();
         if (credential != null
                 && StringUtils.hasText(credential.getComponentAccessToken())
-                && credential.getAccessTokenExpiresAt() != null
-                && credential.getAccessTokenExpiresAt().isAfter(now.plusMinutes(2))) {
+                && credential.getComponentAccessTokenExpireAt() != null
+                && credential.getComponentAccessTokenExpireAt().isAfter(now.plusMinutes(2))) {
             return credential.getComponentAccessToken();
         }
 
@@ -114,18 +116,10 @@ public class WechatComponentCredentialService {
         Integer expiresIn = result.getExpiresIn() != null ? result.getExpiresIn() : 7200;
         LocalDateTime expiresAt = now.plusSeconds(expiresIn - 120L);
 
-        if (credential == null) {
-            credential = new WechatComponentCredentialDO();
-            credential.setComponentAppId(componentAppId);
-            credential.setComponentVerifyTicket(credential.getComponentVerifyTicket());
-            credential.setComponentAccessToken(newToken);
-            credential.setAccessTokenExpiresAt(expiresAt);
-            credentialMapper.insert(credential);
-        } else {
-            credential.setComponentAccessToken(newToken);
-            credential.setAccessTokenExpiresAt(expiresAt);
-            credentialMapper.updateById(credential);
-        }
+        credential.setComponentAccessToken(newToken);
+        credential.setComponentAccessTokenExpireAt(expiresAt);
+        credential.setUpdatedAt(now);
+        credentialMapper.updateById(credential);
 
         log.info("[WechatComponentCredential] refreshed component_access_token for componentAppId={}, expiresIn={}s",
                 componentAppId, expiresIn);
@@ -143,7 +137,7 @@ public class WechatComponentCredentialService {
             return null;
         }
         return credentialMapper.selectOne(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<WechatComponentCredentialDO>()
+                new QueryWrapper<WechatComponentCredentialDO>()
                         .eq("component_app_id", componentAppId)
                         .last("LIMIT 1"));
     }

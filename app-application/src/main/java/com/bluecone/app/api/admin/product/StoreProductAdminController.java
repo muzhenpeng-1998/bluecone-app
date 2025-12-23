@@ -13,13 +13,13 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 门店商品管理 Admin Controller
- * 
+ *
  * <h3>📋 接口列表：</h3>
  * <ul>
  *   <li>PUT /api/admin/stores/{storeId}/products/{productId}/visibility - 上架/下架</li>
  *   <li>POST /api/admin/stores/{storeId}/products/reorder - 批量排序</li>
  * </ul>
- * 
+ *
  * @author BlueCone Team
  * @since 1.0.0
  */
@@ -29,15 +29,15 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Slf4j
 public class StoreProductAdminController {
-    
+
     private final StoreProductAdminApplicationService storeProductService;
     private final CurrentUserContext currentUserContext;
-    
+
     /**
      * 设置商品在门店的可见性（上架/下架）
-     * 
+     *
      * <p>接口：PUT /api/admin/stores/{storeId}/products/{productId}/visibility
-     * 
+     *
      * <h3>使用场景：</h3>
      * <ul>
      *   <li>商品上架：visible=true</li>
@@ -45,7 +45,7 @@ public class StoreProductAdminController {
      *   <li>定时上架：设置 displayStartAt</li>
      *   <li>定时下架：设置 displayEndAt</li>
      * </ul>
-     * 
+     *
      * @param storeId 门店ID
      * @param productId 商品ID
      * @param request 可见性设置请求
@@ -56,36 +56,36 @@ public class StoreProductAdminController {
             @PathVariable Long storeId,
             @PathVariable Long productId,
             @Valid @RequestBody StoreProductVisibilityRequest request) {
-        
-        log.info("设置商品可见性: storeId={}, productId={}, visible={}", 
+
+        log.info("设置商品可见性: storeId={}, productId={}, visible={}",
                 storeId, productId, request.getVisible());
-        
+
         // 从上下文获取 tenantId 和 operatorId
         Long tenantId = currentUserContext.getCurrentTenantId();
         Long operatorId = currentUserContext.getCurrentUserId();
-        
+
         storeProductService.setProductVisibility(tenantId, storeId, productId, request, operatorId);
-        
+
         return ApiResponse.success();
     }
-    
+
     /**
      * 批量调整商品在门店的排序
-     * 
+     *
      * <p>接口：POST /api/admin/stores/{storeId}/products/reorder
-     * 
+     *
      * <h3>使用场景：</h3>
      * <ul>
      *   <li>拖拽排序：前端传入新的排序列表</li>
      *   <li>置顶商品：设置较大的 sortOrder</li>
      * </ul>
-     * 
+     *
      * <h3>排序规则：</h3>
      * <ul>
      *   <li>降序排列：sortOrder 值越大越靠前</li>
      *   <li>相同 sortOrder：按 id 升序</li>
      * </ul>
-     * 
+     *
      * @param storeId 门店ID
      * @param request 排序请求
      * @return 成功响应
@@ -94,16 +94,16 @@ public class StoreProductAdminController {
     public ApiResponse<Void> reorderProducts(
             @PathVariable Long storeId,
             @Valid @RequestBody StoreProductReorderRequest request) {
-        
-        log.info("批量调整商品排序: storeId={}, count={}", 
+
+        log.info("批量调整商品排序: storeId={}, count={}",
                 storeId, request.getProducts().size());
-        
+
         // 从上下文获取 tenantId 和 operatorId
         Long tenantId = currentUserContext.getCurrentTenantId();
         Long operatorId = currentUserContext.getCurrentUserId();
-        
+
         storeProductService.reorderProducts(tenantId, storeId, request, operatorId);
-        
+
         return ApiResponse.success();
     }
 }

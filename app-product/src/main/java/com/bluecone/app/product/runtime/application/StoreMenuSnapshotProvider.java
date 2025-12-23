@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 /**
- * 门店菜单快照 Provider（Prompt 08）。
+ * 门店菜单快照 Provider（Prompt 08 + 门店级 Epoch）。
  * <p>
  * 复用 ContextMiddlewareKit 通用能力：
  * <ul>
@@ -22,7 +22,18 @@ import java.util.Optional;
  *   <li>Epoch Keying 支持（namespace 级缓存失效）</li>
  * </ul>
  * <p>
- * 缓存键格式：{tenantId}:{epoch}:{storeId}:{channel}:{orderScene}
+ * <b>缓存键格式：</b>{tenantId}:{epoch}:{scopeId}
+ * <ul>
+ *   <li>scopeId = {storeId}:{channel}:{orderScene}</li>
+ *   <li>epoch 按门店隔离（namespace = "store:menu:snap:{storeId}"）</li>
+ * </ul>
+ * <p>
+ * <b>门店级 Epoch 设计：</b>
+ * <ul>
+ *   <li>每个门店使用独立的 namespace：CacheNamespaces.STORE_MENU_SNAPSHOT + ":" + storeId</li>
+ *   <li>修改某个门店的菜单时，只会 bump 该门店的 epoch，不影响同租户其他门店</li>
+ *   <li>避免租户级全量失效，提升缓存命中率</li>
+ * </ul>
  * <p>
  * 使用场景：
  * <ul>
@@ -73,6 +84,9 @@ public class StoreMenuSnapshotProvider {
      *   <li>L2 miss 后从数据库加载</li>
      *   <li>定期采样校验版本号，确保缓存一致性</li>
      * </ol>
+     * <p>
+     * <b>门店级 Epoch：</b>使用 "store:menu:snap:{storeId}" 作为 namespace，
+     * 确保只有该门店的菜单变更才会触发该门店的缓存失效。
      *
      * @param tenantId   租户ID
      * @param storeId    门店ID
@@ -89,14 +103,18 @@ public class StoreMenuSnapshotProvider {
         // 构建 scopeId：{storeId}:{channel}:{orderScene}
         String scopeId = buildScopeId(storeId, channel, orderScene);
         
+        // 构建门店级 namespace：store:menu:snap:{storeId}
+        // 这样每个门店有独立的 epoch，避免租户级全量失效
+        String storeNamespace = CacheNamespaces.STORE_MENU_SNAPSHOT + ":" + storeId;
+        
         SnapshotLoadKey loadKey = new SnapshotLoadKey(
                 tenantId,
-                CacheNamespaces.STORE_MENU_SNAPSHOT,
+                storeNamespace,
                 scopeId
         );
 
-        log.debug("获取门店菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}", 
-                tenantId, storeId, channel, orderScene);
+        log.debug("获取门店菜单快照: tenantId={}, storeId={}, channel={}, orderScene={}, namespace={}", 
+                tenantId, storeId, channel, orderScene, storeNamespace);
 
         StoreMenuSnapshotData snapshot = delegate.getOrLoad(
                 loadKey,

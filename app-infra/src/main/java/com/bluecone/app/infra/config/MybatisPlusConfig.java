@@ -32,21 +32,24 @@ import org.springframework.context.annotation.Configuration;
  * @since 1.0.0
  */
 @Configuration
-@MapperScan({
-        "com.bluecone.app.**.mapper",
-        "com.bluecone.app.infra.security.session",
-        "com.bluecone.app.infra.user.query",
-        "com.bluecone.app.infra.idempotency",
-        "com.bluecone.app.infra.event.consume",
-        "com.bluecone.app.infra.event.outbox",
-        "com.bluecone.app.infra.idresolve",
-        "com.bluecone.app.infra.cacheinval",
-        "com.bluecone.app.infra.wechat.openplatform.mapper",
-        // 支付模块 Mapper（位于 infrastructure.persistence 包下）
-        "com.bluecone.app.payment.infrastructure.persistence",
-        // 通知模块 Mapper（位于 infrastructure.dao 包下）
-        "com.bluecone.app.notify.infrastructure.dao"
-})
+@MapperScan(
+        basePackages = {
+                "com.bluecone.app.**.mapper",
+                "com.bluecone.app.infra.security.session",
+                "com.bluecone.app.infra.user.query",
+                "com.bluecone.app.infra.idempotency",
+                "com.bluecone.app.infra.event.consume",
+                "com.bluecone.app.infra.event.outbox",
+                "com.bluecone.app.infra.idresolve",
+                "com.bluecone.app.infra.cacheinval",
+                "com.bluecone.app.infra.wechat.openplatform",
+                // 支付模块 Mapper（位于 infrastructure.persistence 包下）
+                "com.bluecone.app.payment.infrastructure.persistence",
+                // 通知模块 Mapper（位于 infrastructure.dao 包下）
+                "com.bluecone.app.notify.infrastructure.dao"
+        },
+        annotationClass = org.apache.ibatis.annotations.Mapper.class
+)
 @ConditionalOnClass(MybatisPlusInterceptor.class)
 @ConditionalOnProperty(name = "mybatis-plus.enabled", havingValue = "true", matchIfMissing = false)
 public class MybatisPlusConfig {

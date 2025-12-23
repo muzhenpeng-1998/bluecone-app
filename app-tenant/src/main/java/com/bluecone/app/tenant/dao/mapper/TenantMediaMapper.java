@@ -1,5 +1,7 @@
 package com.bluecone.app.tenant.dao.mapper;
 
+import org.apache.ibatis.annotations.Mapper;
+
 import com.bluecone.app.tenant.dao.entity.TenantMedia;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
@@ -11,6 +13,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @author muzhenpeng
  * @since 2025-12-03
  */
+@Mapper
 public interface TenantMediaMapper extends BaseMapper<TenantMedia> {
 
 }

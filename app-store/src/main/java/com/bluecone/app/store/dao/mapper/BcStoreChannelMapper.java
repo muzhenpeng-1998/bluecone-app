@@ -2,6 +2,7 @@ package com.bluecone.app.store.dao.mapper;
 
 import com.bluecone.app.store.dao.entity.BcStoreChannel;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>
@@ -11,6 +12,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @author muzhenpeng
  * @since 2025-12-03
  */
+@Mapper
 public interface BcStoreChannelMapper extends BaseMapper<BcStoreChannel> {
 
 }
