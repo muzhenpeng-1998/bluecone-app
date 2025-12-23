@@ -1,7 +1,3 @@
-# IMPORTANT: Include .mvn directory for Maven settings
-!.mvn/
-!.mvn/**
-
 # Git files
 .git
 .gitignore
