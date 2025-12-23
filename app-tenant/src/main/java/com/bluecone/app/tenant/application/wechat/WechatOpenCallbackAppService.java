@@ -12,6 +12,15 @@ import com.bluecone.app.tenant.application.wechat.command.WechatUnauthorizedEven
 import com.bluecone.app.tenant.dao.entity.Tenant;
 import com.bluecone.app.tenant.dao.mapper.TenantMapper;
 import com.bluecone.app.infra.wechat.openplatform.WechatComponentCredentialService;
+import com.bluecone.app.wechat.config.WeChatOpenPlatformProperties;
+import me.chanjar.weixin.common.util.crypto.WxCryptUtil;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.InputSource;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -40,6 +49,7 @@ public class WechatOpenCallbackAppService {
     private final TenantMapper tenantMapper;
     private final BcStoreMapper bcStoreMapper;
     private final WechatComponentCredentialService wechatComponentCredentialService;
+    private final WeChatOpenPlatformProperties weChatOpenPlatformProperties;
 
     /**
      * 微信开放平台回调原始入口。
@@ -58,10 +68,109 @@ public class WechatOpenCallbackAppService {
         log.info("[WechatOpenCallback] raw callback received, signature={}, timestamp={}, nonce={}, msgSignature={}, bodyLength={}",
                 signature, timestamp, nonce, msgSignature,
                 requestBody != null ? requestBody.length() : 0);
-        // TODO: 在这里接入微信开放平台消息解密与事件解析逻辑，并分发到 handleMiniProgramAuthorized/handleMiniProgramUnauthorized 等方法
-        // 例如，当解析出 event 为 component_verify_ticket 时：
-        // String ticket = parsedXml.getComponentVerifyTicket();
-        // wechatComponentCredentialService.saveOrUpdateVerifyTicket(ticket);
+
+        // 1. 解密消息
+        String decryptedXml;
+        try {
+            String componentToken = weChatOpenPlatformProperties.getComponentToken();
+            String componentAesKey = weChatOpenPlatformProperties.getComponentAesKey();
+            String componentAppId = weChatOpenPlatformProperties.getComponentAppId();
+
+            if (!StringUtils.hasText(componentToken) || !StringUtils.hasText(componentAesKey) || !StringUtils.hasText(componentAppId)) {
+                log.error("[WechatOpenCallback] 配置缺失：componentToken/componentAesKey/componentAppId");
+                return;
+            }
+
+            WxCryptUtil cryptUtil = new WxCryptUtil(componentToken, componentAesKey, componentAppId);
+            decryptedXml = cryptUtil.decrypt(requestBody);
+            
+            log.debug("[WechatOpenCallback] 消息解密成功，明文长度={}", decryptedXml != null ? decryptedXml.length() : 0);
+        } catch (Exception e) {
+            log.error("[WechatOpenCallback] 消息解密失败: {}", e.getMessage(), e);
+            return;
+        }
+
+        // 2. 解析 XML 获取 InfoType 和 AuthorizerAppid
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new InputSource(new StringReader(decryptedXml)));
+            Element root = doc.getDocumentElement();
+
+            String infoType = getElementText(root, "InfoType");
+            String authorizerAppid = getElementText(root, "AuthorizerAppid");
+
+            log.info("[WechatOpenCallback] 解析事件：InfoType={}, AuthorizerAppid={}", infoType, authorizerAppid);
+
+            // 3. 根据 InfoType 路由到不同的处理方法
+            if (!StringUtils.hasText(infoType)) {
+                log.warn("[WechatOpenCallback] InfoType 为空，无法路由");
+                return;
+            }
+
+            switch (infoType) {
+                case "component_verify_ticket":
+                    // 处理 component_verify_ticket 事件
+                    handleComponentVerifyTicket(root);
+                    break;
+
+                case "unauthorized":
+                    // 处理取消授权事件
+                    if (StringUtils.hasText(authorizerAppid)) {
+                        WechatUnauthorizedEventCommand command = new WechatUnauthorizedEventCommand(authorizerAppid);
+                        handleMiniProgramUnauthorized(command);
+                    } else {
+                        log.warn("[WechatOpenCallback] unauthorized 事件缺少 AuthorizerAppid");
+                    }
+                    break;
+
+                case "authorized":
+                case "updateauthorized":
+                    // 处理授权/更新授权事件
+                    // 注意：raw event 没有 state，无法直接绑定 tenantId
+                    // 这里只记录日志，实际绑定在授权回调页面完成
+                    log.info("[WechatOpenCallback] 收到 {} 事件，AuthorizerAppid={}（需要在授权回调页面完成绑定）", 
+                            infoType, authorizerAppid);
+                    // TODO: 可以触发异步任务刷新 authorizer_access_token
+                    break;
+
+                default:
+                    log.info("[WechatOpenCallback] 未处理的 InfoType: {}", infoType);
+                    break;
+            }
+
+        } catch (Exception e) {
+            log.error("[WechatOpenCallback] XML 解析失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 处理 component_verify_ticket 事件。
+     */
+    private void handleComponentVerifyTicket(Element root) {
+        String ticket = getElementText(root, "ComponentVerifyTicket");
+        if (StringUtils.hasText(ticket)) {
+            wechatComponentCredentialService.saveOrUpdateVerifyTicket(ticket);
+            log.info("[WechatOpenCallback] component_verify_ticket 已保存");
+        } else {
+            log.warn("[WechatOpenCallback] component_verify_ticket 为空");
+        }
+    }
+
+    /**
+     * 从 XML Element 中提取文本内容。
+     */
+    private String getElementText(Element parent, String tagName) {
+        try {
+            org.w3c.dom.NodeList nodeList = parent.getElementsByTagName(tagName);
+            if (nodeList.getLength() > 0) {
+                org.w3c.dom.Node node = nodeList.item(0);
+                return node.getTextContent();
+            }
+        } catch (Exception e) {
+            log.debug("[WechatOpenCallback] 提取 {} 失败: {}", tagName, e.getMessage());
+        }
+        return null;
     }
 
     /**

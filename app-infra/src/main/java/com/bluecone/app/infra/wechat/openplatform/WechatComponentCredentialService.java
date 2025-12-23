@@ -2,10 +2,10 @@ package com.bluecone.app.infra.wechat.openplatform;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import java.time.LocalDateTime;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -15,15 +15,27 @@ import org.springframework.util.StringUtils;
  * <p>
  * 负责持久化 component_verify_ticket 与 component_access_token，并提供统一的读取与刷新能力。
  * </p>
+ * <p>
+ * 注意：使用 @Lazy 注入 WeChatOpenPlatformClient 以打破循环依赖。
+ * </p>
  */
 @Service
-@RequiredArgsConstructor
 public class WechatComponentCredentialService {
 
     private static final Logger log = LoggerFactory.getLogger(WechatComponentCredentialService.class);
 
     private final WechatComponentCredentialMapper credentialMapper;
     private final WeChatOpenPlatformClient weChatOpenPlatformClient;
+
+    /**
+     * 构造函数，使用 @Lazy 注入 WeChatOpenPlatformClient 以打破循环依赖。
+     */
+    public WechatComponentCredentialService(
+            WechatComponentCredentialMapper credentialMapper,
+            @Lazy WeChatOpenPlatformClient weChatOpenPlatformClient) {
+        this.credentialMapper = credentialMapper;
+        this.weChatOpenPlatformClient = weChatOpenPlatformClient;
+    }
 
     @Value("${wechat.open-platform.component-app-id:}")
     private String componentAppId;

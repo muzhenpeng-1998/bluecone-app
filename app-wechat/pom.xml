@@ -36,13 +36,6 @@
             <version>${wx-java.version}</version>
         </dependency>
 
-        <!-- WxJava 微信小程序 SDK（可选，如果 weixin-java-open 已包含小程序功能则可不引入） -->
-        <dependency>
-            <groupId>com.github.binarywang</groupId>
-            <artifactId>weixin-java-miniapp</artifactId>
-            <version>${wx-java.version}</version>
-        </dependency>
-
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

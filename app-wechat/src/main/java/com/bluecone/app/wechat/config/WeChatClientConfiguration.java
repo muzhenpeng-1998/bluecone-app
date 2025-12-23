@@ -6,6 +6,9 @@ import com.bluecone.app.infra.wechat.WeChatMiniAppClient;
 import com.bluecone.app.infra.wechat.WeChatMiniAppClientStub;
 import com.bluecone.app.infra.wechat.openplatform.WeChatOpenPlatformClient;
 import com.bluecone.app.infra.wechat.openplatform.WeChatOpenPlatformClientStub;
+import com.bluecone.app.infra.wechat.openplatform.WechatAuthorizedAppService;
+import com.bluecone.app.infra.wechat.openplatform.WechatComponentCredentialDO;
+import com.bluecone.app.infra.wechat.openplatform.WechatComponentCredentialService;
 import com.bluecone.app.wechat.miniapp.WxJavaWeChatMiniAppClient;
 import com.bluecone.app.wechat.openplatform.WxJavaWeChatOpenPlatformClient;
 import me.chanjar.weixin.open.api.WxOpenService;
@@ -16,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 /**
  * 微信客户端配置类。
@@ -32,62 +36,87 @@ public class WeChatClientConfiguration {
 
     /**
      * WxJava 开放平台 Service（当 enabled=true 时创建）。
-     * 
-     * 注意：WxJava 4.7.0 的包结构可能有变化，暂时注释掉，使用 Stub 实现。
-     * TODO: 验证 WxJava 4.7.0 的正确用法后再启用。
+     * <p>
+     * 注意：不在初始化时加载 component_verify_ticket，避免循环依赖。
+     * component_verify_ticket 会在微信推送时自动保存，或在首次使用时动态加载。
+     * </p>
      */
-    // @Bean
-    // @ConditionalOnProperty(prefix = "wechat.open-platform", name = "enabled", havingValue = "true")
-    // public WxOpenService wxOpenService(WeChatOpenPlatformProperties properties) {
-    //     log.info("[WeChatClientConfig] 初始化 WxOpenService, componentAppId={}", properties.getComponentAppId());
-    //     
-    //     WxOpenInMemoryConfigStorage config = new WxOpenInMemoryConfigStorage();
-    //     config.setComponentAppId(properties.getComponentAppId());
-    //     config.setComponentAppSecret(properties.getComponentAppSecret());
-    //     config.setComponentToken(properties.getComponentToken());
-    //     config.setComponentAesKey(properties.getComponentAesKey());
-    //     
-    //     WxOpenServiceImpl wxOpenService = new WxOpenServiceImpl();
-    //     wxOpenService.setWxOpenConfigStorage(config);
-    //     
-    //     log.info("[WeChatClientConfig] WxOpenService 初始化完成");
-    //     return wxOpenService;
-    // }
+    @Bean
+    @ConditionalOnProperty(prefix = "wechat.open-platform", name = "enabled", havingValue = "true")
+    public WxOpenService wxOpenService(WeChatOpenPlatformProperties properties) {
+        log.info("[WeChatClientConfig] 初始化 WxOpenService, componentAppId={}", properties.getComponentAppId());
+        
+        WxOpenInMemoryConfigStorage config = new WxOpenInMemoryConfigStorage();
+        config.setComponentAppId(properties.getComponentAppId());
+        config.setComponentAppSecret(properties.getComponentAppSecret());
+        config.setComponentToken(properties.getComponentToken());
+        config.setComponentAesKey(properties.getComponentAesKey());
+        
+        // 不在初始化时加载 component_verify_ticket，避免循环依赖
+        // component_verify_ticket 会在以下时机设置：
+        // 1. 微信每10分钟推送时，通过回调接口保存到数据库
+        // 2. WechatComponentCredentialService 首次使用时会动态加载
+        log.info("[WeChatClientConfig] WxOpenService 初始化完成（component_verify_ticket 将在微信推送后加载）");
+        
+        WxOpenServiceImpl wxOpenService = new WxOpenServiceImpl();
+        wxOpenService.setWxOpenConfigStorage(config);
+        
+        return wxOpenService;
+    }
 
     /**
      * 微信开放平台客户端（WxJava 实现，当 enabled=true 时创建）。
-     * 
-     * 注意：WxJava 4.7.0 的包结构可能有变化，暂时注释掉，使用 Stub 实现。
-     * TODO: 验证 WxJava 4.7.0 的正确用法后再启用。
-     */
-    // @Bean
-    // @ConditionalOnProperty(prefix = "wechat.open-platform", name = "enabled", havingValue = "true")
-    // public WeChatOpenPlatformClient wxJavaWeChatOpenPlatformClient(WxOpenService wxOpenService) {
-    //     log.info("[WeChatClientConfig] Using WxJavaWeChatOpenPlatformClient (WxJava 4.7.0)");
-    //     return new WxJavaWeChatOpenPlatformClient(wxOpenService);
-    // }
-
-    /**
-     * 微信开放平台客户端（Stub 实现）。
-     * 
-     * 注意：由于 WxJava 4.7.0 实现暂时注释掉，这里总是创建 Stub 实现。
-     * TODO: 验证 WxJava 4.7.0 后，改为条件创建。
      */
     @Bean
-    public WeChatOpenPlatformClient weChatOpenPlatformClient() {
-        log.warn("[WeChatClientConfig] Using WeChatOpenPlatformClientStub (WxJava implementation temporarily disabled)");
+    @ConditionalOnProperty(prefix = "wechat.open-platform", name = "enabled", havingValue = "true")
+    public WeChatOpenPlatformClient wxJavaWeChatOpenPlatformClient(
+            WxOpenService wxOpenService,
+            WechatComponentCredentialService wechatComponentCredentialService,
+            WechatAuthorizedAppService wechatAuthorizedAppService,
+            WeChatOpenPlatformProperties properties) {
+        log.info("[WeChatClientConfig] Using WxJavaWeChatOpenPlatformClient (WxJava 4.7.0)");
+        return new WxJavaWeChatOpenPlatformClient(
+                wxOpenService,
+                wechatComponentCredentialService,
+                wechatAuthorizedAppService,
+                properties);
+    }
+
+    /**
+     * 微信开放平台客户端（Stub 实现，当 enabled=false 时创建）。
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "wechat.open-platform", name = "enabled", havingValue = "false", matchIfMissing = true)
+    public WeChatOpenPlatformClient weChatOpenPlatformClientStub() {
+        log.warn("[WeChatClientConfig] Using WeChatOpenPlatformClientStub (wechat.open-platform.enabled=false)");
         return new WeChatOpenPlatformClientStub();
     }
 
     /**
-     * 微信小程序客户端（Stub 实现）。
-     * 
-     * 注意：由于 WxJava 4.7.0 实现暂时注释掉，这里总是创建 Stub 实现。
-     * TODO: 验证 WxJava 4.7.0 后，改为条件创建。
+     * 微信小程序客户端（WxJava 实现，当 enabled=true 时创建）。
      */
     @Bean
-    public WeChatMiniAppClient weChatMiniAppClient() {
-        log.warn("[WeChatClientConfig] Using WeChatMiniAppClientStub (WxJava implementation temporarily disabled)");
+    @ConditionalOnProperty(prefix = "wechat.open-platform", name = "enabled", havingValue = "true")
+    public WeChatMiniAppClient wxJavaWeChatMiniAppClient(
+            WxOpenService wxOpenService,
+            WechatAuthorizedAppService wechatAuthorizedAppService,
+            WechatComponentCredentialService wechatComponentCredentialService,
+            WeChatOpenPlatformProperties properties) {
+        log.info("[WeChatClientConfig] Using WxJavaWeChatMiniAppClient (WxJava 4.7.0)");
+        return new WxJavaWeChatMiniAppClient(
+                wxOpenService,
+                wechatAuthorizedAppService,
+                wechatComponentCredentialService,
+                properties);
+    }
+
+    /**
+     * 微信小程序客户端（Stub 实现，当 enabled=false 时创建）。
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "wechat.open-platform", name = "enabled", havingValue = "false", matchIfMissing = true)
+    public WeChatMiniAppClient weChatMiniAppClientStub() {
+        log.warn("[WeChatClientConfig] Using WeChatMiniAppClientStub (wechat.open-platform.enabled=false)");
         return new WeChatMiniAppClientStub();
     }
 

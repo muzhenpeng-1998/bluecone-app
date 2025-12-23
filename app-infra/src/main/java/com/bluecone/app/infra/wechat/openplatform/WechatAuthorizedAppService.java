@@ -2,9 +2,9 @@ package com.bluecone.app.infra.wechat.openplatform;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -15,9 +15,11 @@ import java.util.Optional;
  * <p>
  * 提供查询租户授权小程序信息的能力，以及 authorizer_access_token 的刷新管理。
  * </p>
+ * <p>
+ * 注意：使用 @Lazy 注入 WeChatOpenPlatformClient 以打破循环依赖。
+ * </p>
  */
 @Service
-@RequiredArgsConstructor
 public class WechatAuthorizedAppService {
 
     private static final Logger log = LoggerFactory.getLogger(WechatAuthorizedAppService.class);
@@ -25,6 +27,18 @@ public class WechatAuthorizedAppService {
     private final WechatAuthorizedAppMapper authorizedAppMapper;
     private final WeChatOpenPlatformClient weChatOpenPlatformClient;
     private final WechatComponentCredentialService wechatComponentCredentialService;
+
+    /**
+     * 构造函数，使用 @Lazy 注入 WeChatOpenPlatformClient 以打破循环依赖。
+     */
+    public WechatAuthorizedAppService(
+            WechatAuthorizedAppMapper authorizedAppMapper,
+            @Lazy WeChatOpenPlatformClient weChatOpenPlatformClient,
+            WechatComponentCredentialService wechatComponentCredentialService) {
+        this.authorizedAppMapper = authorizedAppMapper;
+        this.weChatOpenPlatformClient = weChatOpenPlatformClient;
+        this.wechatComponentCredentialService = wechatComponentCredentialService;
+    }
 
     /**
      * 根据租户 ID 查询已授权的小程序 AppID。

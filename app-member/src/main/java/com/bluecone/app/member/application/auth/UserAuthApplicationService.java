@@ -76,27 +76,41 @@ public class UserAuthApplicationService {
                 maskOpenId(openId), 
                 StringUtils.hasText(unionId) ? "有值" : "空");
 
-        // 3. 解密手机号（可选）
+        // 3. 获取手机号（可选）
         String phone = null;
         String countryCode = "+86";
         if (StringUtils.hasText(cmd.getPhoneCode())) {
-            // 优先使用 phoneCode 方式（推荐）
-            WeChatPhoneNumberResult phoneResult = weChatMiniAppClient.decryptPhoneNumber(
-                    appId, cmd.getPhoneCode(), null, null);
-            if (phoneResult != null) {
-                phone = phoneResult.getPhoneNumber();
-                countryCode = phoneResult.getCountryCode();
-                log.debug("[UserAuth] 获取手机号成功（phoneCode）");
+            // 优先使用 phoneCode 方式（推荐，新版本）
+            try {
+                WeChatPhoneNumberResult phoneResult = weChatMiniAppClient.getPhoneNumberByCode(
+                        appId, cmd.getPhoneCode());
+                if (phoneResult != null) {
+                    phone = phoneResult.getPhoneNumber();
+                    countryCode = phoneResult.getCountryCode();
+                    log.info("[UserAuth] 获取手机号成功（phoneCode方式）");
+                } else {
+                    log.warn("[UserAuth] 获取手机号失败（phoneCode方式返回null）");
+                }
+            } catch (Exception e) {
+                log.error("[UserAuth] 获取手机号失败（phoneCode方式）: {}", e.getMessage());
             }
         } else if (StringUtils.hasText(cmd.getEncryptedData()) && StringUtils.hasText(cmd.getIv())) {
             // 兼容旧版本 encryptedData/iv 方式
-            WeChatPhoneNumberResult phoneResult = weChatMiniAppClient.decryptPhoneNumber(
-                    appId, sessionResult.getSessionKey(), cmd.getEncryptedData(), cmd.getIv());
-            if (phoneResult != null) {
-                phone = phoneResult.getPhoneNumber();
-                countryCode = phoneResult.getCountryCode();
-                log.debug("[UserAuth] 获取手机号成功（encryptedData/iv）");
+            try {
+                WeChatPhoneNumberResult phoneResult = weChatMiniAppClient.decryptPhoneNumber(
+                        appId, sessionResult.getSessionKey(), cmd.getEncryptedData(), cmd.getIv());
+                if (phoneResult != null) {
+                    phone = phoneResult.getPhoneNumber();
+                    countryCode = phoneResult.getCountryCode();
+                    log.info("[UserAuth] 获取手机号成功（encryptedData/iv方式）");
+                } else {
+                    log.warn("[UserAuth] 获取手机号失败（encryptedData/iv方式返回null）");
+                }
+            } catch (Exception e) {
+                log.error("[UserAuth] 获取手机号失败（encryptedData/iv方式）: {}", e.getMessage());
             }
+        } else {
+            log.debug("[UserAuth] 未提供手机号相关参数（phoneCode或encryptedData/iv），跳过手机号获取");
         }
 
         // 4. 注册或加载用户（使用新的 registerOrLoadByWeChatMiniApp 方法）
