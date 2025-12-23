@@ -1,0 +1,52 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# IDE files
+.idea
+*.iml
+.vscode
+.DS_Store
+
+# Build outputs (will be rebuilt in Docker)
+target/
+*/target/
+**/target/
+
+# Logs
+logs/
+*.log
+app-application/logs/
+
+# Documentation
+docs/
+*.md
+CHANGELOG*.md
+*_SUMMARY.md
+*_GUIDE.md
+QUICK_REFERENCE.md
+
+# Test files
+**/src/test/
+
+# Scripts
+scripts/
+*.sh
+*.class
+*.java.bak
+
+# Frontend
+onboarding-h5/
+node_modules/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS files
+Thumbs.db
+.DS_Store
+

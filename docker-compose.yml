@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  bluecone-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bluecone-app:latest
+    container_name: bluecone-app
+    ports:
+      - "8080:80"
+    environment:
+      # Spring 配置
+      - SPRING_PROFILES_ACTIVE=local
+      - PORT=80
+      
+      # 数据库配置（根据实际情况修改）
+      # - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bluecone?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+      # - SPRING_DATASOURCE_USERNAME=root
+      # - SPRING_DATASOURCE_PASSWORD=password
+      
+      # JVM 配置（可选，覆盖默认配置）
+      # - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0
+    volumes:
+      # 挂载日志目录
+      - ./logs:/app/logs
+      # 如果需要挂载配置文件
+      # - ./config:/app/config
+    restart: unless-stopped
+    networks:
+      - bluecone-network
+    # 资源限制（可选）
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # MySQL 数据库（可选，用于本地开发）
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: bluecone-mysql
+  #   ports:
+  #     - "3306:3306"
+  #   environment:
+  #     - MYSQL_ROOT_PASSWORD=password
+  #     - MYSQL_DATABASE=bluecone
+  #     - MYSQL_CHARACTER_SET_SERVER=utf8mb4
+  #     - MYSQL_COLLATION_SERVER=utf8mb4_unicode_ci
+  #     - TZ=Asia/Shanghai
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+  #     - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   networks:
+  #     - bluecone-network
+  #   restart: unless-stopped
+
+  # Redis（可选，用于缓存）
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: bluecone-redis
+  #   ports:
+  #     - "6379:6379"
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - bluecone-network
+  #   restart: unless-stopped
+
+networks:
+  bluecone-network:
+    driver: bridge
+
+# volumes:
+#   mysql-data:
+#   redis-data:
+
