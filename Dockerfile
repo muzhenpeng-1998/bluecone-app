@@ -4,7 +4,8 @@ FROM maven:3.9.9-eclipse-temurin-21-alpine AS build
 WORKDIR /workspace
 
 # 拷贝 Maven 配置文件（使用国内镜像加速）
-COPY .mvn/ .mvn/
+# 使用 mvn-config 而不是 .mvn 以避免微信云托管构建时的路径问题
+COPY mvn-config/ .mvn/
 
 # 仅拷贝 pom 文件，充分利用 Docker 层缓存
 # 按照 pom.xml 中的模块顺序拷贝，确保构建依赖关系正确

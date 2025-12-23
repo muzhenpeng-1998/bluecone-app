@@ -26,6 +26,9 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
+# mvn-config is a copy of .mvn for Docker builds (微信云托管构建需要)
+mvn-config/
+
 # Logs
 logs/
 *.log
