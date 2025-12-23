@@ -41,29 +41,40 @@ public class UserAuthApplicationService {
     /**
      * 微信小程序登录/注册。
      * <p>
-     * 流程：
-     * 1. 根据 tenantId 查询授权的小程序 appId
+     * 流程（新版本，不再信任客户端传 tenantId）：
+     * 1. 以 authorizerAppId（小程序 appId）为主键，从 bc_wechat_authorized_app 反查 tenantId
      * 2. 使用 code 换取 openId、unionId、sessionKey
      * 3. 解密手机号（可选）
-     * 4. 根据 unionId 或 (appId, openId) 注册或加载用户
+     * 4. 根据 unionId / phone / (appId, openId) 注册或加载用户
      * 5. 确保租户会员存在
      * 6. 创建登录会话
      * </p>
      */
     public LoginResponse loginByWeChatMiniApp(WechatMiniAppLoginRequest cmd) {
-        Long tenantId = cmd.getSourceTenantId();
-        if (tenantId == null) {
-            throw new IllegalArgumentException("sourceTenantId 不能为空");
+        String appId = cmd.getAuthorizerAppId();
+        if (!StringUtils.hasText(appId)) {
+            throw new IllegalArgumentException("authorizerAppId 不能为空");
         }
 
-        // 1. 根据 tenantId 查询授权的小程序 appId
-        String appId = wechatAuthorizedAppService.getAuthorizerAppIdByTenantId(tenantId)
-                .orElseThrow(() -> new IllegalStateException("租户未授权小程序，tenantId=" + tenantId));
+        // 1. 以 authorizerAppId 为主键，从 bc_wechat_authorized_app 反查 tenantId
+        var authorizedApp = wechatAuthorizedAppService.getAuthorizedAppByAppId(appId)
+                .orElseThrow(() -> new IllegalStateException("小程序未接入或未授权，appId=" + appId));
         
-        log.info("[UserAuth] WeChat mini app login, tenantId={}, appId={}", tenantId, appId);
+        if (!"AUTHORIZED".equals(authorizedApp.getAuthorizationStatus())) {
+            throw new IllegalStateException("小程序授权状态异常，appId=" + appId + ", status=" + authorizedApp.getAuthorizationStatus());
+        }
+        
+        Long tenantId = authorizedApp.getTenantId();
+        log.info("[UserAuth] WeChat mini app login, appId={}, tenantId={}", appId, tenantId);
 
         // 2. code 换 session
         WeChatCode2SessionResult sessionResult = weChatMiniAppClient.code2Session(appId, cmd.getCode());
+        String openId = sessionResult.getOpenId();
+        String unionId = sessionResult.getUnionId();
+        
+        log.debug("[UserAuth] code2Session success, openId前3后3={}, unionId={}", 
+                maskOpenId(openId), 
+                StringUtils.hasText(unionId) ? "有值" : "空");
 
         // 3. 解密手机号（可选）
         String phone = null;
@@ -75,6 +86,7 @@ public class UserAuthApplicationService {
             if (phoneResult != null) {
                 phone = phoneResult.getPhoneNumber();
                 countryCode = phoneResult.getCountryCode();
+                log.debug("[UserAuth] 获取手机号成功（phoneCode）");
             }
         } else if (StringUtils.hasText(cmd.getEncryptedData()) && StringUtils.hasText(cmd.getIv())) {
             // 兼容旧版本 encryptedData/iv 方式
@@ -83,25 +95,16 @@ public class UserAuthApplicationService {
             if (phoneResult != null) {
                 phone = phoneResult.getPhoneNumber();
                 countryCode = phoneResult.getCountryCode();
+                log.debug("[UserAuth] 获取手机号成功（encryptedData/iv）");
             }
         }
 
-        // 4. 注册或加载用户
-        // 注意：如果 unionId 为空，可以考虑使用 openId 作为 unionId 的替代
-        // 但这样会导致同一个用户在不同小程序中被识别为不同用户
-        // 这里我们仍然使用 unionId（即使为空），让 UserDomainService 通过手机号识别用户
-        String effectiveUnionId = sessionResult.getUnionId();
-        if (!StringUtils.hasText(effectiveUnionId)) {
-            // 如果 unionId 为空，使用 "openid:{appId}:{openId}" 作为临时标识
-            // 这样可以保证同一个 openId 在同一个小程序中被识别为同一个用户
-            effectiveUnionId = "openid:" + appId + ":" + sessionResult.getOpenId();
-            log.warn("[UserAuth] unionId is empty, using openId-based identifier: {}", effectiveUnionId);
-        } else {
-            log.info("[UserAuth] Using unionId for user registration/load");
-        }
-        
-        UserRegistrationResult registerResult = userDomainService.registerOrLoadByWeChatUnionId(
-                effectiveUnionId,
+        // 4. 注册或加载用户（使用新的 registerOrLoadByWeChatMiniApp 方法）
+        // 识别优先级：unionId > phone > external_identity(appId, openId)
+        UserRegistrationResult registerResult = userDomainService.registerOrLoadByWeChatMiniApp(
+                unionId,
+                appId,
+                openId,
                 phone,
                 countryCode,
                 tenantId,
@@ -149,4 +152,15 @@ public class UserAuthApplicationService {
         
         return result;
     }
+
+    /**
+     * 脱敏 openId：只显示前3后3字符。
+     */
+    private String maskOpenId(String openId) {
+        if (openId == null || openId.length() <= 6) {
+            return "***";
+        }
+        return openId.substring(0, 3) + "***" + openId.substring(openId.length() - 3);
+    }
 }
+

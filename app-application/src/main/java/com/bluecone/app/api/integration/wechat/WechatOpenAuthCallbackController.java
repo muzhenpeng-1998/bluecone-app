@@ -94,6 +94,8 @@ public class WechatOpenAuthCallbackController {
                 null
         );
 
+        // TODO: 传入 sessionToken，让应用服务根据 sessionToken 查询 tenantId
+        // 当前保持原有调用方式，后续可以扩展 handleMiniProgramAuthorized 方法支持 sessionToken
         wechatOpenCallbackAppService.handleMiniProgramAuthorized(cmd);
 
         // TODO: 后续可改为重定向到入驻 H5 成功页，例如带上 sessionToken 的 URL

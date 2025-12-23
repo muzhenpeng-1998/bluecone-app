@@ -75,66 +75,108 @@ public class WechatOpenTicketCallbackController {
     @Operation(summary = "接收微信开放平台 Ticket 推送", description = "接收 component_verify_ticket 并保存到数据库")
     @GetMapping("/ticket")
     public String verifyUrl(
-            @RequestParam(value = "signature", required = false) String signature,
+            @RequestParam(value = "msg_signature", required = false) String msgSignature,
             @RequestParam(value = "timestamp", required = false) String timestamp,
             @RequestParam(value = "nonce", required = false) String nonce,
             @RequestParam(value = "echostr", required = false) String echostr) {
         
-        log.info("[WechatOpenTicket] GET request for URL verification, signature={}, timestamp={}, nonce={}, echostr={}",
-                signature, timestamp, nonce, echostr);
+        log.info("[WechatOpenTicket] GET request for URL verification, msgSignature={}, timestamp={}, nonce={}",
+                msgSignature, timestamp, nonce);
 
-        // 验证签名
-        if (!verifySignature(signature, timestamp, nonce)) {
-            log.warn("[WechatOpenTicket] GET request signature verification failed");
+        // 验证签名并解密 echostr
+        if (!StringUtils.hasText(msgSignature) || !StringUtils.hasText(timestamp) 
+                || !StringUtils.hasText(nonce) || !StringUtils.hasText(echostr)) {
+            log.warn("[WechatOpenTicket] GET request missing required parameters");
             return "error";
         }
 
-        // 首次配置时，微信服务器会发送 GET 请求验证 URL，需要原样返回 echostr
-        log.info("[WechatOpenTicket] URL verification successful, returning echostr");
-        return echostr;
+        try {
+            // 使用 WxJava 的解密工具验证签名并解密 echostr
+            me.chanjar.weixin.common.util.crypto.WxCryptUtil cryptUtil = 
+                    new me.chanjar.weixin.common.util.crypto.WxCryptUtil(
+                            componentToken, componentAesKey, componentAppId);
+            
+            // 验证签名并解密
+            String decryptedEchostr = cryptUtil.decrypt(msgSignature, timestamp, nonce, echostr);
+            
+            log.info("[WechatOpenTicket] URL verification successful, returning decrypted echostr");
+            return decryptedEchostr;
+        } catch (Exception e) {
+            log.error("[WechatOpenTicket] Failed to decrypt echostr", e);
+            return "error";
+        }
     }
 
     @PostMapping(value = "/ticket", produces = MediaType.TEXT_PLAIN_VALUE)
     public String receiveTicket(
-            @RequestParam(value = "signature", required = false) String signature,
+            @RequestParam(value = "msg_signature", required = false) String msgSignature,
             @RequestParam(value = "timestamp", required = false) String timestamp,
             @RequestParam(value = "nonce", required = false) String nonce,
-            @RequestParam(value = "encrypt_type", required = false) String encryptType,
-            @RequestParam(value = "msg_signature", required = false) String msgSignature,
             @RequestBody String requestBody) {
 
-        log.info("[WechatOpenTicket] POST request received, signature={}, timestamp={}, nonce={}, encryptType={}, msgSignature={}",
-                signature, timestamp, nonce, encryptType, msgSignature);
-        log.debug("[WechatOpenTicket] Request body: {}", requestBody);
+        log.info("[WechatOpenTicket] POST request received, msgSignature={}, timestamp={}, nonce={}",
+                msgSignature, timestamp, nonce);
+        log.debug("[WechatOpenTicket] Request body (encrypted): {}", requestBody);
 
         try {
-            // 1. 验证签名
-            if (!verifySignature(signature, timestamp, nonce)) {
-                log.warn("[WechatOpenTicket] POST request signature verification failed");
+            // 1. 验证签名并解密消息
+            if (!StringUtils.hasText(msgSignature) || !StringUtils.hasText(timestamp) || !StringUtils.hasText(nonce)) {
+                log.warn("[WechatOpenTicket] POST request missing required parameters");
                 return "error";
             }
 
-            // 2. 解析 XML 消息体
-            String xmlContent = requestBody;
+            if (!StringUtils.hasText(componentToken) || !StringUtils.hasText(componentAesKey) 
+                    || !StringUtils.hasText(componentAppId)) {
+                log.error("[WechatOpenTicket] WeChat component configuration is incomplete");
+                return "error";
+            }
+
+            // 2. 使用 WxJava 的解密工具解密消息
+            me.chanjar.weixin.common.util.crypto.WxCryptUtil cryptUtil = 
+                    new me.chanjar.weixin.common.util.crypto.WxCryptUtil(
+                            componentToken, componentAesKey, componentAppId);
             
-            // 如果是加密消息，需要先解密（这里简化处理，实际应使用 WxJava 的解密工具）
-            if ("aes".equalsIgnoreCase(encryptType) && StringUtils.hasText(componentAesKey)) {
-                log.info("[WechatOpenTicket] Message is encrypted, need to decrypt");
-                // TODO: 使用 WxJava 的 WxCryptUtil 解密消息
-                // 当前简化实现，假设消息未加密或已在网关层解密
-            }
-
-            // 3. 解析 XML，提取 ComponentVerifyTicket
-            String componentVerifyTicket = extractComponentVerifyTicket(xmlContent);
-            if (!StringUtils.hasText(componentVerifyTicket)) {
-                log.warn("[WechatOpenTicket] Failed to extract ComponentVerifyTicket from XML");
+            // 从 XML 中提取 Encrypt 字段
+            String encryptedMsg = extractEncryptedMessage(requestBody);
+            if (!StringUtils.hasText(encryptedMsg)) {
+                log.warn("[WechatOpenTicket] Failed to extract Encrypt from XML");
                 return "error";
             }
+            
+            // 解密消息
+            String decryptedXml = cryptUtil.decrypt(msgSignature, timestamp, nonce, encryptedMsg);
+            log.debug("[WechatOpenTicket] Decrypted XML: {}", decryptedXml);
 
-            // 4. 保存到数据库
-            credentialService.saveOrUpdateVerifyTicket(componentVerifyTicket);
-            log.info("[WechatOpenTicket] ComponentVerifyTicket saved successfully: {}", 
-                    componentVerifyTicket.substring(0, Math.min(20, componentVerifyTicket.length())) + "...");
+            // 3. 解析明文 XML，提取 InfoType 和对应内容
+            String infoType = extractInfoType(decryptedXml);
+            log.info("[WechatOpenTicket] InfoType: {}", infoType);
+
+            if ("component_verify_ticket".equals(infoType)) {
+                // 提取 ComponentVerifyTicket
+                String componentVerifyTicket = extractComponentVerifyTicket(decryptedXml);
+                if (!StringUtils.hasText(componentVerifyTicket)) {
+                    log.warn("[WechatOpenTicket] Failed to extract ComponentVerifyTicket from XML");
+                    return "error";
+                }
+
+                // 保存到数据库
+                credentialService.saveOrUpdateVerifyTicket(componentVerifyTicket);
+                log.info("[WechatOpenTicket] ComponentVerifyTicket saved successfully: {}", 
+                        componentVerifyTicket.substring(0, Math.min(20, componentVerifyTicket.length())) + "...");
+            } else if ("unauthorized".equals(infoType)) {
+                // 处理取消授权事件
+                String authorizerAppId = extractAuthorizerAppId(decryptedXml);
+                if (StringUtils.hasText(authorizerAppId)) {
+                    log.info("[WechatOpenTicket] Received unauthorized event, authorizerAppId={}", authorizerAppId);
+                    // 调用应用服务处理取消授权
+                    // wechatOpenCallbackAppService.handleUnauthorized(authorizerAppId);
+                    log.warn("[WechatOpenTicket] Unauthorized event handling not implemented yet");
+                } else {
+                    log.warn("[WechatOpenTicket] Failed to extract AuthorizerAppid from unauthorized event");
+                }
+            } else {
+                log.info("[WechatOpenTicket] Received other InfoType: {}, ignoring", infoType);
+            }
 
             return "success";
 
@@ -145,64 +187,90 @@ public class WechatOpenTicketCallbackController {
     }
 
     /**
-     * 验证微信签名。
+     * 从加密的 XML 消息体中提取 Encrypt 字段。
      * <p>
-     * 签名算法：
-     * 1. 将 token、timestamp、nonce 三个参数进行字典序排序
-     * 2. 将三个参数字符串拼接成一个字符串进行 SHA1 加密
-     * 3. 开发者获得加密后的字符串可与 signature 对比，标识该请求来源于微信
+     * XML 格式示例：
+     * <xml>
+     *   <ToUserName><![CDATA[gh_xxx]]></ToUserName>
+     *   <Encrypt><![CDATA[encrypted_content...]]></Encrypt>
+     * </xml>
      * </p>
      */
-    private boolean verifySignature(String signature, String timestamp, String nonce) {
-        if (!StringUtils.hasText(signature) || !StringUtils.hasText(timestamp) || !StringUtils.hasText(nonce)) {
-            log.warn("[WechatOpenTicket] Signature verification failed: missing parameters");
-            return false;
-        }
-
-        if (!StringUtils.hasText(componentToken)) {
-            log.error("[WechatOpenTicket] componentToken is not configured, cannot verify signature");
-            return false;
-        }
-
+    private String extractEncryptedMessage(String xmlContent) {
         try {
-            // 1. 字典序排序
-            String[] params = {componentToken, timestamp, nonce};
-            Arrays.sort(params);
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            // 防止 XXE 攻击
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
 
-            // 2. 拼接字符串
-            String concatenated = String.join("", params);
-
-            // 3. SHA1 加密
-            MessageDigest digest = MessageDigest.getInstance("SHA-1");
-            byte[] hash = digest.digest(concatenated.getBytes(StandardCharsets.UTF_8));
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new InputSource(new StringReader(xmlContent)));
             
-            // 4. 转换为十六进制字符串
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            
-            String calculatedSignature = hexString.toString();
-            boolean valid = calculatedSignature.equalsIgnoreCase(signature);
-            
-            if (!valid) {
-                log.warn("[WechatOpenTicket] Signature mismatch: expected={}, actual={}", calculatedSignature, signature);
-            }
-            
-            return valid;
+            Element root = doc.getDocumentElement();
+            return getElementText(root, "Encrypt");
 
         } catch (Exception e) {
-            log.error("[WechatOpenTicket] Failed to verify signature", e);
-            return false;
+            log.error("[WechatOpenTicket] Failed to extract Encrypt from XML", e);
+            return null;
         }
     }
 
     /**
-     * 从 XML 消息体中提取 ComponentVerifyTicket。
+     * 从明文 XML 消息体中提取 InfoType。
+     */
+    private String extractInfoType(String xmlContent) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
+
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new InputSource(new StringReader(xmlContent)));
+            
+            Element root = doc.getDocumentElement();
+            return getElementText(root, "InfoType");
+
+        } catch (Exception e) {
+            log.error("[WechatOpenTicket] Failed to extract InfoType from XML", e);
+            return null;
+        }
+    }
+
+    /**
+     * 从明文 XML 消息体中提取 AuthorizerAppid（用于 unauthorized 事件）。
+     */
+    private String extractAuthorizerAppId(String xmlContent) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
+
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new InputSource(new StringReader(xmlContent)));
+            
+            Element root = doc.getDocumentElement();
+            return getElementText(root, "AuthorizerAppid");
+
+        } catch (Exception e) {
+            log.error("[WechatOpenTicket] Failed to extract AuthorizerAppid from XML", e);
+            return null;
+        }
+    }
+
+    /**
+     * 从明文 XML 消息体中提取 ComponentVerifyTicket。
      * <p>
      * XML 格式示例：
      * <xml>
@@ -228,13 +296,6 @@ public class WechatOpenTicketCallbackController {
             Document doc = builder.parse(new InputSource(new StringReader(xmlContent)));
             
             Element root = doc.getDocumentElement();
-            String infoType = getElementText(root, "InfoType");
-            
-            if (!"component_verify_ticket".equals(infoType)) {
-                log.warn("[WechatOpenTicket] InfoType is not component_verify_ticket: {}", infoType);
-                return null;
-            }
-            
             String ticket = getElementText(root, "ComponentVerifyTicket");
             log.info("[WechatOpenTicket] Extracted ComponentVerifyTicket from XML");
             return ticket;

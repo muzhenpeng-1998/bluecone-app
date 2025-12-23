@@ -25,7 +25,7 @@
         <logback.ecs.version>1.6.0</logback.ecs.version>
         <micrometer.version>1.12.5</micrometer.version>
         <opentelemetry.version>1.36.0</opentelemetry.version>
-        <wx-java.version>4.6.0</wx-java.version>
+        <wx-java.version>4.7.0</wx-java.version>
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <maven.failsafe.plugin.version>3.2.5</maven.failsafe.plugin.version>

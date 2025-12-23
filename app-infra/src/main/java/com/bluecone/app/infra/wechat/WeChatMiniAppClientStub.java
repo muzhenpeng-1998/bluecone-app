@@ -18,4 +18,9 @@ public class WeChatMiniAppClientStub implements WeChatMiniAppClient {
     public WeChatPhoneNumberResult decryptPhoneNumber(String appId, String sessionKey, String encryptedData, String iv) {
         throw new UnsupportedOperationException("TODO: integrate with WeChat phone decrypt");
     }
+
+    @Override
+    public WeChatPhoneNumberResult getPhoneNumberByCode(String authorizerAppId, String phoneCode) {
+        throw new UnsupportedOperationException("TODO: integrate with WeChat getPhoneNumber by code");
+    }
 }

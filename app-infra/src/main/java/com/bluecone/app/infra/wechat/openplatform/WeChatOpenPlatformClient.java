@@ -44,5 +44,22 @@ public interface WeChatOpenPlatformClient {
      */
     Optional<AuthorizerInfoResult> getAuthorizerInfo(String componentAccessToken,
                                                      String authorizerAppId);
+
+    /**
+     * 刷新授权方的接口调用令牌（authorizer_access_token）。
+     *
+     * 对应接口：
+     * POST https://api.weixin.qq.com/cgi-bin/component/api_authorizer_token?component_access_token=XXX
+     *
+     * @param componentAccessToken  第三方平台 component_access_token
+     * @param componentAppId        第三方平台 appid
+     * @param authorizerAppId       授权方 appid
+     * @param authorizerRefreshToken 授权方的刷新令牌
+     * @return 刷新结果
+     */
+    RefreshAuthorizerTokenResult refreshAuthorizerToken(String componentAccessToken,
+                                                        String componentAppId,
+                                                        String authorizerAppId,
+                                                        String authorizerRefreshToken);
 }
 

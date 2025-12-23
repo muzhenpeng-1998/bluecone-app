@@ -71,5 +71,18 @@ public class WeChatOpenPlatformClientStub implements WeChatOpenPlatformClient {
         result.setVerifyType(0);
         return Optional.of(result);
     }
+
+    @Override
+    public RefreshAuthorizerTokenResult refreshAuthorizerToken(String componentAccessToken,
+                                                               String componentAppId,
+                                                               String authorizerAppId,
+                                                               String authorizerRefreshToken) {
+        log.warn("[WeChatOpenPlatform][Stub] refreshAuthorizerToken called, return fake token");
+        RefreshAuthorizerTokenResult result = new RefreshAuthorizerTokenResult();
+        result.setAuthorizerAccessToken("stub-authorizer-access-token-refreshed");
+        result.setAuthorizerRefreshToken(authorizerRefreshToken);
+        result.setExpiresInSeconds(7200);
+        return result;
+    }
 }
 

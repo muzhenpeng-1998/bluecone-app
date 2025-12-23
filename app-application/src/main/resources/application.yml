@@ -193,6 +193,23 @@ bluecone:
   log:
     enabled: false
 
+# 微信开放平台配置
+wechat:
+  open-platform:
+    # 是否启用微信开放平台功能（本地开发可设为 false 使用 Stub）
+    enabled: ${WECHAT_OPEN_PLATFORM_ENABLED:true}
+    # 第三方平台 appid
+    component-app-id: ${WECHAT_COMPONENT_APP_ID:}
+    # 第三方平台 appsecret
+    component-app-secret: ${WECHAT_COMPONENT_APP_SECRET:}
+    # 消息校验 Token
+    component-token: ${WECHAT_COMPONENT_TOKEN:}
+    # 消息加解密 Key
+    component-aes-key: ${WECHAT_COMPONENT_AES_KEY:}
+  wxjava:
+    # 是否启用 WxJava SDK（与 open-platform.enabled 保持一致）
+    enabled: ${WECHAT_WXJAVA_ENABLED:true}
+
 logging:
   level:
     com.bluecone.app.infra.outbox: WARN

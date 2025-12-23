@@ -46,4 +46,15 @@ public class WeChatOpenPlatformHttpClient implements WeChatOpenPlatformClient {
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
+    @Override
+    public RefreshAuthorizerTokenResult refreshAuthorizerToken(String componentAccessToken,
+                                                               String componentAppId,
+                                                               String authorizerAppId,
+                                                               String authorizerRefreshToken) {
+        // TODO: 使用 RestTemplate 调用
+        // String url = "https://api.weixin.qq.com/cgi-bin/component/api_authorizer_token?component_access_token=" + componentAccessToken;
+        // 请求体包含 component_appid、authorizer_appid、authorizer_refresh_token，解析响应为 RefreshAuthorizerTokenResult。
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
 }
