@@ -1,4 +1,4 @@
-package com.bluecone.app.application.wechat;
+package com.bluecone.app.api.integration.wechat;
 
 import com.bluecone.app.api.advice.NoApiResponseWrap;
 import com.bluecone.app.tenant.application.wechat.WechatOpenCallbackAppService;
