@@ -15,6 +15,11 @@ public class QueryAuthResult {
     private Integer funcInfoCount;
     private List<Integer> funcScopeCategories;
 
+    /**
+     * 完整的授权信息对象
+     */
+    private AuthorizationInfo authorizationInfo;
+
     public boolean isSuccess() {
         return errcode == null || errcode == 0;
     }
@@ -65,6 +70,14 @@ public class QueryAuthResult {
 
     public void setFuncScopeCategories(List<Integer> funcScopeCategories) {
         this.funcScopeCategories = funcScopeCategories;
+    }
+
+    public AuthorizationInfo getAuthorizationInfo() {
+        return authorizationInfo;
+    }
+
+    public void setAuthorizationInfo(AuthorizationInfo authorizationInfo) {
+        this.authorizationInfo = authorizationInfo;
     }
 }
 

@@ -26,10 +26,10 @@ ERROR: failed to solve: failed to compute cache key: failed to calculate checksu
 2. **修改 Dockerfile**
    ```dockerfile
    # 原来：
-   COPY .mvn/ .mvn/
+   COPY ../.mvn .mvn/
    
    # 修改为：
-   COPY mvn-config/ .mvn/
+   COPY ../mvn-config .mvn/
    ```
 
 3. **提交 mvn-config 到 Git**

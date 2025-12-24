@@ -36,6 +36,13 @@
             <version>${wx-java.version}</version>
         </dependency>
 
+        <!-- WxJava 微信小程序 SDK -->
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-miniapp</artifactId>
+            <version>${wx-java.version}</version>
+        </dependency>
+
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
