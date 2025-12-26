@@ -17,6 +17,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
+ * 注意：此 Controller 处理的是浏览器授权回调（带 auth_code），不是微信服务器推送的事件回调。
+ * 因为需要调用 queryAuth 获取授权信息并绑定租户，所以暂时保留对 WeChatOpenPlatformClient 的依赖。
+ * 未来可以考虑将 queryAuth 也封装到 facade 中。
+ */
+
+/**
  * 微信开放平台授权完成后的浏览器回调入口。
  * <p>
  * 用于接收 auth_code，将其兑换为授权信息，并写入本地授权表，

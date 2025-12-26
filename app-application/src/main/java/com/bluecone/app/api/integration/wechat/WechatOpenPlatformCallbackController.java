@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 微信开放平台"授权事件接收 URL"统一入口。
  * <p>
- * 当前版本仅接收微信开放平台回调，请求参数与原始加密 XML 透传给应用服务做后续处理，
- * 并按微信约定返回字符串 "success" 防止重复推送。
+ * Phase 3 版本：极薄 Controller，只转发 headers/body/path 到 app-tenant 服务。
+ * 不做验签解密、不做 InfoType switch，所有逻辑在服务层完成。
  * </p>
  */
 @Tag(name = "🔌 第三方集成 > 微信相关 > 微信开放平台回调", description = "微信开放平台事件回调接口")
@@ -35,7 +35,7 @@ public class WechatOpenPlatformCallbackController {
     /**
      * 微信开放平台回调入口（授权/取消授权等事件）。
      * <p>
-     * 目前仅记录基础日志并将原始参数透传给应用服务，后续会在服务层实现消息解密与事件分发。
+     * 极薄实现：只转发参数到 app-tenant 服务层处理。
      * </p>
      *
      * @return 固定返回 "success" 表示接收成功
@@ -48,9 +48,10 @@ public class WechatOpenPlatformCallbackController {
             @RequestParam(name = "msg_signature", required = false) String msgSignature,
             @RequestBody String requestBody
     ) {
-        log.info("[WechatOpenCallback] HTTP callback received, signature={}, timestamp={}, nonce={}, msgSignature={}",
-                signature, timestamp, nonce, msgSignature);
+        log.info("[WechatOpenCallback] HTTP callback received, msgSignature={}, timestamp={}",
+                msgSignature, timestamp);
 
+        // 转发给 app-tenant 服务层处理
         wechatOpenCallbackAppService.handleRawCallback(signature, timestamp, nonce, msgSignature, requestBody);
 
         return "success";

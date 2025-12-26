@@ -84,6 +84,7 @@
         <module>app-order</module>
         <module>app-payment</module>
         <module>app-inventory</module>
+        <module>app-wechat-api</module>
         <module>app-wechat</module>
 
         <!-- Application module (must be last) -->
@@ -384,7 +385,13 @@
                 <version>${project.version}</version>
             </dependency>
 
-            <!-- WeChat module -->
+            <!-- WeChat modules -->
+            <dependency>
+                <groupId>com.bluecone</groupId>
+                <artifactId>app-wechat-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.bluecone</groupId>
                 <artifactId>app-wechat</artifactId>

@@ -34,6 +34,11 @@
         </dependency>
         <dependency>
             <groupId>com.bluecone</groupId>
+            <artifactId>app-wechat-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bluecone</groupId>
             <artifactId>app-wechat</artifactId>
             <version>${project.version}</version>
         </dependency>

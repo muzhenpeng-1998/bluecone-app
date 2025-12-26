@@ -1,4 +1,4 @@
-package com.bluecone.app.user.application.auth;
+package com.bluecone.app.member.application.auth;
 
 import com.bluecone.app.core.event.DomainEventPublisher;
 import com.bluecone.app.core.user.domain.event.UserRegisteredEvent;
@@ -8,9 +8,7 @@ import com.bluecone.app.core.user.domain.member.TenantMember;
 import com.bluecone.app.core.user.domain.service.MemberDomainService;
 import com.bluecone.app.core.user.domain.service.UserDomainService;
 import com.bluecone.app.core.user.domain.service.UserDomainService.UserRegistrationResult;
-import com.bluecone.app.infra.wechat.WeChatCode2SessionResult;
-import com.bluecone.app.infra.wechat.WeChatMiniAppClient;
-import com.bluecone.app.infra.wechat.WeChatPhoneNumberResult;
+import com.bluecone.app.wechat.facade.miniapp.*;
 import com.bluecone.app.infra.wechat.openplatform.WechatAuthorizedAppService;
 import com.bluecone.app.security.session.AuthSessionCreateResult;
 import com.bluecone.app.security.session.AuthSessionManager;
@@ -31,7 +29,7 @@ public class UserAuthApplicationService {
 
     private static final Logger log = LoggerFactory.getLogger(UserAuthApplicationService.class);
 
-    private final WeChatMiniAppClient weChatMiniAppClient;
+    private final WeChatMiniAppFacade weChatMiniAppFacade;
     private final WechatAuthorizedAppService wechatAuthorizedAppService;
     private final DomainEventPublisher domainEventPublisher;
     private final UserDomainService userDomainService;
@@ -41,34 +39,30 @@ public class UserAuthApplicationService {
     /**
      * 微信小程序登录/注册。
      * <p>
-     * 流程（新版本，不再信任客户端传 tenantId）：
-     * 1. 以 authorizerAppId（小程序 appId）为主键，从 bc_wechat_authorized_app 反查 tenantId
-     * 2. 使用 code 换取 openId、unionId、sessionKey
-     * 3. 解密手机号（可选）
-     * 4. 根据 unionId / phone / (appId, openId) 注册或加载用户
-     * 5. 确保租户会员存在
-     * 6. 创建登录会话
+     * 流程（Phase 3 版本，使用 facade + tenantId 路由）：
+     * 1. 使用 tenantId 通过 facade 换取 openId、unionId、sessionKey
+     * 2. 获取手机号（可选，通过 facade）
+     * 3. 根据 unionId / phone / (appId, openId) 注册或加载用户
+     * 4. 确保租户会员存在
+     * 5. 创建登录会话
      * </p>
      */
     public LoginResponse loginByWeChatMiniApp(WechatMiniAppLoginRequest cmd) {
-        String appId = cmd.getAuthorizerAppId();
-        if (!StringUtils.hasText(appId)) {
-            throw new IllegalArgumentException("authorizerAppId 不能为空");
+        Long tenantId = cmd.getTenantId();
+        if (tenantId == null) {
+            throw new IllegalArgumentException("tenantId 不能为空");
         }
 
-        // 1. 以 authorizerAppId 为主键，从 bc_wechat_authorized_app 反查 tenantId
-        var authorizedApp = wechatAuthorizedAppService.getAuthorizedAppByAppId(appId)
-                .orElseThrow(() -> new IllegalStateException("小程序未接入或未授权，appId=" + appId));
-        
-        if (!"AUTHORIZED".equals(authorizedApp.getAuthorizationStatus())) {
-            throw new IllegalStateException("小程序授权状态异常，appId=" + appId + ", status=" + authorizedApp.getAuthorizationStatus());
-        }
-        
-        Long tenantId = authorizedApp.getTenantId();
-        log.info("[UserAuth] WeChat mini app login, appId={}, tenantId={}", appId, tenantId);
+        log.info("[UserAuth] WeChat mini app login, tenantId={}", tenantId);
 
-        // 2. code 换 session
-        WeChatCode2SessionResult sessionResult = weChatMiniAppClient.code2Session(appId, cmd.getCode());
+        // 1. code 换 session（通过 facade，内部会路由到 authorizerAppId）
+        WeChatMiniAppCode2SessionCommand code2SessionCmd = WeChatMiniAppCode2SessionCommand.builder()
+                .tenantId(tenantId)
+                .storeId(cmd.getStoreId())
+                .code(cmd.getCode())
+                .build();
+        
+        WeChatMiniAppLoginResult sessionResult = weChatMiniAppFacade.code2Session(code2SessionCmd);
         String openId = sessionResult.getOpenId();
         String unionId = sessionResult.getUnionId();
         
@@ -76,14 +70,22 @@ public class UserAuthApplicationService {
                 maskOpenId(openId), 
                 StringUtils.hasText(unionId) ? "有值" : "空");
 
-        // 3. 获取手机号（可选）
+        // 2. 获取 authorizerAppId（用于用户身份关联）
+        String appId = wechatAuthorizedAppService.getAuthorizerAppIdByTenantId(tenantId)
+                .orElseThrow(() -> new IllegalStateException("租户未授权小程序，tenantId=" + tenantId));
+
+        // 3. 获取手机号（可选，通过 facade）
         String phone = null;
         String countryCode = "+86";
         if (StringUtils.hasText(cmd.getPhoneCode())) {
-            // 优先使用 phoneCode 方式（推荐，新版本）
             try {
-                WeChatPhoneNumberResult phoneResult = weChatMiniAppClient.getPhoneNumberByCode(
-                        appId, cmd.getPhoneCode());
+                WeChatMiniAppPhoneCommand phoneCmd = WeChatMiniAppPhoneCommand.builder()
+                        .tenantId(tenantId)
+                        .storeId(cmd.getStoreId())
+                        .phoneCode(cmd.getPhoneCode())
+                        .build();
+                
+                WeChatMiniAppPhoneResult phoneResult = weChatMiniAppFacade.getPhoneNumber(phoneCmd);
                 if (phoneResult != null) {
                     phone = phoneResult.getPhoneNumber();
                     countryCode = phoneResult.getCountryCode();
@@ -94,23 +96,8 @@ public class UserAuthApplicationService {
             } catch (Exception e) {
                 log.error("[UserAuth] 获取手机号失败（phoneCode方式）: {}", e.getMessage());
             }
-        } else if (StringUtils.hasText(cmd.getEncryptedData()) && StringUtils.hasText(cmd.getIv())) {
-            // 兼容旧版本 encryptedData/iv 方式
-            try {
-                WeChatPhoneNumberResult phoneResult = weChatMiniAppClient.decryptPhoneNumber(
-                        appId, sessionResult.getSessionKey(), cmd.getEncryptedData(), cmd.getIv());
-                if (phoneResult != null) {
-                    phone = phoneResult.getPhoneNumber();
-                    countryCode = phoneResult.getCountryCode();
-                    log.info("[UserAuth] 获取手机号成功（encryptedData/iv方式）");
-                } else {
-                    log.warn("[UserAuth] 获取手机号失败（encryptedData/iv方式返回null）");
-                }
-            } catch (Exception e) {
-                log.error("[UserAuth] 获取手机号失败（encryptedData/iv方式）: {}", e.getMessage());
-            }
         } else {
-            log.debug("[UserAuth] 未提供手机号相关参数（phoneCode或encryptedData/iv），跳过手机号获取");
+            log.debug("[UserAuth] 未提供手机号参数（phoneCode），跳过手机号获取");
         }
 
         // 4. 注册或加载用户（使用新的 registerOrLoadByWeChatMiniApp 方法）

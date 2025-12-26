@@ -128,6 +128,80 @@ public class WxJavaWeChatPayPartnerFacade implements WeChatPayPartnerFacade {
         }
     }
 
+    @Override
+    public WeChatPartnerOrderQueryResult queryPartnerOrder(WeChatPartnerOrderQueryCommand cmd) {
+        log.info("[WxJavaWeChatPayPartnerFacade] 开始查询服务商订单，subMchId={}, outTradeNo={}, transactionId={}",
+                maskMchId(cmd.getSubMchId()), cmd.getOutTradeNo(), cmd.getTransactionId());
+
+        try {
+            com.github.binarywang.wxpay.bean.request.WxPayPartnerOrderQueryV3Request wxRequest = 
+                    new com.github.binarywang.wxpay.bean.request.WxPayPartnerOrderQueryV3Request();
+            wxRequest.setSpMchId(properties.getSpMchId());
+            wxRequest.setSubMchId(cmd.getSubMchId());
+            
+            if (StringUtils.hasText(cmd.getTransactionId())) {
+                wxRequest.setTransactionId(cmd.getTransactionId());
+            } else if (StringUtils.hasText(cmd.getOutTradeNo())) {
+                wxRequest.setOutTradeNo(cmd.getOutTradeNo());
+            } else {
+                throw new BusinessException(CommonErrorCode.BAD_REQUEST, "商户订单号和微信支付单号不能同时为空");
+            }
+
+            com.github.binarywang.wxpay.bean.result.WxPayPartnerOrderQueryV3Result wxResult = 
+                    wxPayService.queryPartnerOrderV3(wxRequest);
+
+            log.info("[WxJavaWeChatPayPartnerFacade] 查询订单成功，outTradeNo={}, tradeState={}",
+                    wxResult.getOutTradeNo(), wxResult.getTradeState());
+
+            return convertToQueryResult(wxResult);
+
+        } catch (WxPayException e) {
+            log.error("[WxJavaWeChatPayPartnerFacade] 查询订单失败，errCode={}, errMsg={}",
+                    e.getErrCode(), e.getErrCodeDes(), e);
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
+                    "微信支付查询订单失败: " + e.getErrCodeDes());
+        }
+    }
+
+    @Override
+    public void closePartnerOrder(WeChatPartnerOrderCloseCommand cmd) {
+        log.info("[WxJavaWeChatPayPartnerFacade] 开始关闭服务商订单，subMchId={}, outTradeNo={}",
+                maskMchId(cmd.getSubMchId()), cmd.getOutTradeNo());
+
+        try {
+            com.github.binarywang.wxpay.bean.request.WxPayPartnerOrderCloseV3Request wxRequest = 
+                    new com.github.binarywang.wxpay.bean.request.WxPayPartnerOrderCloseV3Request();
+            wxRequest.setSpMchId(properties.getSpMchId());
+            wxRequest.setSubMchId(cmd.getSubMchId());
+            wxRequest.setOutTradeNo(cmd.getOutTradeNo());
+
+            wxPayService.closePartnerOrderV3(wxRequest);
+
+            log.info("[WxJavaWeChatPayPartnerFacade] 关闭订单成功，outTradeNo={}", cmd.getOutTradeNo());
+
+        } catch (WxPayException e) {
+            log.error("[WxJavaWeChatPayPartnerFacade] 关闭订单失败，errCode={}, errMsg={}",
+                    e.getErrCode(), e.getErrCodeDes(), e);
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
+                    "微信支付关闭订单失败: " + e.getErrCodeDes());
+        }
+    }
+
+    @Override
+    public WeChatPartnerRefundResult refund(WeChatPartnerRefundCommand cmd) {
+        log.warn("[WxJavaWeChatPayPartnerFacade] 服务商退款功能待实现，subMchId={}, outRefundNo={}",
+                maskMchId(cmd.getSubMchId()), cmd.getOutRefundNo());
+        throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, 
+                "服务商退款功能待实现，请参考 WxJava SDK 文档完成实现");
+    }
+
+    @Override
+    public WeChatPartnerRefundNotifyParsed parseRefundNotify(WeChatPayNotifyParseCommand cmd) {
+        log.warn("[WxJavaWeChatPayPartnerFacade] 服务商退款回调解析功能待实现");
+        throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, 
+                "服务商退款回调解析功能待实现，请参考 WxJava SDK 文档完成实现");
+    }
+
     /**
      * 校验预下单命令参数。
      */
@@ -277,5 +351,47 @@ public class WxJavaWeChatPayPartnerFacade implements WeChatPayPartnerFacade {
         }
         return appId.substring(0, 6) + "***" + appId.substring(appId.length() - 4);
     }
+
+    /**
+     * 转换为订单查询结果。
+     */
+    private WeChatPartnerOrderQueryResult convertToQueryResult(
+            com.github.binarywang.wxpay.bean.result.WxPayPartnerOrderQueryV3Result wxResult) {
+        
+        WeChatPartnerOrderQueryResult.WeChatPartnerOrderQueryResultBuilder builder = 
+                WeChatPartnerOrderQueryResult.builder()
+                .spAppId(wxResult.getSpAppid())
+                .spMchId(wxResult.getSpMchId())
+                .subAppId(wxResult.getSubAppid())
+                .subMchId(wxResult.getSubMchId())
+                .outTradeNo(wxResult.getOutTradeNo())
+                .transactionId(wxResult.getTransactionId())
+                .tradeState(wxResult.getTradeState())
+                .tradeStateDesc(wxResult.getTradeStateDesc())
+                .attach(wxResult.getAttach());
+
+        // 金额信息
+        if (wxResult.getAmount() != null) {
+            builder.totalAmount(Long.valueOf(wxResult.getAmount().getTotal()));
+            builder.currency(wxResult.getAmount().getCurrency());
+            if (wxResult.getAmount().getPayerTotal() != null) {
+                builder.payerAmount(Long.valueOf(wxResult.getAmount().getPayerTotal()));
+            }
+        }
+
+        // 支付成功时间
+        if (wxResult.getSuccessTime() != null) {
+            try {
+                builder.successTime(OffsetDateTime.parse(wxResult.getSuccessTime(),
+                        DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant());
+            } catch (Exception e) {
+                log.warn("[WxJavaWeChatPayPartnerFacade] 解析支付成功时间失败，successTime={}",
+                        wxResult.getSuccessTime(), e);
+            }
+        }
+
+        return builder.build();
+    }
+
 }
 

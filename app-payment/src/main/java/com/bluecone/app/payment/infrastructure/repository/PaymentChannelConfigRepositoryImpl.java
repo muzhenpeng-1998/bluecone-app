@@ -55,6 +55,7 @@ public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigR
                     .mchId(doObj.getMchId())
                     .appId(doObj.getAppId())
                     .subMchId(doObj.getSubMchId())
+                    .channelMode(doObj.getChannelMode())
                     // encryptPayload 可存储敏感配置的密文，后续引入解密服务再拆分
                     .encApiV3Key(doObj.getEncryptPayload())
                     .encSerialNo(null)
@@ -65,10 +66,11 @@ public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigR
                 .tenantId(doObj.getTenantId())
                 .storeId(doObj.getStoreId())
                 .channelType(channelType)
+                .channelMode(doObj.getChannelMode())
                 .enabled(doObj.getStatus() != null && doObj.getStatus() == 1)
-                .notifyUrl(null)
+                .notifyUrl(doObj.getNotifyUrl())
                 .weChatSecrets(secrets)
-                .extJson(null)
+                .extJson(doObj.getExtJson())
                 .createdAt(doObj.getCreatedAt())
                 .updatedAt(doObj.getUpdatedAt())
                 .build();
@@ -80,12 +82,28 @@ public class PaymentChannelConfigRepositoryImpl implements PaymentChannelConfigR
         doObj.setTenantId(config.getTenantId());
         doObj.setStoreId(config.getStoreId());
         doObj.setChannelType(config.getChannelType() == null ? null : config.getChannelType().getCode());
+        // channelMode：若空则默认 SERVICE_PROVIDER
+        String channelMode = config.getChannelMode();
+        if (channelMode == null || channelMode.isEmpty()) {
+            channelMode = "SERVICE_PROVIDER";
+        }
+        doObj.setChannelMode(channelMode);
+        doObj.setNotifyUrl(config.getNotifyUrl());
+        doObj.setExtJson(config.getExtJson());
         doObj.setStatus(config.isEnabled() ? 1 : 0);
         if (config.getWeChatSecrets() != null) {
             doObj.setMchId(config.getWeChatSecrets().getMchId());
             doObj.setAppId(config.getWeChatSecrets().getAppId());
             doObj.setSubMchId(config.getWeChatSecrets().getSubMchId());
-            doObj.setEncryptPayload(config.getWeChatSecrets().getEncApiV3Key());
+            // encryptPayload：非空；若 config/ext 都没有则写 '{}'，保证 NOT NULL
+            String encryptPayload = config.getWeChatSecrets().getEncApiV3Key();
+            if (encryptPayload == null || encryptPayload.isEmpty()) {
+                encryptPayload = "{}";
+            }
+            doObj.setEncryptPayload(encryptPayload);
+        } else {
+            // 非微信渠道也需要保证 encryptPayload 不为空
+            doObj.setEncryptPayload("{}");
         }
         doObj.setCreatedAt(config.getCreatedAt());
         doObj.setUpdatedAt(config.getUpdatedAt());

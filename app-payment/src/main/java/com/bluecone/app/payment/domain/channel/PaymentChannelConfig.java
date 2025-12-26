@@ -23,6 +23,8 @@ public class PaymentChannelConfig {
 
     private PaymentChannelType channelType;
 
+    private String channelMode;
+
     private boolean enabled;
 
     private String notifyUrl;
@@ -55,6 +57,10 @@ public class PaymentChannelConfig {
     public void validateRequired() {
         if (tenantId == null || storeId == null || channelType == null) {
             throw new IllegalArgumentException("渠道配置缺少必填字段：tenantId/storeId/channelType");
+        }
+        // 当 channelType 为 WECHAT_* 时，channelMode 不能为空（为空则默认 SERVICE_PROVIDER）
+        if (isWeChatChannel() && channelMode == null) {
+            this.channelMode = "SERVICE_PROVIDER";
         }
     }
 }

@@ -27,6 +27,10 @@ public class PaymentChannelConfigDO implements Serializable {
 
     private String channelMode;
 
+    private String notifyUrl;
+
+    private String extJson;
+
     private String appId;
 
     private String mchId;

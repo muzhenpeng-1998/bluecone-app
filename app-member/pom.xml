@@ -50,6 +50,13 @@
             <version>${project.version}</version>
         </dependency>
         
+        <!-- WeChat API only (no implementation) -->
+        <dependency>
+            <groupId>com.bluecone</groupId>
+            <artifactId>app-wechat-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
