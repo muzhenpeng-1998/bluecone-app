@@ -1,0 +1,77 @@
+# 微信支付 V3 服务商模式配置示例
+# 将此配置添加到 application.yml 或通过环境变量注入
+
+bluecone:
+  wechat:
+    pay:
+      # 是否启用微信支付（本地开发可设为 false 使用 stub）
+      enabled: true
+      
+      # 服务商 AppID（sp_appid）
+      sp-app-id: wx1234567890abcdef
+      
+      # 服务商商户号（sp_mchid）
+      sp-mch-id: 1234567890
+      
+      # 微信支付 V3 API 密钥（32位，用于回调解密）
+      # 获取方式：微信商户平台 -> 账户中心 -> API安全 -> API密钥
+      api-v3-key: your_32_character_api_v3_key_here
+      
+      # 商户证书序列号
+      # 获取方式：微信商户平台 -> 账户中心 -> API安全 -> API证书 -> 查看证书
+      cert-serial-no: 1234567890ABCDEF1234567890ABCDEF12345678
+      
+      # 商户私钥文件路径（推荐方式）
+      # 下载方式：微信商户平台 -> 账户中心 -> API安全 -> API证书 -> 下载证书
+      # 解压后使用 apiclient_key.pem 文件
+      private-key-path: /path/to/apiclient_key.pem
+      
+      # 或者直接配置私钥内容（二选一，不推荐，仅用于容器环境）
+      # private-key-string: |
+      #   -----BEGIN PRIVATE KEY-----
+      #   MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...
+      #   -----END PRIVATE KEY-----
+      
+      # 默认回调地址（当 PaymentChannelConfig.notifyUrl 为空时使用）
+      default-notify-url: https://your-domain.com/open-api/wechat/pay/notify
+
+---
+# 生产环境配置示例（通过环境变量注入）
+# 环境变量命名规则：BLUECONE_WECHAT_PAY_SP_APP_ID
+
+# Docker Compose 示例：
+# environment:
+#   - BLUECONE_WECHAT_PAY_ENABLED=true
+#   - BLUECONE_WECHAT_PAY_SP_APP_ID=wx1234567890abcdef
+#   - BLUECONE_WECHAT_PAY_SP_MCH_ID=1234567890
+#   - BLUECONE_WECHAT_PAY_API_V3_KEY=your_32_character_api_v3_key_here
+#   - BLUECONE_WECHAT_PAY_CERT_SERIAL_NO=1234567890ABCDEF1234567890ABCDEF12345678
+#   - BLUECONE_WECHAT_PAY_PRIVATE_KEY_PATH=/app/certs/apiclient_key.pem
+#   - BLUECONE_WECHAT_PAY_DEFAULT_NOTIFY_URL=https://your-domain.com/open-api/wechat/pay/notify
+
+# Kubernetes Secret 示例：
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: wechat-pay-config
+# type: Opaque
+# stringData:
+#   sp-app-id: wx1234567890abcdef
+#   sp-mch-id: "1234567890"
+#   api-v3-key: your_32_character_api_v3_key_here
+#   cert-serial-no: 1234567890ABCDEF1234567890ABCDEF12345678
+#   private-key: |
+#     -----BEGIN PRIVATE KEY-----
+#     MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...
+#     -----END PRIVATE KEY-----
+
+---
+# 本地开发配置示例（使用 stub，无需真实密钥）
+# spring:
+#   profiles: local
+# 
+# bluecone:
+#   wechat:
+#     pay:
+#       enabled: false  # 使用 StubWeChatPaymentGateway
+

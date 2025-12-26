@@ -30,4 +30,14 @@ public class WeChatChannelSecrets {
 
     /** 证书序列号密文或明文 */
     private String encSerialNo;
+
+    /**
+     * 渠道模式：SERVICE_PROVIDER（服务商）或 DIRECT（直连）。
+     * <p>
+     * 默认为 SERVICE_PROVIDER，用于标识当前配置是服务商模式还是直连模式。
+     * 未来如需同时支持两种模式，可根据此字段路由到不同的下单逻辑。
+     * </p>
+     */
+    @Builder.Default
+    private String channelMode = "SERVICE_PROVIDER";
 }

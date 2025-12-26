@@ -4,6 +4,7 @@ import com.bluecone.app.payment.domain.channel.PaymentChannelConfig;
 import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayRequest;
 import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayResponse;
 import com.bluecone.app.payment.domain.gateway.WeChatPaymentGateway;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,9 +12,10 @@ import org.springframework.stereotype.Component;
  * <p>
  * - 仅用于当前阶段解决 Bean 注入问题，便于应用启动和后续联调；<br>
  * - 不调用真实微信接口，返回最小的占位参数；<br>
- * - 后续需要接入官方 SDK 时，可替换/扩展为正式实现。
+ * - 当 bluecone.wechat.pay.enabled=false 时使用此实现，否则使用 WxJavaWeChatPaymentGateway。
  */
 @Component
+@ConditionalOnProperty(prefix = "bluecone.wechat.pay", name = "enabled", havingValue = "false", matchIfMissing = true)
 public class StubWeChatPaymentGateway implements WeChatPaymentGateway {
 
     @Override

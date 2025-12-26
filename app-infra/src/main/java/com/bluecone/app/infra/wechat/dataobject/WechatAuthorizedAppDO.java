@@ -25,14 +25,14 @@ public class WechatAuthorizedAppDO {
     private Long tenantId;
 
     /**
-     * 所属门店 ID，对应 bc_store.id，可为空（租户级小程序时为 NULL）
+     * 第三方平台 AppID
      */
-    private Long storeId;
+    private String componentAppId;
 
     /**
      * 授权方小程序 appid，全局唯一
      */
-    private String authorizerAppid;
+    private String authorizerAppId;
 
     /**
      * 授权方刷新令牌（建议应用层加密后再入库）
@@ -40,7 +40,17 @@ public class WechatAuthorizedAppDO {
     private String authorizerRefreshToken;
 
     /**
-     * 小程序名称（微信昵称）
+     * 授权方接口调用令牌
+     */
+    private String authorizerAccessToken;
+
+    /**
+     * authorizer_access_token 过期时间
+     */
+    private LocalDateTime authorizerAccessTokenExpireAt;
+
+    /**
+     * 小程序昵称
      */
     private String nickName;
 
@@ -50,69 +60,59 @@ public class WechatAuthorizedAppDO {
     private String headImg;
 
     /**
-     * 主体类型：0-未知，1-企业，2-个体工商户，3-政府，4-媒体，5-其他组织
+     * 小程序类型（service_type_info）
      */
-    private Integer principalType;
+    private Integer serviceTypeInfo;
 
     /**
-     * 主体名称（公司名/个体户名等）
+     * 认证类型（verify_type_info）
+     */
+    private Integer verifyTypeInfo;
+
+    /**
+     * 原始 ID（user_name）
+     */
+    private String userName;
+
+    /**
+     * 主体名称
      */
     private String principalName;
 
     /**
-     * 功能介绍/简介签名
+     * 小程序别名
      */
-    private String signature;
+    private String alias;
 
     /**
-     * 服务类型/帐号类型（保留微信返回的整数编码）
+     * 二维码图片 URL
      */
-    private Integer serviceType;
+    private String qrcodeUrl;
 
     /**
-     * 认证类型/认证情况（保留微信返回的整数编码）
+     * 功能的开通状况（JSON 格式）
      */
-    private Integer verifyType;
+    private String businessInfo;
 
     /**
-     * 授权给第三方的权限集列表原始 JSON 快照
+     * 小程序配置信息（JSON 格式）
      */
-    private String funcInfoJson;
+    private String miniProgramInfo;
 
     /**
-     * business_info 原始 JSON，例如支付、卡券等能力开关
+     * 授权状态：AUTHORIZED=已授权，UNAUTHORIZED=已取消授权
      */
-    private String businessInfoJson;
+    private String authorizationStatus;
 
     /**
-     * 小程序相关配置原始 JSON，例如类目信息、发布信息等
+     * 授权时间
      */
-    private String miniprograminfoJson;
-
-    /**
-     * 授权状态：1-已授权，2-已取消，3-已封禁/失效
-     */
-    private Integer authStatus;
-
-    /**
-     * 认证状态：0-未认证，1-已认证，2-认证失败，3-认证过期
-     */
-    private Integer certStatus;
-
-    /**
-     * 首次授权时间
-     */
-    private LocalDateTime firstAuthTime;
-
-    /**
-     * 最近一次授权信息同步时间
-     */
-    private LocalDateTime lastAuthUpdateAt;
+    private LocalDateTime authorizedAt;
 
     /**
      * 取消授权时间
      */
-    private LocalDateTime canceledAt;
+    private LocalDateTime unauthorizedAt;
 
     /**
      * 创建时间

@@ -22,14 +22,24 @@ public class WechatPayCallbackCommand {
     private String rawBody;
 
     /**
-     * 微信回调中的 appid。
+     * 微信回调中的 appid（服务商模式下为 sp_appid）。
      */
     private String appId;
 
     /**
-     * 微信回调中的商户号 mchid。
+     * 微信回调中的商户号 mchid（服务商模式下为 sp_mchid）。
      */
     private String mchId;
+
+    /**
+     * 子商户应用 ID（服务商模式下的 sub_appid）。
+     */
+    private String subAppId;
+
+    /**
+     * 子商户号（服务商模式下的 sub_mchid）。
+     */
+    private String subMchId;
 
     /**
      * 商户订单号，对应我方支付单号（通常为 paymentId 或 paymentNo）。
@@ -65,6 +75,11 @@ public class WechatPayCallbackCommand {
      * 回调通知的唯一 ID（如有）。
      */
     private String notifyId;
+
+    /**
+     * 支付者 openid（服务商模式下可能是 sub_openid）。
+     */
+    private String payerOpenId;
 
     /**
      * 支付成功时间（如果回调中提供）。

@@ -68,10 +68,11 @@ public class WechatAuthorizedAppService {
             return Optional.empty();
         }
 
-        log.info("[WechatAuthorizedAppService] Found authorized app for tenantId={}, appId={}", 
-                tenantId, authorizedApp.getAuthorizerAppId());
+        String appId = authorizedApp.getAuthorizerAppId();
+        log.info("[WechatAuthorizedAppService] Found authorized app for tenantId={}, appId={}***", 
+                tenantId, appId != null && appId.length() > 6 ? appId.substring(0, 6) : "");
         
-        return Optional.of(authorizedApp.getAuthorizerAppId());
+        return Optional.of(appId);
     }
 
     /**

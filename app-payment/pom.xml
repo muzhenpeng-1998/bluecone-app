@@ -73,6 +73,13 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
+
+        <!-- WeChat Pay SDK -->
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-pay</artifactId>
+            <version>${wx-java.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
