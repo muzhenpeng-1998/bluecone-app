@@ -1,4 +1,4 @@
-package com.bluecone.app.payment.infrastructure.wechatpay;
+package com.bluecone.app.wechat.pay.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "bluecone.wechat.pay")
-public class BlueconeWeChatPayProperties {
+@ConfigurationProperties(prefix = "wechat.pay.partner")
+public class WeChatPayPartnerProperties {
 
     /**
      * 是否启用微信支付（默认 false，本地开发时可关闭使用 stub）。

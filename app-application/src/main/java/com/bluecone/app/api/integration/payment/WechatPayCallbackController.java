@@ -5,22 +5,17 @@ import com.bluecone.app.core.error.CommonErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.payment.api.WechatPayCallbackCommand;
 import com.bluecone.app.payment.application.WechatPayCallbackApplicationService;
-import com.github.binarywang.wxpay.bean.notify.SignatureHeader;
-import com.github.binarywang.wxpay.bean.notify.WxPayPartnerNotifyV3Result;
-import com.github.binarywang.wxpay.exception.WxPayException;
-import com.github.binarywang.wxpay.service.WxPayService;
+import com.bluecone.app.wechat.facade.pay.WeChatPartnerPayNotifyParsed;
+import com.bluecone.app.wechat.facade.pay.WeChatPayNotifyParseCommand;
+import com.bluecone.app.wechat.facade.pay.WeChatPayPartnerFacade;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,7 +24,7 @@ import java.util.Map;
  * <p>
  * 负责：
  * - 接收微信 V3 回调原始报文和签名头；
- * - 使用 WxPayService 进行验签和解密；
+ * - 使用 WeChatPayPartnerFacade 进行验签和解密；
  * - 解析服务商模式回调结构（partner notify）；
  * - 调用应用服务处理业务逻辑；
  * - 按微信要求返回 SUCCESS/FAIL。
@@ -46,7 +41,7 @@ public class WechatPayCallbackController {
     private final WechatPayCallbackApplicationService callbackService;
 
     @Autowired(required = false)
-    private WxPayService wxPayService;
+    private WeChatPayPartnerFacade weChatPayPartnerFacade;
 
     public WechatPayCallbackController(WechatPayCallbackApplicationService callbackService) {
         this.callbackService = callbackService;
@@ -117,83 +112,64 @@ public class WechatPayCallbackController {
      */
     private WechatPayCallbackCommand parseAndVerifyCallback(String body, String timestamp,
                                                             String nonce, String signature, String serial) {
-        if (wxPayService == null) {
-            log.warn("[WechatPayCallback] WxPayService 未启用，跳过验签解密（仅用于本地开发）");
+        if (weChatPayPartnerFacade == null) {
+            log.warn("[WechatPayCallback] WeChatPayPartnerFacade 未启用，跳过验签解密（仅用于本地开发）");
             throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
                     "微信支付服务未启用，无法处理回调");
         }
 
-        try {
-            // 构造签名头
-            SignatureHeader signatureHeader = new SignatureHeader();
-            signatureHeader.setTimeStamp(timestamp);
-            signatureHeader.setNonce(nonce);
-            signatureHeader.setSignature(signature);
-            signatureHeader.setSerial(serial);
+        // 1. 构造 Facade 解析命令
+        WeChatPayNotifyParseCommand parseCmd = WeChatPayNotifyParseCommand.builder()
+                .rawBody(body)
+                .timestamp(timestamp)
+                .nonce(nonce)
+                .signature(signature)
+                .serial(serial)
+                .build();
 
-            // 调用 WxJava 进行验签和解密（服务商模式）
-            WxPayPartnerNotifyV3Result notifyResult = wxPayService.parsePartnerOrderNotifyV3Result(body, signatureHeader);
+        // 2. 调用 Facade 进行验签和解密
+        WeChatPartnerPayNotifyParsed parsed = weChatPayPartnerFacade.parsePayNotify(parseCmd);
 
-            log.info("[WechatPayCallback] 验签解密成功，outTradeNo={}, transactionId={}, tradeState={}",
-                    notifyResult.getResult().getOutTradeNo(),
-                    notifyResult.getResult().getTransactionId(),
-                    notifyResult.getResult().getTradeState());
+        log.info("[WechatPayCallback] 验签解密成功，outTradeNo={}, transactionId={}, tradeState={}",
+                parsed.getOutTradeNo(), parsed.getTransactionId(), parsed.getTradeState());
 
-            // 转换为业务命令对象
-            return convertToCommand(notifyResult, body);
-
-        } catch (WxPayException e) {
-            log.error("[WechatPayCallback] 验签或解密失败，errCode={}, errMsg={}",
-                    e.getErrCode(), e.getErrCodeDes(), e);
-            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
-                    "微信支付回调验签失败: " + e.getErrCodeDes());
-        }
+        // 3. 转换为业务命令对象
+        return convertToCommand(parsed);
     }
 
     /**
-     * 将 WxPayPartnerNotifyV3Result 转换为 WechatPayCallbackCommand。
+     * 将 WeChatPartnerPayNotifyParsed 转换为 WechatPayCallbackCommand。
      */
-    private WechatPayCallbackCommand convertToCommand(WxPayPartnerNotifyV3Result notifyResult, String rawBody) {
-        WxPayPartnerNotifyV3Result.DecryptNotifyResult result = notifyResult.getResult();
-
+    private WechatPayCallbackCommand convertToCommand(WeChatPartnerPayNotifyParsed parsed) {
         WechatPayCallbackCommand cmd = new WechatPayCallbackCommand();
-        cmd.setRawBody(rawBody);
+        cmd.setRawBody(parsed.getRawBody());
 
         // 服务商信息
-        cmd.setAppId(result.getSpAppid());
-        cmd.setMchId(result.getSpMchid());
+        cmd.setAppId(parsed.getSpAppId());
+        cmd.setMchId(parsed.getSpMchId());
 
         // 子商户信息
-        cmd.setSubAppId(result.getSubAppid());
-        cmd.setSubMchId(result.getSubMchid());
+        cmd.setSubAppId(parsed.getSubAppId());
+        cmd.setSubMchId(parsed.getSubMchId());
 
         // 订单信息
-        cmd.setOutTradeNo(result.getOutTradeNo());
-        cmd.setTransactionId(result.getTransactionId());
-        cmd.setTradeState(result.getTradeState());
-        cmd.setBankType(result.getBankType());
-        cmd.setAttach(result.getAttach());
+        cmd.setOutTradeNo(parsed.getOutTradeNo());
+        cmd.setTransactionId(parsed.getTransactionId());
+        cmd.setTradeState(parsed.getTradeState());
+        cmd.setBankType(parsed.getBankType());
+        cmd.setAttach(parsed.getAttach());
 
         // 金额信息
-        if (result.getAmount() != null) {
-            cmd.setTotalAmount(Long.valueOf(result.getAmount().getTotal()));
-        }
+        cmd.setTotalAmount(parsed.getTotalAmount());
 
         // 支付者信息
-        if (result.getPayer() != null) {
-            cmd.setPayerOpenId(result.getPayer().getSubOpenid());
-        }
+        cmd.setPayerOpenId(parsed.getPayerSubOpenId());
 
         // 支付成功时间
-        if (result.getSuccessTime() != null) {
-            try {
-                // 微信返回格式：2018-06-08T10:34:56+08:00
-                cmd.setSuccessTime(OffsetDateTime.parse(result.getSuccessTime(),
-                        DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant());
-            } catch (Exception e) {
-                log.warn("[WechatPayCallback] 解析支付成功时间失败，successTime={}", result.getSuccessTime(), e);
-            }
-        }
+        cmd.setSuccessTime(parsed.getSuccessTime());
+
+        // 预留字段
+        cmd.setExtraFields(parsed.getExtraFields());
 
         log.info("[WechatPayCallback] 回调解析完成，spMchid={}, subMchid={}, subAppid={}, outTradeNo={}, transactionId={}",
                 maskMchId(cmd.getMchId()), maskMchId(cmd.getSubMchId()),

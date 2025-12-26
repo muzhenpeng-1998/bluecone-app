@@ -43,6 +43,13 @@
             <version>${wx-java.version}</version>
         </dependency>
 
+        <!-- WxJava 微信支付 SDK -->
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-pay</artifactId>
+            <version>${wx-java.version}</version>
+        </dependency>
+
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,4 +1,4 @@
-package com.bluecone.app.payment.infrastructure.wechatpay;
+package com.bluecone.app.wechat.pay.config;
 
 import com.github.binarywang.wxpay.config.WxPayConfig;
 import com.github.binarywang.wxpay.service.WxPayService;
@@ -29,9 +29,9 @@ public class WxJavaWeChatPayConfiguration {
      * 构建 WxPayService Bean（仅当 enabled=true 时启用）。
      */
     @Bean
-    @ConditionalOnProperty(prefix = "bluecone.wechat.pay", name = "enabled", havingValue = "true")
-    public WxPayService wxPayService(BlueconeWeChatPayProperties properties) {
-        log.info("[WxJavaWeChatPayConfiguration] 初始化微信支付服务商模式，spMchId={}", properties.getSpMchId());
+    @ConditionalOnProperty(prefix = "wechat.pay.partner", name = "enabled", havingValue = "true")
+    public WxPayService wxPayService(WeChatPayPartnerProperties properties) {
+        log.info("[WxJavaWeChatPayConfiguration] 初始化微信支付服务商模式，spMchId={}", maskMchId(properties.getSpMchId()));
 
         validateProperties(properties);
 
@@ -67,7 +67,7 @@ public class WxJavaWeChatPayConfiguration {
     /**
      * 校验配置必填项。
      */
-    private void validateProperties(BlueconeWeChatPayProperties properties) {
+    private void validateProperties(WeChatPayPartnerProperties properties) {
         if (!StringUtils.hasText(properties.getSpAppId())) {
             throw new IllegalStateException("微信支付配置缺失：spAppId");
         }
@@ -80,6 +80,16 @@ public class WxJavaWeChatPayConfiguration {
         if (!StringUtils.hasText(properties.getCertSerialNo())) {
             throw new IllegalStateException("微信支付配置缺失：certSerialNo");
         }
+    }
+
+    /**
+     * 脱敏商户号（显示前4位和后4位）。
+     */
+    private String maskMchId(String mchId) {
+        if (mchId == null || mchId.length() <= 8) {
+            return "***";
+        }
+        return mchId.substring(0, 4) + "***" + mchId.substring(mchId.length() - 4);
     }
 }
 

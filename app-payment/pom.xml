@@ -37,6 +37,12 @@
 
         <dependency>
             <groupId>com.bluecone</groupId>
+            <artifactId>app-wechat</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.bluecone</groupId>
             <artifactId>app-wallet-api</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -72,13 +78,6 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-        </dependency>
-
-        <!-- WeChat Pay SDK -->
-        <dependency>
-            <groupId>com.github.binarywang</groupId>
-            <artifactId>weixin-java-pay</artifactId>
-            <version>${wx-java.version}</version>
         </dependency>
     </dependencies>
 

@@ -7,16 +7,18 @@ import com.bluecone.app.payment.domain.channel.PaymentChannelConfigRepository;
 import com.bluecone.app.payment.domain.channel.PaymentChannelType;
 import com.bluecone.app.payment.domain.enums.PaymentChannel;
 import com.bluecone.app.payment.domain.enums.PaymentMethod;
-import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayRequest;
-import com.bluecone.app.payment.domain.gateway.WeChatJsapiPrepayResponse;
-import com.bluecone.app.payment.domain.gateway.WeChatPaymentGateway;
 import com.bluecone.app.payment.domain.gateway.channel.ChannelPrepayCommand;
 import com.bluecone.app.payment.domain.gateway.channel.ChannelPrepayResult;
 import com.bluecone.app.payment.domain.gateway.channel.PaymentChannelGateway;
 import com.bluecone.app.payment.domain.model.PaymentOrder;
+import com.bluecone.app.wechat.facade.pay.WeChatPartnerJsapiPrepayCommand;
+import com.bluecone.app.wechat.facade.pay.WeChatPartnerJsapiPrepayResult;
+import com.bluecone.app.wechat.facade.pay.WeChatPayPartnerFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,7 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 微信 JSAPI 渠道网关适配器：实现通用 SPI，内部委托 WeChatPaymentGateway。
+ * 微信 JSAPI 渠道网关适配器：实现通用 SPI，内部委托 WeChatPayPartnerFacade。
  */
 @Component
 public class WechatJsapiChannelGateway implements PaymentChannelGateway {
@@ -32,12 +34,12 @@ public class WechatJsapiChannelGateway implements PaymentChannelGateway {
     private static final Logger log = LoggerFactory.getLogger(WechatJsapiChannelGateway.class);
 
     private final PaymentChannelConfigRepository paymentChannelConfigRepository;
-    private final WeChatPaymentGateway weChatPaymentGateway;
 
-    public WechatJsapiChannelGateway(PaymentChannelConfigRepository paymentChannelConfigRepository,
-                                     WeChatPaymentGateway weChatPaymentGateway) {
+    @Autowired(required = false)
+    private WeChatPayPartnerFacade weChatPayPartnerFacade;
+
+    public WechatJsapiChannelGateway(PaymentChannelConfigRepository paymentChannelConfigRepository) {
         this.paymentChannelConfigRepository = paymentChannelConfigRepository;
-        this.weChatPaymentGateway = weChatPaymentGateway;
     }
 
     @Override
@@ -47,6 +49,11 @@ public class WechatJsapiChannelGateway implements PaymentChannelGateway {
 
     @Override
     public ChannelPrepayResult prepay(ChannelPrepayCommand command) {
+        if (weChatPayPartnerFacade == null) {
+            throw new BusinessException(CommonErrorCode.SYSTEM_ERROR,
+                    "微信支付服务未启用，无法发起支付（请检查 wechat.pay.partner.enabled 配置）");
+        }
+
         PaymentOrder paymentOrder = command.getPaymentOrder();
         PaymentChannelType channelType = PaymentChannelType.fromChannelAndMethod(
                 paymentOrder.getChannel(), paymentOrder.getMethod());
@@ -54,12 +61,26 @@ public class WechatJsapiChannelGateway implements PaymentChannelGateway {
             throw new BusinessException(CommonErrorCode.BAD_REQUEST, "WechatJsapiChannelGateway 只支持 WECHAT_JSAPI");
         }
 
+        // 1. 查询渠道配置
         PaymentChannelConfig config = paymentChannelConfigRepository.findByTenantStoreAndChannel(
                         paymentOrder.getTenantId(),
                         paymentOrder.getStoreId(),
                         channelType)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 渠道未配置"));
 
+        // 2. 校验配置
+        if (!config.isEnabled()) {
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "微信 JSAPI 渠道未启用");
+        }
+        if (config.getWeChatSecrets() == null) {
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "微信支付配置为空");
+        }
+        String subMchId = config.getWeChatSecrets().getSubMchId();
+        if (!StringUtils.hasText(subMchId)) {
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "子商户号配置缺失");
+        }
+
+        // 3. 计算金额（元 -> 分）
         BigDecimal payable = paymentOrder.getPayableAmount();
         if (payable == null) {
             throw new BusinessException(CommonErrorCode.SYSTEM_ERROR, "支付单缺少应付金额");
@@ -68,30 +89,34 @@ public class WechatJsapiChannelGateway implements PaymentChannelGateway {
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValueExact();
 
-        WeChatJsapiPrepayRequest req = new WeChatJsapiPrepayRequest();
-        req.setPaymentOrderId(paymentOrder.getId());
-        req.setTenantId(paymentOrder.getTenantId());
-        req.setStoreId(paymentOrder.getStoreId());
-        req.setUserId(paymentOrder.getUserId());
-        req.setAmountTotal(fen);
-        req.setCurrency(paymentOrder.getCurrency());
-        req.setDescription(command.getDescription());
-        req.setOutTradeNo(String.valueOf(paymentOrder.getId()));
-        req.setPayerOpenId(command.getPayerOpenId());
-        req.setAttach(command.getAttach());
+        // 4. 构造 Facade 命令
+        WeChatPartnerJsapiPrepayCommand facadeCmd = WeChatPartnerJsapiPrepayCommand.builder()
+                .tenantId(paymentOrder.getTenantId())
+                .subMchId(subMchId)
+                .payerSubOpenId(command.getPayerOpenId())
+                .outTradeNo(String.valueOf(paymentOrder.getId()))
+                .amountTotal(fen)
+                .currency(paymentOrder.getCurrency())
+                .description(command.getDescription())
+                .attach(command.getAttach())
+                .notifyUrl(config.getNotifyUrl())  // 从配置中取回调地址
+                .build();
 
-        WeChatJsapiPrepayResponse resp = weChatPaymentGateway.jsapiPrepay(req, config);
+        // 5. 调用 Facade 预下单
+        WeChatPartnerJsapiPrepayResult result = weChatPayPartnerFacade.jsapiPrepay(facadeCmd);
+
+        // 6. 构造渠道上下文（供前端唤起支付）
         Map<String, Object> context = new HashMap<>();
-        context.put("appId", resp.getAppId());
-        context.put("timeStamp", resp.getTimeStamp());
-        context.put("nonceStr", resp.getNonceStr());
-        context.put("package", resp.getPackageValue());
-        context.put("signType", resp.getSignType());
-        context.put("paySign", resp.getPaySign());
+        context.put("appId", result.getAppId());
+        context.put("timeStamp", result.getTimeStamp());
+        context.put("nonceStr", result.getNonceStr());
+        context.put("package", result.getPackageValue());
+        context.put("signType", result.getSignType());
+        context.put("paySign", result.getPaySign());
 
         log.info("[WechatJsapiGateway] prepay success paymentId={} prepayPackage={} tenantId={} storeId={}",
-                paymentOrder.getId(), resp.getPackageValue(), paymentOrder.getTenantId(), paymentOrder.getStoreId());
+                paymentOrder.getId(), result.getPackageValue(), paymentOrder.getTenantId(), paymentOrder.getStoreId());
 
-        return new ChannelPrepayResult(resp.getPackageValue(), context);
+        return new ChannelPrepayResult(result.getPackageValue(), context);
     }
 }
