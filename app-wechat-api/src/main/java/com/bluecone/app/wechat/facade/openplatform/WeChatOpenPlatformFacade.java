@@ -47,5 +47,24 @@ public interface WeChatOpenPlatformFacade {
      * @return 回调处理结果（success/fail）
      */
     WeChatOpenCallbackResult handleCallback(WeChatOpenCallbackCommand command);
+
+    /**
+     * 使用授权码查询授权信息（用于浏览器授权回调）。
+     * <p>
+     * 内部流程：
+     * 1. 使用 auth_code 调用 queryAuth 获取 authorizer_access_token/refresh_token
+     * 2. 调用 getAuthorizerInfo 获取小程序基本信息
+     * 3. 保存到 bc_wechat_authorized_app 表
+     * 4. 返回授权方信息
+     * </p>
+     * <p>
+     * 注意：此方法不涉及租户绑定，租户绑定由 app-tenant 完成。
+     * </p>
+     *
+     * @param command queryAuth 命令（包含 auth_code）
+     * @return queryAuth 结果（包含 authorizerAppId/nickName 等）
+     */
+    WeChatQueryAuthResult queryAuth(WeChatQueryAuthCommand command);
 }
+
 

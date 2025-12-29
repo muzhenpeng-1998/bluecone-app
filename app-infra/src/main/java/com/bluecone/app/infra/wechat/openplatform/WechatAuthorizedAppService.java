@@ -225,5 +225,183 @@ public class WechatAuthorizedAppService {
 
         return refreshResult.getAuthorizerAccessToken();
     }
+
+    /**
+     * 保存或更新授权信息（用于回调事件处理）。
+     * <p>
+     * 如果记录不存在则创建，如果存在则更新基本信息和授权状态。
+     * </p>
+     *
+     * @param authorizerAppId 小程序 AppID
+     * @param authorizerInfo  授权方信息（从 getAuthorizerInfo 获取）
+     */
+    public void saveOrUpdateAuthorizerInfo(String authorizerAppId, AuthorizerInfoResult authorizerInfo) {
+        if (authorizerAppId == null) {
+            log.warn("[WechatAuthorizedAppService] authorizerAppId is null");
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // 查找已有记录
+        WechatAuthorizedAppDO existing = authorizedAppMapper.selectOne(
+                new QueryWrapper<WechatAuthorizedAppDO>()
+                        .eq("authorizer_app_id", authorizerAppId)
+                        .last("LIMIT 1")
+        );
+
+        if (existing == null) {
+            // 创建新记录
+            WechatAuthorizedAppDO newRecord = new WechatAuthorizedAppDO();
+            newRecord.setAuthorizerAppId(authorizerAppId);
+            newRecord.setAuthorizationStatus("AUTHORIZED");
+            newRecord.setAuthorizedAt(now);
+            newRecord.setCreatedAt(now);
+            newRecord.setUpdatedAt(now);
+
+            if (authorizerInfo != null) {
+                applyAuthorizerInfo(newRecord, authorizerInfo);
+            }
+
+            authorizedAppMapper.insert(newRecord);
+            log.info("[WechatAuthorizedAppService] 创建授权记录, appId={}", authorizerAppId);
+        } else {
+            // 更新已有记录
+            existing.setAuthorizationStatus("AUTHORIZED");
+            if (existing.getAuthorizedAt() == null) {
+                existing.setAuthorizedAt(now);
+            }
+            existing.setUpdatedAt(now);
+
+            if (authorizerInfo != null) {
+                applyAuthorizerInfo(existing, authorizerInfo);
+            }
+
+            authorizedAppMapper.updateById(existing);
+            log.info("[WechatAuthorizedAppService] 更新授权记录, appId={}", authorizerAppId);
+        }
+    }
+
+    /**
+     * 保存或更新授权信息（包含 refresh_token，用于 queryAuth 后的处理）。
+     *
+     * @param authorizerAppId          小程序 AppID
+     * @param authorizerRefreshToken   授权方刷新令牌
+     * @param authorizerAccessToken    授权方接口调用令牌
+     * @param expiresInSeconds         access_token 过期时间（秒）
+     * @param authorizerInfo           授权方信息
+     */
+    public void saveOrUpdateAuthorizerWithTokens(
+            String authorizerAppId,
+            String authorizerRefreshToken,
+            String authorizerAccessToken,
+            Integer expiresInSeconds,
+            AuthorizerInfoResult authorizerInfo) {
+        if (authorizerAppId == null) {
+            log.warn("[WechatAuthorizedAppService] authorizerAppId is null");
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expireAt = expiresInSeconds != null ? now.plusSeconds(expiresInSeconds) : null;
+
+        // 查找已有记录
+        WechatAuthorizedAppDO existing = authorizedAppMapper.selectOne(
+                new QueryWrapper<WechatAuthorizedAppDO>()
+                        .eq("authorizer_app_id", authorizerAppId)
+                        .last("LIMIT 1")
+        );
+
+        if (existing == null) {
+            // 创建新记录
+            WechatAuthorizedAppDO newRecord = new WechatAuthorizedAppDO();
+            newRecord.setAuthorizerAppId(authorizerAppId);
+            newRecord.setAuthorizerRefreshToken(authorizerRefreshToken);
+            newRecord.setAuthorizerAccessToken(authorizerAccessToken);
+            newRecord.setAuthorizerAccessTokenExpireAt(expireAt);
+            newRecord.setAuthorizationStatus("AUTHORIZED");
+            newRecord.setAuthorizedAt(now);
+            newRecord.setCreatedAt(now);
+            newRecord.setUpdatedAt(now);
+
+            if (authorizerInfo != null) {
+                applyAuthorizerInfo(newRecord, authorizerInfo);
+            }
+
+            authorizedAppMapper.insert(newRecord);
+            log.info("[WechatAuthorizedAppService] 创建授权记录（含 tokens）, appId={}", authorizerAppId);
+        } else {
+            // 更新已有记录
+            if (authorizerRefreshToken != null) {
+                existing.setAuthorizerRefreshToken(authorizerRefreshToken);
+            }
+            if (authorizerAccessToken != null) {
+                existing.setAuthorizerAccessToken(authorizerAccessToken);
+                existing.setAuthorizerAccessTokenExpireAt(expireAt);
+            }
+            existing.setAuthorizationStatus("AUTHORIZED");
+            if (existing.getAuthorizedAt() == null) {
+                existing.setAuthorizedAt(now);
+            }
+            existing.setUpdatedAt(now);
+
+            if (authorizerInfo != null) {
+                applyAuthorizerInfo(existing, authorizerInfo);
+            }
+
+            authorizedAppMapper.updateById(existing);
+            log.info("[WechatAuthorizedAppService] 更新授权记录（含 tokens）, appId={}", authorizerAppId);
+        }
+    }
+
+    /**
+     * 标记授权为已取消。
+     *
+     * @param authorizerAppId 小程序 AppID
+     */
+    public void markAsUnauthorized(String authorizerAppId) {
+        if (authorizerAppId == null) {
+            log.warn("[WechatAuthorizedAppService] authorizerAppId is null");
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        UpdateWrapper<WechatAuthorizedAppDO> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("authorizer_app_id", authorizerAppId)
+                .set("authorization_status", "UNAUTHORIZED")
+                .set("unauthorized_at", now)
+                .set("updated_at", now);
+
+        int updated = authorizedAppMapper.update(null, updateWrapper);
+        if (updated > 0) {
+            log.info("[WechatAuthorizedAppService] 标记为已取消授权, appId={}, count={}", authorizerAppId, updated);
+        } else {
+            log.warn("[WechatAuthorizedAppService] 未找到授权记录, appId={}", authorizerAppId);
+        }
+    }
+
+    /**
+     * 应用授权方信息到 DO 对象。
+     * <p>
+     * 注意：AuthorizerInfoResult 只包含基本字段，更详细的信息需要通过其他接口获取。
+     * </p>
+     */
+    private void applyAuthorizerInfo(WechatAuthorizedAppDO record, AuthorizerInfoResult info) {
+        if (info.getNickName() != null) {
+            record.setNickName(info.getNickName());
+        }
+        if (info.getHeadImg() != null) {
+            record.setHeadImg(info.getHeadImg());
+        }
+        if (info.getPrincipalName() != null) {
+            record.setPrincipalName(info.getPrincipalName());
+        }
+        if (info.getVerifyType() != null) {
+            record.setVerifyTypeInfo(info.getVerifyType());
+        }
+        // 其他字段（userName, alias, qrcodeUrl, serviceTypeInfo, businessInfo, miniProgramInfo）
+        // 需要通过其他接口获取，这里不设置
+    }
 }
 

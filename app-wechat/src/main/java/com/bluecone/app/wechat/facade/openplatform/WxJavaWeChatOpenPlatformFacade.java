@@ -37,6 +37,7 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
     private final WeChatOpenPlatformProperties properties;
     private final WechatComponentCredentialService componentCredentialService;
     private final WeChatOpenPlatformClient weChatOpenPlatformClient;
+    private final WechatAuthorizedAppService authorizedAppService;
 
     @Override
     public WeChatPreAuthUrlResult buildPreAuthUrl(WeChatPreAuthUrlCommand command) {
@@ -94,6 +95,72 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
             log.error("[WxJavaWeChatOpenPlatformFacade] buildPreAuthUrl 异常, tenantId={}",
                     command.getTenantId(), e);
             throw new IllegalStateException("生成预授权链接失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public WeChatQueryAuthResult queryAuth(WeChatQueryAuthCommand command) {
+        log.info("[WxJavaWeChatOpenPlatformFacade] queryAuth, authCode={}", 
+                command.getAuthCode() != null ? "***" : "null");
+
+        try {
+            // 1. 获取 component_access_token
+            String componentAccessToken = componentCredentialService.getValidComponentAccessToken();
+
+            // 2. 调用 queryAuth 获取授权信息
+            QueryAuthResult authResult = weChatOpenPlatformClient.queryAuth(
+                    componentAccessToken, command.getAuthCode());
+
+            if (authResult == null || !authResult.isSuccess() || authResult.getAuthorizerAppId() == null) {
+                log.error("[WxJavaWeChatOpenPlatformFacade] queryAuth 失败, errcode={}, errmsg={}",
+                        authResult != null ? authResult.getErrcode() : null,
+                        authResult != null ? authResult.getErrmsg() : null);
+                return WeChatQueryAuthResult.builder()
+                        .success(false)
+                        .errcode(authResult != null ? authResult.getErrcode() : -1)
+                        .errmsg(authResult != null ? authResult.getErrmsg() : "queryAuth failed")
+                        .build();
+            }
+
+            String authorizerAppId = authResult.getAuthorizerAppId();
+            log.info("[WxJavaWeChatOpenPlatformFacade] queryAuth 成功, authorizerAppId={}***",
+                    maskAppId(authorizerAppId));
+
+            // 3. 从 authorizationInfo 中提取 tokens
+            AuthorizationInfo authInfo = authResult.getAuthorizationInfo();
+            String authorizerAccessToken = authInfo != null ? authInfo.getAuthorizerAccessToken() : null;
+            String authorizerRefreshToken = authResult.getAuthorizerRefreshToken();
+            Integer expiresIn = authInfo != null ? authInfo.getExpiresIn() : null;
+
+            // 4. 调用 getAuthorizerInfo 获取小程序基本信息
+            Optional<AuthorizerInfoResult> infoOpt = weChatOpenPlatformClient.getAuthorizerInfo(
+                    componentAccessToken, authorizerAppId);
+            AuthorizerInfoResult info = infoOpt.orElse(null);
+
+            // 5. 保存到数据库（包含 tokens）
+            authorizedAppService.saveOrUpdateAuthorizerWithTokens(
+                    authorizerAppId,
+                    authorizerRefreshToken,
+                    authorizerAccessToken,
+                    expiresIn,
+                    info
+            );
+
+            // 6. 构造返回结果
+            return WeChatQueryAuthResult.builder()
+                    .success(true)
+                    .authorizerAppId(authorizerAppId)
+                    .nickName(info != null ? info.getNickName() : null)
+                    .headImg(info != null ? info.getHeadImg() : null)
+                    .principalName(info != null ? info.getPrincipalName() : null)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("[WxJavaWeChatOpenPlatformFacade] queryAuth 异常", e);
+            return WeChatQueryAuthResult.builder()
+                    .success(false)
+                    .errmsg(e.getMessage())
+                    .build();
         }
     }
 
@@ -234,9 +301,7 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
     /**
      * 根据 InfoType 分发处理
      * <p>
-     * 注意：此方法只处理 component_verify_ticket，其他事件（authorized/unauthorized）
-     * 应该由 app-tenant 的 WechatOpenCallbackAppService 处理。
-     * 为了避免循环依赖，这里只做最基础的处理。
+     * Phase 3: 统一处理所有回调事件，包括 ticket/authorized/updateauthorized/unauthorized
      * </p>
      */
     private void handleEventByType(ParsedCallbackEvent event) {
@@ -251,18 +316,16 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
 
             case "authorized":
             case "updateauthorized":
-                // 授权/更新授权：只记录日志，实际处理由 app-tenant 完成
+                // 授权/更新授权：调用 queryAuth 并落库
                 if (StringUtils.hasText(event.authorizerAppid)) {
-                    log.info("[WxJavaWeChatOpenPlatformFacade] 收到 {} 事件，AuthorizerAppid={}（需要由 app-tenant 处理）",
-                            event.infoType, event.authorizerAppid);
+                    handleAuthorizedEvent(event.authorizerAppid, event.infoType);
                 }
                 break;
 
             case "unauthorized":
-                // 取消授权：只记录日志，实际处理由 app-tenant 完成
+                // 取消授权：标记解绑
                 if (StringUtils.hasText(event.authorizerAppid)) {
-                    log.info("[WxJavaWeChatOpenPlatformFacade] 收到 unauthorized 事件，AuthorizerAppid={}（需要由 app-tenant 处理）",
-                            event.authorizerAppid);
+                    handleUnauthorizedEvent(event.authorizerAppid);
                 }
                 break;
 
@@ -270,6 +333,78 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
                 log.info("[WxJavaWeChatOpenPlatformFacade] 未处理的 InfoType: {}", event.infoType);
                 break;
         }
+    }
+
+    /**
+     * 处理授权/更新授权事件
+     * <p>
+     * 注意：此方法只负责调用 getAuthorizerInfo 并更新 bc_wechat_authorized_app 表。
+     * 租户/门店绑定逻辑由 app-tenant 的 WechatOpenCallbackAppService 处理。
+     * </p>
+     */
+    private void handleAuthorizedEvent(String authorizerAppid, String infoType) {
+        log.info("[WxJavaWeChatOpenPlatformFacade] 处理 {} 事件，authorizerAppid={}", 
+                infoType, maskAppId(authorizerAppid));
+
+        try {
+            // 1. 获取 component_access_token
+            String componentAccessToken = componentCredentialService.getValidComponentAccessToken();
+
+            // 2. 调用 getAuthorizerInfo 获取小程序基本信息
+            // 注意：authorized/updateauthorized 事件本身不包含 auth_code，
+            // 这里只能获取基本信息并更新授权状态。
+            // 完整的授权信息（包含 refresh_token）应该在浏览器回调时通过 auth_code + queryAuth 获取
+            Optional<AuthorizerInfoResult> infoResult = weChatOpenPlatformClient.getAuthorizerInfo(
+                    componentAccessToken, authorizerAppid);
+            
+            if (infoResult.isPresent()) {
+                AuthorizerInfoResult info = infoResult.get();
+                log.info("[WxJavaWeChatOpenPlatformFacade] 获取授权方信息成功，nickName={}", info.getNickName());
+                
+                // 3. 更新或创建授权记录（通过 WechatAuthorizedAppService）
+                // 注意：这里只更新基本信息，不涉及租户绑定
+                authorizedAppService.saveOrUpdateAuthorizerInfo(authorizerAppid, info);
+            } else {
+                log.warn("[WxJavaWeChatOpenPlatformFacade] 获取授权方信息失败，authorizerAppid={}", authorizerAppid);
+                // 即使获取信息失败，也创建一个基本记录
+                authorizedAppService.saveOrUpdateAuthorizerInfo(authorizerAppid, null);
+            }
+
+        } catch (Exception e) {
+            log.error("[WxJavaWeChatOpenPlatformFacade] 处理授权事件失败，authorizerAppid={}", 
+                    authorizerAppid, e);
+            // 不抛出异常，避免影响微信回调重试
+        }
+    }
+
+    /**
+     * 处理取消授权事件
+     */
+    private void handleUnauthorizedEvent(String authorizerAppid) {
+        log.info("[WxJavaWeChatOpenPlatformFacade] 处理 unauthorized 事件，authorizerAppid={}", 
+                maskAppId(authorizerAppid));
+
+        try {
+            // 标记授权状态为 UNAUTHORIZED
+            authorizedAppService.markAsUnauthorized(authorizerAppid);
+            log.info("[WxJavaWeChatOpenPlatformFacade] 已标记授权状态为 UNAUTHORIZED，authorizerAppid={}", 
+                    maskAppId(authorizerAppid));
+
+        } catch (Exception e) {
+            log.error("[WxJavaWeChatOpenPlatformFacade] 处理取消授权事件失败，authorizerAppid={}", 
+                    authorizerAppid, e);
+            // 不抛出异常，避免影响微信回调重试
+        }
+    }
+
+    /**
+     * 脱敏 AppID
+     */
+    private String maskAppId(String appId) {
+        if (appId == null || appId.length() <= 6) {
+            return "***";
+        }
+        return appId.substring(0, 6);
     }
 
     /**
