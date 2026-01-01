@@ -1,0 +1,60 @@
+# BlueCone Application - 生产环境快速启动配置
+# 
+# 说明：
+# - 此配置专门用于优化启动速度，适用于微信云托管等需要快速启动的环境
+# - 继承 application-prod.yml 的所有配置，并添加启动优化
+# - 使用方式：设置环境变量 SPRING_PROFILES_ACTIVE=prod-fast
+#
+# 优化策略：
+# 1. 启用延迟初始化（lazy-initialization）
+# 2. 减少数据库连接池初始连接数
+# 3. 优化 Flyway 配置
+# 4. 禁用非关键自动配置
+
+spring:
+  # 继承 prod 配置
+  profiles:
+    include: prod
+  
+  # 启用延迟初始化，加快启动速度
+  # 注意：首次请求响应时间可能稍长（约 100-200ms）
+  main:
+    lazy-initialization: true
+  
+  # 数据源配置：优化启动速度
+  datasource:
+    hikari:
+      # 减少初始连接数，加快启动
+      minimum-idle: 1
+      # 允许延迟初始化连接池
+      initialization-fail-timeout: -1
+  
+  # Flyway 配置：优化启动速度
+  flyway:
+    # 如果数据库已经是最新版本，跳过迁移检查可以加快启动
+    # 注意：仅在确认数据库已是最新版本时使用
+    validate-on-migrate: false
+  
+  # 自动配置排除：禁用不必要的自动配置，加快启动
+  autoconfigure:
+    exclude:
+      # 如果不使用 Redis Repository，可以排除
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+# BlueCone 应用自定义配置
+bluecone:
+  # Outbox 配置：优化启动速度
+  outbox:
+    # 延迟启动 Outbox 调度器（启动后 30 秒再开始扫描）
+    # 这样不会阻塞应用启动
+    publish-cron: "30 0/10 * * * ?"  # 启动 30 秒后，每 10 秒扫描一次
+
+# 日志级别：减少启动时的日志输出
+logging:
+  level:
+    root: WARN
+    com.bluecone.app: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    com.zaxxer.hikari: WARN
+

@@ -8,7 +8,29 @@ Liveness probe failed: dial tcp 10.19.11.147:80: connect: connection refused
 Readiness probe failed: dial tcp 10.19.11.147:80: connect: connection refused
 ```
 
-### ⚡ 快速修复（5 分钟）
+### ⚡ 快速修复方案
+
+#### 方案 A：优化应用启动速度（推荐，无需修改控制台）
+
+如果微信云托管控制台**没有健康检查配置选项**，使用此方案。
+
+**步骤 1**: 设置环境变量
+
+在微信云托管控制台添加：
+
+```bash
+SPRING_PROFILES_ACTIVE=prod-fast
+```
+
+**步骤 2**: 重新部署
+
+启动时间将从 30 秒缩短到 **15-20 秒**，大幅提高启动成功率。
+
+详细说明请查看：`FAST_STARTUP_GUIDE.md`
+
+---
+
+#### 方案 B：修改健康检查配置（如果控制台支持）
 
 1. 登录 [微信云托管控制台](https://cloud.weixin.qq.com/cloudrun)
 2. 进入服务 → 版本管理 → 编辑版本

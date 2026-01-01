@@ -100,6 +100,7 @@ EXPOSE 80
 # - 使用 G1GC 垃圾收集器
 # - 设置合理的堆内存大小
 # - 启用 JVM 容器感知特性
+# - 优化启动速度：使用分层编译、禁用字节码验证
 ENV JAVA_OPTS="-XX:+UseG1GC \
     -XX:MaxRAMPercentage=75.0 \
     -XX:InitialRAMPercentage=50.0 \
@@ -107,6 +108,9 @@ ENV JAVA_OPTS="-XX:+UseG1GC \
     -XX:MaxGCPauseMillis=200 \
     -XX:+HeapDumpOnOutOfMemoryError \
     -XX:HeapDumpPath=/app/logs \
+    -XX:+TieredCompilation \
+    -XX:TieredStopAtLevel=1 \
+    -Xverify:none \
     -Djava.security.egd=file:/dev/./urandom \
     -Dfile.encoding=UTF-8 \
     -Duser.timezone=Asia/Shanghai"

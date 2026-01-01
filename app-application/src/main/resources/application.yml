@@ -41,6 +41,11 @@ spring:
   application:
     name: bluecone-app
   
+  # 性能优化：启用延迟初始化，加快启动速度
+  # 注意：仅在启动速度是瓶颈时启用，可能影响首次请求响应时间
+  main:
+    lazy-initialization: ${SPRING_LAZY_INITIALIZATION:false}
+  
   # Flyway 数据库迁移配置
   # 注意：此配置为通用配置，各环境（dev/prod）会覆盖为严格模式，local 环境允许容错
   flyway:
@@ -65,13 +70,14 @@ spring:
     # 数据库密码：通过环境变量 DB_PASSWORD 注入，无默认值（开发环境可为空）
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # 连接池配置：通用配置，各环境可根据需要覆盖
+    # 连接池配置：优化启动速度，减少初始连接数
     hikari:
       maximum-pool-size: 10
-      minimum-idle: 2
+      minimum-idle: 1  # 减少初始连接数，加快启动
       idle-timeout: 600000
       max-lifetime: 1800000
       connection-timeout: 30000
+      initialization-fail-timeout: -1  # 允许延迟初始化连接池
 
   # Redis 配置：所有敏感信息通过环境变量注入
   data:
