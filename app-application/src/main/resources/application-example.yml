@@ -109,14 +109,45 @@ wechat:
   open-platform:
     # 是否启用微信开放平台功能（本地开发可设为 false 使用 Stub）
     enabled: ${WECHAT_OPEN_PLATFORM_ENABLED:true}
-    # 第三方平台 appid
+    # 第三方平台 appid（从微信开放平台获取）
     component-app-id: ${WECHAT_COMPONENT_APP_ID:}
-    # 第三方平台 appsecret
+    # 第三方平台 appsecret（从微信开放平台获取）
     component-app-secret: ${WECHAT_COMPONENT_APP_SECRET:}
-    # 消息校验 Token
+    # 消息校验 Token（在微信开放平台配置，用于验证消息来源）
     component-token: ${WECHAT_COMPONENT_TOKEN:}
-    # 消息加解密 Key
+    # 消息加解密 Key（在微信开放平台配置，43位字符，用于消息加解密）
     component-aes-key: ${WECHAT_COMPONENT_AES_KEY:}
+  
+  # 微信支付服务商模式配置
+  pay:
+    partner:
+      # 是否启用微信支付服务商模式（本地开发可设为 false）
+      enabled: ${WECHAT_PAY_PARTNER_ENABLED:false}
+      # 服务商应用 AppID（sp_appid）
+      # 获取方式：登录微信支付商户平台 > 产品中心 > 开发配置 > 服务商 AppID
+      sp-app-id: ${WECHAT_PAY_SP_APP_ID:}
+      # 服务商商户号（sp_mchid）
+      # 获取方式：登录微信支付商户平台 > 账户中心 > 商户信息 > 商户号
+      sp-mch-id: ${WECHAT_PAY_SP_MCH_ID:}
+      # 微信支付 V3 API 密钥（32位，用于回调解密）
+      # 获取方式：登录微信支付商户平台 > 账户中心 > API安全 > 设置APIv3密钥
+      # 注意：APIv3密钥需要自行设置，建议使用32位随机字符串
+      api-v3-key: ${WECHAT_PAY_API_V3_KEY:}
+      # 商户证书序列号
+      # 获取方式：登录微信支付商户平台 > 账户中心 > API安全 > 申请API证书 > 查看证书序列号
+      # 或使用命令：openssl x509 -in apiclient_cert.pem -noout -serial
+      cert-serial-no: ${WECHAT_PAY_CERT_SERIAL_NO:}
+      # 商户私钥路径（apiclient_key.pem 文件路径，优先使用）
+      # 获取方式：登录微信支付商户平台 > 账户中心 > API安全 > 申请API证书 > 下载证书
+      # 注意：私钥文件需要妥善保管，不要泄露
+      private-key-path: ${WECHAT_PAY_PRIVATE_KEY_PATH:}
+      # 商户私钥字符串（如果不使用文件路径，可直接配置私钥内容）
+      # 注意：privateKeyPath 和 privateKeyString 二选一，优先使用 privateKeyPath
+      private-key-string: ${WECHAT_PAY_PRIVATE_KEY_STRING:}
+      # 默认回调地址（当 PaymentChannelConfig.notifyUrl 为空时使用）
+      # 格式：https://yourdomain.com/api/payment/wechat/callback
+      default-notify-url: ${WECHAT_PAY_DEFAULT_NOTIFY_URL:}
+  
   wxjava:
     # 是否启用 WxJava SDK（与 open-platform.enabled 保持一致）
     enabled: ${WECHAT_WXJAVA_ENABLED:true}

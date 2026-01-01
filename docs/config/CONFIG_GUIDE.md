@@ -315,8 +315,15 @@ java -jar target/bluecone-app.jar --spring.profiles.active=local
 2. 检查 Redis 服务是否已启动
 3. 如果是本地开发，可以禁用 Redis 相关功能
 
+## 微信集成配置
+
+对于微信开放平台和微信支付服务商模式的配置，请参考：
+
+- **[微信集成生产环境部署检查清单](../wechat-prod-checklist.md)**：包含微信开放平台、微信支付服务商模式的完整配置清单、环境变量说明、回调 URL 列表、安全配置要求等。
+
 ## 参考文档
 
 - [Spring Boot 配置文档](https://docs.spring.io/spring-boot/docs/current/reference/html/application-properties.html)
 - [Flyway 配置文档](https://flywaydb.org/documentation/configuration/parameters/)
 - [微信云托管文档](https://cloud.tencent.com/document/product/876)
+- [微信集成生产环境部署检查清单](../wechat-prod-checklist.md)

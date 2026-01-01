@@ -477,6 +477,7 @@
                 <configuration>
                     <release>${java.version}</release>
                     <fork>true</fork>
+                    <parameters>true</parameters>
                     <compilerArgs>
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>

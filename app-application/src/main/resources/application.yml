@@ -56,13 +56,13 @@ spring:
     # 注意：ignore-migration-patterns 仅在 local 环境配置，dev/prod 环境禁止忽略缺失迁移
     # 原因：线上环境必须保证迁移脚本的完整性和可重复性，禁止忽略缺失迁移
 
-  # 数据源配置：所有敏感信息通过环境变量注入，默认值为空以确保安全
+  # 数据源配置：所有敏感信息通过环境变量注入
   datasource:
-    # 数据库连接 URL：通过环境变量 DB_URL 注入，无默认值（安全：避免意外使用默认连接）
-    url: ${DB_URL:}
-    # 数据库用户名：通过环境变量 DB_USERNAME 注入，无默认值（安全：避免使用默认账号）
-    username: ${DB_USERNAME:}
-    # 数据库密码：通过环境变量 DB_PASSWORD 注入，无默认值（安全：密码必须显式配置）
+    # 数据库连接 URL：通过环境变量 DB_URL 注入，默认连接本地数据库（开发环境）
+    url: ${DB_URL:jdbc:mysql://localhost:3306/bluecone?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8}
+    # 数据库用户名：通过环境变量 DB_USERNAME 注入，默认 root（开发环境）
+    username: ${DB_USERNAME:root}
+    # 数据库密码：通过环境变量 DB_PASSWORD 注入，无默认值（开发环境可为空）
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     # 连接池配置：通用配置，各环境可根据需要覆盖
@@ -76,15 +76,15 @@ spring:
   # Redis 配置：所有敏感信息通过环境变量注入
   data:
     redis:
-      # Redis 主机地址：通过环境变量 REDIS_HOST 注入，无默认值（安全：避免使用默认地址）
-      host: ${REDIS_HOST:}
-      # Redis 端口：通过环境变量 REDIS_PORT 注入，无默认值（安全：避免使用默认端口）
-      port: ${REDIS_PORT:}
-      # Redis 数据库编号：通过环境变量 REDIS_DATABASE 注入，无默认值
-      database: ${REDIS_DATABASE:}
+      # Redis 主机地址：通过环境变量 REDIS_HOST 注入，默认 localhost（开发环境）
+      host: ${REDIS_HOST:localhost}
+      # Redis 端口：通过环境变量 REDIS_PORT 注入，默认 6379
+      port: ${REDIS_PORT:6379}
+      # Redis 数据库编号：通过环境变量 REDIS_DATABASE 注入，默认 0
+      database: ${REDIS_DATABASE:0}
       # Redis 用户名：通过环境变量 REDIS_USERNAME 注入（可选，无默认值）
       username: ${REDIS_USERNAME:}
-      # Redis 密码：通过环境变量 REDIS_PASSWORD 注入，无默认值（安全：密码必须显式配置）
+      # Redis 密码：通过环境变量 REDIS_PASSWORD 注入，无默认值（开发环境可为空）
       password: ${REDIS_PASSWORD:}
 
 
@@ -206,6 +206,27 @@ wechat:
     component-token: ${WECHAT_COMPONENT_TOKEN:}
     # 消息加解密 Key
     component-aes-key: ${WECHAT_COMPONENT_AES_KEY:}
+  
+  # 微信支付服务商模式配置
+  pay:
+    partner:
+      # 是否启用微信支付服务商模式（本地开发可设为 false）
+      enabled: ${WECHAT_PAY_PARTNER_ENABLED:false}
+      # 服务商应用 AppID（sp_appid）
+      sp-app-id: ${WECHAT_PAY_SP_APP_ID:}
+      # 服务商商户号（sp_mchid）
+      sp-mch-id: ${WECHAT_PAY_SP_MCH_ID:}
+      # 微信支付 V3 API 密钥（32位，用于回调解密）
+      api-v3-key: ${WECHAT_PAY_API_V3_KEY:}
+      # 商户证书序列号
+      cert-serial-no: ${WECHAT_PAY_CERT_SERIAL_NO:}
+      # 商户私钥路径（apiclient_key.pem 文件路径，优先使用）
+      private-key-path: ${WECHAT_PAY_PRIVATE_KEY_PATH:}
+      # 商户私钥字符串（如果不使用文件路径，可直接配置私钥内容）
+      private-key-string: ${WECHAT_PAY_PRIVATE_KEY_STRING:}
+      # 默认回调地址（当 PaymentChannelConfig.notifyUrl 为空时使用）
+      default-notify-url: ${WECHAT_PAY_DEFAULT_NOTIFY_URL:}
+  
   wxjava:
     # 是否启用 WxJava SDK（与 open-platform.enabled 保持一致）
     enabled: ${WECHAT_WXJAVA_ENABLED:true}

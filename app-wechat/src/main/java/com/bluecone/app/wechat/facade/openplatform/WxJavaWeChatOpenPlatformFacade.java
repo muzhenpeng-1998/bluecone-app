@@ -1,5 +1,6 @@
 package com.bluecone.app.wechat.facade.openplatform;
 
+import com.bluecone.app.infra.integration.idempotency.IntegrationIdempotencyService;
 import com.bluecone.app.infra.wechat.openplatform.*;
 import com.bluecone.app.wechat.config.WeChatOpenPlatformProperties;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Optional;
 
@@ -32,12 +34,14 @@ import java.util.Optional;
 public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade {
 
     private static final Logger log = LoggerFactory.getLogger(WxJavaWeChatOpenPlatformFacade.class);
+    private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
 
     private final WxOpenService wxOpenService;
     private final WeChatOpenPlatformProperties properties;
     private final WechatComponentCredentialService componentCredentialService;
     private final WeChatOpenPlatformClient weChatOpenPlatformClient;
     private final WechatAuthorizedAppService authorizedAppService;
+    private final IntegrationIdempotencyService idempotencyService;
 
     @Override
     public WeChatPreAuthUrlResult buildPreAuthUrl(WeChatPreAuthUrlCommand command) {
@@ -201,8 +205,12 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
 
             // 3. 幂等检查（使用 InfoType + createTime + appid + bodyHash）
             String idempotencyKey = buildIdempotencyKey(event, command.getRawBody());
-            if (isDuplicate(idempotencyKey)) {
-                log.info("[WxJavaWeChatOpenPlatformFacade] 幂等命中，跳过处理, key={}", idempotencyKey);
+            
+            // 使用 Redis SETNX 实现幂等检查
+            boolean isFirstTime = idempotencyService.tryAcquire(idempotencyKey, IDEMPOTENCY_TTL);
+            if (!isFirstTime) {
+                log.info("[WxJavaWeChatOpenPlatformFacade] 幂等命中，跳过处理, infoType={}, authorizerAppid={}",
+                        event.infoType, maskAppId(event.authorizerAppid));
                 return WeChatOpenCallbackResult.builder()
                         .success(true)
                         .message("success")
@@ -213,9 +221,6 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
 
             // 4. 根据 InfoType 分发处理
             handleEventByType(event);
-
-            // 5. 记录幂等
-            recordIdempotency(idempotencyKey);
 
             return WeChatOpenCallbackResult.builder()
                     .success(true)
@@ -259,11 +264,31 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
     }
 
     /**
-     * 解析回调事件
+     * 解析回调事件（带 XML 安全硬化）
      */
     private ParsedCallbackEvent parseCallbackEvent(String xml) {
         try {
+            // XML 安全硬化：防止 XXE 攻击
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            
+            // 禁用 DOCTYPE 声明
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            
+            // 禁用外部通用实体
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            
+            // 禁用外部参数实体
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            
+            // 禁用外部 DTD
+            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            
+            // 禁用 XInclude
+            factory.setXIncludeAware(false);
+            
+            // 禁用扩展实体引用
+            factory.setExpandEntityReferences(false);
+            
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse(new InputSource(new StringReader(xml)));
             Element root = doc.getDocumentElement();
@@ -409,46 +434,34 @@ public class WxJavaWeChatOpenPlatformFacade implements WeChatOpenPlatformFacade 
 
     /**
      * 构造幂等 key
+     * <p>
+     * 格式：wechat:open:callback:{infoType}:{createTime}:{authorizerAppid}:{bodyHash}
+     * 注意：不打印完整的 ticket/token，只打印哈希值
+     * </p>
      */
     private String buildIdempotencyKey(ParsedCallbackEvent event, String rawBody) {
         try {
-            String source = event.infoType + "_" + event.createTime + "_" + event.authorizerAppid + "_"
-                    + hashBody(rawBody);
-            return "wechat_callback_" + source;
+            String bodyHash = hashBody(rawBody);
+            String appId = event.authorizerAppid != null ? event.authorizerAppid : "null";
+            String source = event.infoType + ":" + event.createTime + ":" + appId + ":" + bodyHash;
+            return "wechat:open:callback:" + source;
         } catch (Exception e) {
             log.error("[WxJavaWeChatOpenPlatformFacade] 构造幂等 key 失败", e);
-            return "wechat_callback_" + System.currentTimeMillis();
+            return "wechat:open:callback:error:" + System.currentTimeMillis();
         }
     }
 
     /**
-     * 计算 body hash
+     * 计算 body hash（用于幂等 key，不打印明文）
      */
     private String hashBody(String body) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] hash = md.digest(body.getBytes());
-            return Base64.getEncoder().encodeToString(hash).substring(0, 16);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash).substring(0, 16);
         } catch (Exception e) {
             return "hash_error";
         }
-    }
-
-    /**
-     * 检查是否重复（简单内存实现，生产环境应使用 Redis）
-     */
-    private boolean isDuplicate(String key) {
-        // TODO: 使用 Redis 实现幂等检查
-        // 当前简化实现：不做幂等检查
-        return false;
-    }
-
-    /**
-     * 记录幂等
-     */
-    private void recordIdempotency(String key) {
-        // TODO: 使用 Redis 记录幂等 key，设置过期时间（如 24 小时）
-        // 当前简化实现：不记录
     }
 
     /**

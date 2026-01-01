@@ -3,13 +3,17 @@ package com.bluecone.app.infra.security.token;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -34,11 +38,13 @@ public class TokenProvider {
     private static final String DEFAULT_DEV_SECRET = "bluecone-dev-secret-please-override-32ch";
 
     private final TokenProperties properties;
+    private final Environment environment;
     private final SecretKey signingKey;
     private final ZoneId zoneId = ZoneId.systemDefault();
 
-    public TokenProvider(TokenProperties properties) {
+    public TokenProvider(TokenProperties properties, Environment environment) {
         this.properties = properties;
+        this.environment = environment;
         String configuredSecret = properties.getSecret();
         String secretToUse = StringUtils.hasText(configuredSecret) ? configuredSecret : DEFAULT_DEV_SECRET;
         if (!StringUtils.hasText(configuredSecret)) {
@@ -46,6 +52,51 @@ public class TokenProvider {
         }
         Assert.hasText(secretToUse, "JWT secret must be configured");
         this.signingKey = Keys.hmacShaKeyFor(secretToUse.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * 启动时校验：生产环境必须配置强密钥。
+     */
+    @PostConstruct
+    public void validateProductionSecret() {
+        // 检查是否为生产环境
+        List<String> activeProfiles = Arrays.asList(environment.getActiveProfiles());
+        boolean isProd = activeProfiles.contains("prod") || activeProfiles.contains("production");
+
+        if (!isProd) {
+            log.info("[TokenProvider] 非生产环境，跳过 JWT 密钥校验");
+            return;
+        }
+
+        log.info("[TokenProvider] 生产环境，开始校验 JWT 密钥");
+
+        String configuredSecret = properties.getSecret();
+
+        // 校验 1：密钥不能为空
+        if (!StringUtils.hasText(configuredSecret)) {
+            throw new IllegalStateException(
+                    "生产环境必须配置 JWT 密钥。" +
+                    "请通过环境变量 JWT_SECRET 注入 bluecone.security.token.secret 配置。" +
+                    "密钥要求：至少 32 字符的随机字符串，定期轮换。");
+        }
+
+        // 校验 2：密钥不能是默认开发密钥
+        if (DEFAULT_DEV_SECRET.equals(configuredSecret)) {
+            throw new IllegalStateException(
+                    "生产环境禁止使用默认开发密钥。" +
+                    "请通过环境变量 JWT_SECRET 注入强密钥。" +
+                    "密钥要求：至少 32 字符的随机字符串，定期轮换。");
+        }
+
+        // 校验 3：密钥长度至少 32 字符
+        if (configuredSecret.length() < 32) {
+            throw new IllegalStateException(
+                    "生产环境 JWT 密钥长度不足。" +
+                    "当前长度：" + configuredSecret.length() + " 字符，要求至少 32 字符。" +
+                    "请通过环境变量 JWT_SECRET 注入足够长度的强密钥。");
+        }
+
+        log.info("[TokenProvider] 生产环境 JWT 密钥校验通过，密钥长度：{} 字符", configuredSecret.length());
     }
 
     public String generateAccessToken(TokenUserContext ctx) {

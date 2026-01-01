@@ -3,6 +3,7 @@ package com.bluecone.app.tenant.application.wechat;
 import com.bluecone.app.core.error.BizErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.infra.tenant.dataobject.TenantOnboardingSessionDO;
+import com.bluecone.app.infra.wechat.openplatform.OnboardingWeChatAuthSessionService;
 import com.bluecone.app.wechat.facade.openplatform.*;
 import com.bluecone.app.tenant.application.wechat.command.BuildAuthorizeUrlCommand;
 import com.bluecone.app.tenant.service.TenantOnboardingAppService;
@@ -31,14 +32,16 @@ public class WechatAuthorizationAppService {
 
     private final TenantOnboardingAppService tenantOnboardingAppService;
     private final WeChatOpenPlatformFacade weChatOpenPlatformFacade;
+    private final OnboardingWeChatAuthSessionService authSessionService;
 
     /**
      * 为入驻 H5 场景构建微信开放平台授权 URL。
      * <p>
-     * Phase 3 版本：使用 facade 统一处理，不再直接调用底层 client。
+     * Phase 3 版本（带 state 绑定）：
      * 1) 校验并加载入驻会话；
-     * 2) 通过 facade 获取预授权 URL（内部处理 pre_auth_code 获取和 URL 拼接）；
-     * 3) 在 redirectUri 上追加 sessionToken 作为回调参数。
+     * 2) 创建授权会话（state）并绑定 tenantId/storeId；
+     * 3) 通过 facade 获取预授权 URL（内部处理 pre_auth_code 获取和 URL 拼接）；
+     * 4) 在 redirectUri 上追加 state 和 sessionToken 作为回调参数。
      * </p>
      *
      * @param command 构建授权 URL 的命令
@@ -64,8 +67,11 @@ public class WechatAuthorizationAppService {
         Long tenantId = session.getTenantId();
         Long storeId = session.getStoreId();
 
-        // 构造自定义参数（包含 sessionToken）
-        String customParam = "sessionToken=" + urlEncode(command.sessionToken());
+        // 创建授权会话（state）并绑定 tenantId/storeId
+        String state = authSessionService.createSession(tenantId, storeId);
+
+        // 构造自定义参数（包含 state 和 sessionToken）
+        String customParam = "state=" + urlEncode(state) + "&sessionToken=" + urlEncode(command.sessionToken());
 
         // 通过 facade 生成预授权 URL
         WeChatPreAuthUrlCommand preAuthCommand = WeChatPreAuthUrlCommand.builder()
@@ -84,8 +90,8 @@ public class WechatAuthorizationAppService {
         }
 
         String authorizeUrl = result.getPreAuthUrl();
-        log.info("[WechatOpenAuth] built authorize url, tenantId={}, sessionToken={}, url={}",
-                tenantId, command.sessionToken(), authorizeUrl);
+        log.info("[WechatOpenAuth] built authorize url with state, tenantId={}, storeId={}, state={}***",
+                tenantId, storeId, state != null && state.length() > 8 ? state.substring(0, 8) : "");
         return authorizeUrl;
     }
 
