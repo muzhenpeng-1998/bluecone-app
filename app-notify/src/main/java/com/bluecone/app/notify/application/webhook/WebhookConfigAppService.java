@@ -1,10 +1,10 @@
-package com.bluecone.app.application.service.webhook;
+package com.bluecone.app.notify.application.webhook;
 
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigCreateRequest;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestRequest;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestResult;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigUpdateRequest;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigView;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigCreateRequest;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigTestRequest;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigTestResult;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigUpdateRequest;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigView;
 import com.bluecone.app.core.error.BizErrorCode;
 import com.bluecone.app.core.exception.BusinessException;
 import com.bluecone.app.core.tenant.TenantContext;

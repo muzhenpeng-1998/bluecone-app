@@ -1,4 +1,4 @@
-package com.bluecone.app.application.gateway.dto.webhook;
+package com.bluecone.app.notify.dto.webhook;
 
 import java.util.Map;
 import lombok.Data;

@@ -1,12 +1,12 @@
 package com.bluecone.app.api.admin.system;
 
 import com.bluecone.app.core.api.ApiResponse;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigCreateRequest;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestRequest;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigTestResult;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigUpdateRequest;
-import com.bluecone.app.application.gateway.dto.webhook.WebhookConfigView;
-import com.bluecone.app.application.service.webhook.WebhookConfigAppService;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigCreateRequest;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigTestRequest;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigTestResult;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigUpdateRequest;
+import com.bluecone.app.notify.dto.webhook.WebhookConfigView;
+import com.bluecone.app.notify.application.webhook.WebhookConfigAppService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
