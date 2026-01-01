@@ -53,6 +53,7 @@ COPY app-campaign/pom.xml app-campaign/
 COPY app-order/pom.xml app-order/
 COPY app-payment/pom.xml app-payment/
 COPY app-inventory/pom.xml app-inventory/
+COPY app-wechat-api/pom.xml app-wechat-api/
 COPY app-wechat/pom.xml app-wechat/
 
 # Application module (must be last)
