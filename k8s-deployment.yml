@@ -1,0 +1,237 @@
+# Kubernetes Deployment 配置文件
+# 用于微信云托管部署
+# 
+# 使用方式：
+# 1. 修改镜像地址、命名空间等配置
+# 2. 在微信云托管控制台上传此文件，或使用 kubectl apply
+# 3. kubectl apply -f k8s-deployment.yml
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bluecone-app
+  namespace: default  # 修改为您的命名空间
+  labels:
+    app: bluecone-app
+    version: v1
+spec:
+  replicas: 2  # 副本数量，建议至少 2 个
+  selector:
+    matchLabels:
+      app: bluecone-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # 确保滚动更新时服务不中断
+  template:
+    metadata:
+      labels:
+        app: bluecone-app
+        version: v1
+    spec:
+      containers:
+        - name: bluecone-app
+          # 修改为您的镜像地址
+          image: ccr.ccs.tencentyun.com/your-namespace/bluecone-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+          
+          # 环境变量配置
+          env:
+            # Spring Profile
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            
+            # 数据库配置（建议使用 Secret）
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: bluecone-app-secrets
+                  key: db-url
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bluecone-app-secrets
+                  key: db-username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bluecone-app-secrets
+                  key: db-password
+            
+            # Redis 配置
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: bluecone-app-config
+                  key: redis-host
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bluecone-app-secrets
+                  key: redis-password
+            
+            # JVM 配置
+            - name: JAVA_OPTS
+              value: >-
+                -XX:+UseG1GC
+                -XX:MaxRAMPercentage=75.0
+                -XX:InitialRAMPercentage=50.0
+                -XX:+UseContainerSupport
+                -XX:MaxGCPauseMillis=200
+                -XX:+HeapDumpOnOutOfMemoryError
+                -XX:HeapDumpPath=/app/logs
+          
+          # ============================================
+          # 健康检查配置（关键！）
+          # ============================================
+          
+          # Startup Probe - 启动探针（处理慢启动）
+          # 在启动阶段使用，成功后才启用 liveness 和 readiness
+          startupProbe:
+            httpGet:
+              path: /internal/actuator/health/liveness
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 30  # 最多等待 300 秒（10秒 × 30次）
+          
+          # Liveness Probe - 存活探针
+          # 检查应用是否存活，失败会重启容器
+          livenessProbe:
+            httpGet:
+              path: /internal/actuator/health/liveness
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 60  # ⭐ 关键配置：给应用 60 秒启动时间
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3  # 连续失败 3 次才重启
+          
+          # Readiness Probe - 就绪探针
+          # 检查应用是否就绪，失败会停止转发流量
+          readinessProbe:
+            httpGet:
+              path: /internal/actuator/health/readiness
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 30  # ⭐ 关键配置：给应用 30 秒启动时间
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          
+          # 资源限制
+          resources:
+            requests:
+              memory: "2Gi"   # 请求 2GB 内存
+              cpu: "1000m"    # 请求 1 核 CPU
+            limits:
+              memory: "4Gi"   # 限制 4GB 内存
+              cpu: "2000m"    # 限制 2 核 CPU
+          
+          # 日志目录挂载（可选）
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      
+      # 卷配置
+      volumes:
+        - name: logs
+          emptyDir: {}
+      
+      # 优雅关闭配置
+      terminationGracePeriodSeconds: 30
+
+---
+# Service 配置
+apiVersion: v1
+kind: Service
+metadata:
+  name: bluecone-app
+  namespace: default  # 修改为您的命名空间
+  labels:
+    app: bluecone-app
+spec:
+  type: ClusterIP
+  selector:
+    app: bluecone-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+  sessionAffinity: None
+
+---
+# ConfigMap 配置（非敏感配置）
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bluecone-app-config
+  namespace: default  # 修改为您的命名空间
+data:
+  redis-host: "your-redis-host.redis.rds.aliyuncs.com"
+  redis-port: "6379"
+  # 其他非敏感配置...
+
+---
+# Secret 配置（敏感信息）
+# 注意：实际使用时应该通过 kubectl create secret 创建，而不是直接写在文件中
+# 这里仅作为示例，实际部署时请删除此部分
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bluecone-app-secrets
+  namespace: default  # 修改为您的命名空间
+type: Opaque
+stringData:
+  # 数据库配置（请修改为实际值）
+  db-url: "jdbc:mysql://your-db-host:3306/bluecone?useSSL=true&serverTimezone=Asia/Shanghai"
+  db-username: "your-db-username"
+  db-password: "your-db-password"
+  
+  # Redis 配置（请修改为实际值）
+  redis-password: "your-redis-password"
+  
+  # 其他敏感配置...
+
+---
+# HorizontalPodAutoscaler - 自动扩缩容（可选）
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bluecone-app-hpa
+  namespace: default  # 修改为您的命名空间
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bluecone-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+

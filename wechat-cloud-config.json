@@ -1,0 +1,57 @@
+{
+  "name": "bluecone-app",
+  "description": "BlueCone 应用 - 微信云托管配置",
+  "version": "1.0.0",
+  
+  "container": {
+    "image": "ccr.ccs.tencentyun.com/your-namespace/bluecone-app:latest",
+    "port": 80,
+    "cpu": 2,
+    "memory": 4,
+    "minReplicas": 2,
+    "maxReplicas": 10
+  },
+  
+  "healthCheck": {
+    "liveness": {
+      "type": "HTTP",
+      "path": "/internal/actuator/health/liveness",
+      "port": 80,
+      "initialDelaySeconds": 60,
+      "periodSeconds": 10,
+      "timeoutSeconds": 5,
+      "failureThreshold": 3,
+      "successThreshold": 1
+    },
+    "readiness": {
+      "type": "HTTP",
+      "path": "/internal/actuator/health/readiness",
+      "port": 80,
+      "initialDelaySeconds": 30,
+      "periodSeconds": 5,
+      "timeoutSeconds": 3,
+      "failureThreshold": 3,
+      "successThreshold": 1
+    }
+  },
+  
+  "envVariables": {
+    "SPRING_PROFILES_ACTIVE": "prod",
+    "DB_URL": "jdbc:mysql://your-db-host:3306/bluecone?useSSL=true&serverTimezone=Asia/Shanghai",
+    "DB_USERNAME": "your-db-username",
+    "DB_PASSWORD": "your-db-password",
+    "REDIS_HOST": "your-redis-host",
+    "REDIS_PORT": "6379",
+    "REDIS_PASSWORD": "your-redis-password",
+    "JAVA_OPTS": "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseContainerSupport"
+  },
+  
+  "注意事项": {
+    "1": "请将 image 中的 your-namespace 替换为您的腾讯云容器镜像服务命名空间",
+    "2": "请将所有 your-* 占位符替换为实际的配置值",
+    "3": "敏感信息（密码、密钥）建议使用云托管的密钥管理功能",
+    "4": "健康检查的 initialDelaySeconds 是关键配置，不要改小",
+    "5": "CPU 和内存配置根据实际负载调整，建议至少 2核4GB"
+  }
+}
+
